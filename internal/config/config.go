@@ -6,8 +6,28 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
+	"strings"
 )
+
+var aliasName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]*$`)
+
+// CleanAlias is the alias as the mod reads it (hooks/format.ts commandNames):
+// spaces around it and leading slashes dropped, "" for none. One the mod
+// would not take is an error saying why.
+func CleanAlias(s string) (string, error) {
+	name := strings.TrimLeft(strings.TrimSpace(s), "/")
+	switch {
+	case name == "":
+		return "", nil
+	case name == "ccdrawu":
+		return "", errors.New("That is /ccdrawu itself")
+	case !aliasName.MatchString(name):
+		return "", errors.New("One name of letters, digits and -, such as ccd")
+	}
+	return name, nil
+}
 
 // Item is one row of the catalog the mod writes to <data>/catalog.json
 // (hooks/items.ts): what the drawer can show, in the order it shows it.

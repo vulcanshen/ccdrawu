@@ -138,6 +138,8 @@ async function refreshVim($: Engine) {
 async function rememberMode($: Engine, e: { permission_mode?: string; agent_id?: string }) {
   const mode = e.permission_mode
   if (e.agent_id !== undefined || mode === undefined) return
+  // Read before each tool call too: leave the drawing alone when nothing changed
+  if ((await read($, modes)).permission === mode) return
   await update($, modes, m => ({ ...m, permission: mode }))
 }
 
@@ -270,8 +272,22 @@ export const register: Register = on => {
     return result
   }).catch(($, e, next) => next(e))
 
-  // Permission mode: recorded at session start, on each prompt and when a reply ends
-  // (after shift+tab it shows once the next of these comes)
+  // A compaction starts the context over, and no turn ends to measure it: read it again
+  on('classic.PostCompact', async ($, e, next) => {
+    const result = await next(e)
+    if (e.agent_id === undefined) quietly(refreshUsage($))
+    return result
+  }).catch(($, e, next) => next(e))
+
+  // Permission mode: recorded at session start, on each prompt, after each step's tool calls and
+  // when a reply ends (after shift+tab it shows once the next of these comes). classic.PreToolUse
+  // carries no permission_mode; PostToolBatch comes once a step, where PostToolUse comes per tool
+  on('classic.PostToolBatch', async ($, e, next) => {
+    const result = await next(e)
+    quietly(rememberMode($, e))
+    return result
+  }).catch(($, e, next) => next(e))
+
   on('classic.SessionStart', async ($, e, next) => {
     const result = await next(e)
     quietly(rememberMode($, e))

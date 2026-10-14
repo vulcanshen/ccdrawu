@@ -71,6 +71,20 @@ func TestConfigKeepsUnknownIDsAndWritesAllOff(t *testing.T) {
 	}
 }
 
+// The same names as hooks/format.ts commandNames takes
+func TestCleanAliasTakesWhatTheModTakes(t *testing.T) {
+	for in, want := range map[string]string{"": "", "  ": "", "ccd": "ccd", " /ccd ": "ccd", "dr-2": "dr-2"} {
+		if got, err := CleanAlias(in); err != nil || got != want {
+			t.Errorf("CleanAlias(%q) = %q, %v; want %q", in, got, err, want)
+		}
+	}
+	for _, in := range []string{"ccdrawu", "/ccdrawu", "two words", "-x", "a_b"} {
+		if _, err := CleanAlias(in); err == nil {
+			t.Errorf("CleanAlias(%q) took it; the mod would not", in)
+		}
+	}
+}
+
 // A toggle rewrites the whole file: the alias goes back as it was
 func TestConfigKeepsTheAlias(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")

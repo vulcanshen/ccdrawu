@@ -72,15 +72,9 @@ Answer `y` to add the marketplace, then choose the user scope to have the drawer
 
 ### A shorter command
 
-Add an `alias` to `~/.config/ccdrawu/config.json`:
+Run `ccdrawu`, move to **alias** under Settings, press `Enter` twice, and type a name such as `ccd`. Within a second `/ccd` works as well as `/ccdrawu`, in every open session. A name you change or remove keeps working in a session until you restart it.
 
-```json
-{
-  "alias": "ccd"
-}
-```
-
-Within a second `/ccd` works as well as `/ccdrawu`, in every open session. A name you change or remove keeps working in a session until you restart it.
+The alias is kept in `~/.config/ccdrawu/config.json` as `"alias": "ccd"`, so you can also set it there.
 
 ### Live vim mode (optional)
 
@@ -119,7 +113,7 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 
 ## Limitations
 
-- After you switch the permission mode with `shift+tab`, **Mode** changes when you send the next prompt or Claude's reply ends.
+- After you switch the permission mode with `shift+tab`, **Mode** changes once Claude finishes the tools of the step it is on; while Claude is idle, it changes when you send the next prompt.
 - The colors are Catppuccin Mocha and cannot be changed yet.
 - Where an organization manages Claude Code, **Mode** and **Compact** may stay empty: those events skip plugins the user installed.
 - Claude Code's mod interface is in early access and may change between releases.

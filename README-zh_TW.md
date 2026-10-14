@@ -72,15 +72,9 @@ Version  2.1.299  ↑ 2.1.300
 
 ### 比較短的指令
 
-在 `~/.config/ccdrawu/config.json` 加上 `alias`：
+執行 `ccdrawu`，移到 Settings 底下的 **alias**，按兩次 `Enter`，輸入例如 `ccd`。一秒內，每個開著的 session 裡 `/ccd` 就跟 `/ccdrawu` 一樣能用。改掉或拿掉的名字，在 session 重開之前都還能用。
 
-```json
-{
-  "alias": "ccd"
-}
-```
-
-一秒內，每個開著的 session 裡 `/ccd` 就跟 `/ccdrawu` 一樣能用。改掉或拿掉的名字，在 session 重開之前都還能用。
+別名存在 `~/.config/ccdrawu/config.json` 的 `"alias": "ccd"`，也可以直接改那裡。
 
 ### 即時 vim 狀態（選用）
 
@@ -119,7 +113,7 @@ Version  2.1.299  ↑ 2.1.300
 
 ## 限制
 
-- 用 `shift+tab` 切換權限模式後，**Mode** 要等你送出下一則訊息或 Claude 回覆結束才會更新。
+- 用 `shift+tab` 切換權限模式後，**Mode** 要等 Claude 跑完目前這一步的工具才會更新；Claude 閒著的時候，要等你送出下一則訊息。
 - 配色是 Catppuccin Mocha，目前不能更改。
 - 由組織管理的 Claude Code 環境裡，**Mode** 和 **Compact** 可能會是空的：那些事件會略過使用者自己安裝的外掛。
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。

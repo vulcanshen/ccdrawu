@@ -12,8 +12,9 @@ import (
 	terminu "github.com/vulcanshen/terminu-go"
 )
 
-// drawer is the TUI: one screen, a panel per placement, each a group of
-// checkboxes per catalog group. A toggle is written at once, and every open
+// drawer is the TUI (tdp components/layout/panel, groups and details): [1]
+// Preferences lists what can be set, in groups; [2] is the one under its
+// cursor and follows it at once. A change is written at once, and every open
 // Claude Code session takes it within a second.
 type drawer struct {
 	app    *terminu.App
@@ -21,9 +22,22 @@ type drawer struct {
 	cat    config.Catalog
 	stamp  time.Time // the catalog's mtime when it was read
 	cfg    config.Config
-	panels map[config.Placement]*terminu.Panel
-	values map[config.Placement]*terminu.Values
+	detail *terminu.Panel
+	pages  map[string]*terminu.Values // [2]'s body for each row of [1]
+	fail   *terminu.Failure           // what an empty page of items says
 }
+
+// The rows of [1]: the drawer beside the transcript and above the prompt,
+// then the command's alias
+const (
+	rowSidebar = "sidebar"
+	rowInline  = "inline"
+	rowAlias   = "alias"
+)
+
+var placements = map[string]config.Placement{rowSidebar: config.Dock, rowInline: config.Inline}
+
+const glyphPencil = "\U000F03EB" // nf-md-pencil, the alias input's title
 
 type catalogTick struct{}
 
@@ -42,10 +56,16 @@ func newDrawer(loc config.Locations) (*drawer, error) {
 		return nil, fmt.Errorf("%s: %w", loc.ConfigFile, err)
 	}
 	d := &drawer{
-		loc:    loc,
-		cfg:    cfg,
-		panels: map[config.Placement]*terminu.Panel{},
-		values: map[config.Placement]*terminu.Values{},
+		loc: loc,
+		cfg: cfg,
+		pages: map[string]*terminu.Values{
+			rowSidebar: {},
+			rowInline:  {},
+		},
+		fail: &terminu.Failure{
+			Fact: "Nothing to list until ccdrawu runs in Claude Code",
+			Hint: "Run ccdrawu install, then start Claude Code",
+		},
 	}
 	a := terminu.New("ccdrawu")
 	a.Splash = splash()
@@ -53,29 +73,48 @@ func newDrawer(loc config.Locations) (*drawer, error) {
 	a.OnMsg = d.onMsg
 	a.Start = func() tea.Cmd { return d.reload() }
 	d.app = a
+	d.pages[rowAlias] = &terminu.Values{Fields: []*terminu.Field{d.aliasField()}}
 
-	for _, p := range []config.Placement{config.Dock, config.Inline} {
-		v := &terminu.Values{}
-		d.values[p] = v
-		d.panels[p] = &terminu.Panel{Label: placementLabel(p), Body: v, Fail: &terminu.Failure{
-			Fact: "Nothing to list until ccdrawu runs in Claude Code",
-			Hint: "Run ccdrawu install, then start Claude Code",
-		}}
+	list := &terminu.List{}
+	list.SetRows([]terminu.Row{
+		{ID: rowSidebar, Cells: []string{rowSidebar}, Group: "Drawer"},
+		{ID: rowInline, Cells: []string{rowInline}, Group: "Drawer"},
+		{ID: rowAlias, Cells: []string{rowAlias}, Group: "Settings"},
+	})
+	list.OnMove = func(r terminu.Row) tea.Cmd {
+		d.show(r.ID)
+		return nil
 	}
+	d.detail = &terminu.Panel{}
+	d.show(rowSidebar)
+	// Enter goes into the row's page in [2]: the one change of panels Enter
+	// makes (tdp v0.6.3 K3, details). Every row has a page.
+	prefs := &terminu.Panel{Label: "Preferences", Body: list, Details: d.detail, Actions: []terminu.Action{
+		{Key: "Enter", Label: "Edit", Desc: "go into it", Scope: terminu.ItemScope, Hint: "edit",
+			ToDetails: func() bool { return true }},
+	}}
 	a.AddScreen(&terminu.Screen{
-		Name: "Items", Key: "I", Desc: "which items the drawer shows",
-		Panels:      []*terminu.Panel{d.panels[config.Dock], d.panels[config.Inline]},
+		Name: "Preferences", Key: "P", Desc: "what the drawer shows, and its command",
+		Panels:      []*terminu.Panel{prefs, d.detail},
+		Layout:      sidebar,
 		NarrowBelow: 60,
 	})
 	d.load()
 	return d, nil
 }
 
-func placementLabel(p config.Placement) string {
-	if p == config.Dock {
-		return "Beside the transcript"
-	}
-	return "Above the prompt"
+// sidebar puts [1] in a sidebar 24 columns wide, as locku and webu do, and
+// [2] beside it.
+func sidebar(w, h int) []terminu.Rect {
+	left := min(24, w/2)
+	return []terminu.Rect{{X: 0, Y: 0, W: left, H: h}, {X: left, Y: 0, W: w - left, H: h}}
+}
+
+// show puts the page of row id in [2], named after it.
+func (d *drawer) show(id string) {
+	d.detail.Label = id
+	d.detail.Body = d.pages[id]
+	d.detail.Fail = d.fail
 }
 
 // load reads the catalog when it is new or changed: Claude Code writes it each
@@ -89,17 +128,16 @@ func (d *drawer) load() {
 	}
 	cat, ok, err := config.ReadCatalog(path)
 	if err != nil {
-		for _, p := range d.panels {
-			p.Fail = &terminu.Failure{Fact: "The catalog can't be read: " + err.Error(), Hint: "Start Claude Code again to write it anew"}
-		}
+		d.fail = &terminu.Failure{Fact: "The catalog can't be read: " + err.Error(), Hint: "Start Claude Code again to write it anew"}
+		d.detail.Fail = d.fail
 		return
 	}
 	if !ok {
 		return
 	}
 	d.cat, d.stamp = cat, info.ModTime()
-	for p, v := range d.values {
-		v.Fields = d.fields(p)
+	for id, p := range placements {
+		d.pages[id].Fields = d.fields(p)
 	}
 }
 
@@ -147,6 +185,29 @@ func (d *drawer) toggled(p config.Placement, f *terminu.Field, ids []string) tea
 			d.cfg.Set(p, d.cat, id, on)
 		}
 	}
+	return d.save()
+}
+
+// aliasField is the alias row: one more name for /ccdrawu, set in an input
+// popup and checked as the mod reads it.
+func (d *drawer) aliasField() *terminu.Field {
+	return &terminu.Field{Label: "Alias", Value: func() string { return d.cfg.Alias }, Empty: "none", Edit: func() tea.Cmd {
+		return d.app.Text(terminu.TextInput{
+			Title: "Alias", Glyph: glyphPencil, Prompt: "One more name for /ccdrawu, such as ccd; empty for none",
+			Verb: "save", Old: d.cfg.Alias, MaxLen: 64,
+			Check: func(v string) error {
+				_, err := config.CleanAlias(v)
+				return err
+			},
+			Done: func(v string) tea.Cmd {
+				d.cfg.Alias, _ = config.CleanAlias(v)
+				return d.save()
+			},
+		})
+	}}
+}
+
+func (d *drawer) save() tea.Cmd {
 	if err := config.WriteConfig(d.loc.ConfigFile, d.cfg); err != nil {
 		return d.app.Error("Can't save", err.Error())
 	}

@@ -8,6 +8,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/ccdrawu/internal/config"
@@ -54,9 +55,46 @@ func TestL4EveryRowFullWidthAt80x40(t *testing.T) {
 	}
 }
 
+func key(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
+
+// press sends msg and plays out what it starts: a popup opens and closes in
+// frames the app sends itself (tdp F2). A command still waiting after 100ms,
+// a timer, is dropped.
+func press(d *drawer, msg tea.Msg) {
+	update := func(m tea.Msg) tea.Cmd {
+		_, cmd := d.app.Update(m)
+		return cmd
+	}
+	queue := []tea.Cmd{update(msg)}
+	for n := 0; len(queue) > 0 && n < 500; n++ {
+		cmd := queue[0]
+		queue = queue[1:]
+		if cmd == nil {
+			continue
+		}
+		got := make(chan tea.Msg, 1)
+		go func() { got <- cmd() }()
+		select {
+		case m := <-got:
+			if batch, ok := m.(tea.BatchMsg); ok {
+				queue = append(queue, batch...)
+			} else if m != nil {
+				queue = append(queue, update(m))
+			}
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
+}
+
+func frameText(d *drawer) string { return terminu.StripStyles(strings.Join(d.app.Frame(), "\n")) }
+
 func TestEnterTogglesAndSavesAtOnce(t *testing.T) {
 	d, loc := newTestDrawer(t)
-	// The cursor starts on the first item of the first panel: Model, beside the transcript
+	// [1] starts on sidebar; Enter goes into [2] (tdp K3, details), whose cursor is on Model
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if d.app.Screen().Focused() != d.detail {
+		t.Fatalf("Enter on [1] left the focus there:\n%s", frameText(d))
+	}
 	d.app.Update(tea.KeyMsg{Type: tea.KeyEnter})
 	c, err := config.ReadConfig(loc.ConfigFile)
 	if err != nil {
@@ -79,6 +117,49 @@ func TestNoCatalogSaysWhatToDo(t *testing.T) {
 	d.app.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
 	if !strings.Contains(terminu.StripStyles(strings.Join(d.app.Frame(), "\n")), "ccdrawu install") {
 		t.Fatal("an empty panel names ccdrawu install")
+	}
+}
+
+// tdp components/layout/panel, groups and details: [1] in groups, the cursor
+// skipping their titles; [2] is the row under it, named after it
+func TestDetailFollowsTheSidebar(t *testing.T) {
+	d, _ := newTestDrawer(t)
+	text := frameText(d)
+	for _, want := range []string{"[1] PREFERENCES", "DRAWER", "SETTINGS", "[2] SIDEBAR", "Permission mode"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("no %q in\n%s", want, text)
+		}
+	}
+	d.app.Update(key("j"))
+	if d.detail.Label != rowInline {
+		t.Fatalf("[2] is %q after j, want inline", d.detail.Label)
+	}
+	d.app.Update(key("j")) // over the SETTINGS title
+	if text := frameText(d); d.detail.Label != rowAlias || !strings.Contains(text, "[2] ALIAS") || !strings.Contains(text, "none") {
+		t.Fatalf("[2] is %q after j j, want alias, none set:\n%s", d.detail.Label, text)
+	}
+}
+
+func TestAliasIsCheckedAndSaved(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	press(d, key("G")) // the last row: alias
+	press(d, tea.KeyMsg{Type: tea.KeyTab})
+	edit := func(v string) {
+		press(d, tea.KeyMsg{Type: tea.KeyEnter})
+		press(d, key(v))
+		press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	}
+	edit("two words")
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Alias != "" {
+		t.Fatalf("alias %q saved, want a name the mod takes or nothing", c.Alias)
+	}
+	if !strings.Contains(frameText(d), "letters, digits and -") {
+		t.Fatalf("the input says nothing of what is wrong:\n%s", frameText(d))
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEsc})
+	edit("/ccd")
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Alias != "ccd" {
+		t.Fatalf("alias = %q, want ccd", c.Alias)
 	}
 }
 
