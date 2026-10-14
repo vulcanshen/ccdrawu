@@ -54,9 +54,11 @@ const (
 // Config is what the TUI writes and every open session reads within a second
 // (hooks/layout.ts): the ids on in each placement. A placement left out takes
 // the catalog's defaults: it is written as null, while [] is every item off.
+// Alias is one more name for /ccdrawu (hooks/commands.ts), "" for none.
 type Config struct {
 	Dock   []string `json:"dock"`
 	Inline []string `json:"inline"`
+	Alias  string   `json:"alias,omitempty"`
 }
 
 func (c *Config) ids(p Placement) *[]string {

@@ -12,6 +12,7 @@ import {
   truncateStart,
   usageColor,
 } from '../hooks/format'
+import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
 import { columnRows, enabledItems, inlineValue, parseConfig } from '../hooks/layout'
 import { locations } from '../hooks/paths'
@@ -104,6 +105,19 @@ test('the alias adds one command name and ignores what cannot be one', async () 
   expect(commandNames('two words')).toEqual(['ccdrawu'])
 })
 
+test('an alias in the config registers one more command, and a name once registered stays', async () => {
+  const registered: string[] = []
+  const register = async (spec: { name: string }) => registered.push(spec.name)
+  const commands = new Set<string>()
+  await registerCommands(register, commands, undefined)
+  await registerCommands(register, commands, 'ccd')
+  await registerCommands(register, commands, 'ccd')
+  await registerCommands(register, commands, '')
+  await registerCommands(register, commands, 'cd2')
+  expect(registered).toEqual(['ccdrawu', 'ccd', 'cd2'])
+  expect([...commands]).toEqual(['ccdrawu', 'ccd', 'cd2'])
+})
+
 test('every catalog item has a unique id, a short key and something to show', async () => {
   expect(new Set(ITEMS.map(i => i.id)).size).toBe(ITEMS.length)
   for (const item of ITEMS) {
@@ -123,6 +137,8 @@ test('the config picks items per placement, in the catalog order', async () => {
   expect(parseConfig('{"dock": ["git", "model", 3], "inline": "x"}')).toEqual({ dock: ['git', 'model'] })
   expect(parseConfig('{"dock": [')).toBeUndefined()
   expect(parseConfig('null')).toEqual({})
+  expect(parseConfig('{"dock": null, "alias": "ccd"}')).toEqual({ alias: 'ccd' })
+  expect(parseConfig('{"alias": 3}')).toEqual({})
   expect(enabledItems({ dock: ['git', 'model', 'gone'] }, 'dock').map(i => i.id)).toEqual(['model', 'git'])
   expect(enabledItems({ dock: [] }, 'dock')).toEqual([])
   expect(enabledItems({}, 'inline').map(i => i.id)).toEqual(ITEMS.filter(i => i.inline).map(i => i.id))

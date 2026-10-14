@@ -70,3 +70,22 @@ func TestConfigKeepsUnknownIDsAndWritesAllOff(t *testing.T) {
 		t.Fatalf("inline written as %v, want null", raw["inline"])
 	}
 }
+
+// A toggle rewrites the whole file: the alias goes back as it was
+func TestConfigKeepsTheAlias(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"dock": null, "alias": "ccd"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c, err := ReadConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.Set(Dock, testCatalog, "git", true)
+	if err := WriteConfig(path, c); err != nil {
+		t.Fatal(err)
+	}
+	if c, _ = ReadConfig(path); c.Alias != "ccd" {
+		t.Fatalf("alias = %q after a toggle, want ccd", c.Alias)
+	}
+}

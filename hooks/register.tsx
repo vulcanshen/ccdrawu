@@ -2,7 +2,8 @@ import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
 import type { CacheInfo, Config, GitInfo, ModelInfo, Modes, Usage, VersionInfo } from '../types'
-import { bar, commandNames, parseShortstat, percentText, shortPath, usageColor } from './format'
+import { registerCommands } from './commands'
+import { bar, parseShortstat, percentText, shortPath, usageColor } from './format'
 import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
 import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from './layout'
 import { locations } from './paths'
@@ -106,6 +107,8 @@ async function installCatalog($: Engine) {
 // The TUI writes ~/.config/ccdrawu/config.json; every open session looks at it each second and takes
 // a change at once. A file not there means the catalog's defaults
 let configStamp: number | undefined
+// The command names this session has registered: /ccdrawu, and each alias the config has named
+const commands = new Set<string>()
 
 async function refreshConfig($: Engine) {
   const file = configFile
@@ -120,6 +123,7 @@ async function refreshConfig($: Engine) {
   if (parsed === undefined) return
   configStamp = stamp
   await update($, config, () => parsed)
+  await registerCommands(spec => $.command.register(spec), commands, parsed.alias)
 }
 
 async function refreshVim($: Engine) {
@@ -174,15 +178,10 @@ function quietly(work: Promise<unknown>) {
   void work.catch(() => undefined)
 }
 
-export const register: Register = (on, options) => {
-  const names = commandNames(options.alias)
-
+export const register: Register = on => {
   on('session.start', async ($, e, next) => {
-    for (const name of names) {
-      const description =
-        name === 'ccdrawu' ? 'Toggle the status drawer' : 'Toggle the status drawer (alias of /ccdrawu)'
-      await $.command.register({ name, description, immediate: true })
-    }
+    // The alias follows once the config is read
+    await registerCommands(spec => $.command.register(spec), commands, undefined)
 
     await tick($)
     await locateFiles($).catch(() => undefined)
@@ -216,12 +215,12 @@ export const register: Register = (on, options) => {
 
   // Every slash command passes through here, so a failure must leave other commands alone
   on('command.run', async ($, e, next) => {
-    if (!names.includes(e.command)) return next(e)
+    if (!commands.has(e.command)) return next(e)
     const isOpen = (await $.ui.panes()).some(p => p.id === PANE)
     if (isOpen) await $.ui.close({ id: PANE })
     else await $.ui.open(PANE_OPEN)
     return {}
-  }).catch(($, e, next) => (names.includes(e.command) ? {} : next(e)))
+  }).catch(($, e, next) => (commands.has(e.command) ? {} : next(e)))
 
   // Usage, context and cost changed (after each turn, or a rate limit moved)
   on('session.measure', async ($, e, next) => {

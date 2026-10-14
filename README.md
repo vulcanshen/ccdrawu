@@ -72,7 +72,15 @@ Answer `y` to add the marketplace, then choose the user scope to have the drawer
 
 ### A shorter command
 
-`/config` has a **Command alias** row for ccdrawu. Type a name such as `ccd`, and `/ccd` works as well as `/ccdrawu`.
+Add an `alias` to `~/.config/ccdrawu/config.json`:
+
+```json
+{
+  "alias": "ccd"
+}
+```
+
+Within a second `/ccd` works as well as `/ccdrawu`, in every open session. A name you change or remove keeps working in a session until you restart it.
 
 ### Live vim mode (optional)
 

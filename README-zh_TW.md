@@ -72,7 +72,15 @@ Version  2.1.299  ↑ 2.1.300
 
 ### 比較短的指令
 
-`/config` 裡有 ccdrawu 的 **Command alias** 欄位。填入例如 `ccd`，`/ccd` 就跟 `/ccdrawu` 一樣能用。
+在 `~/.config/ccdrawu/config.json` 加上 `alias`：
+
+```json
+{
+  "alias": "ccd"
+}
+```
+
+一秒內，每個開著的 session 裡 `/ccd` 就跟 `/ccdrawu` 一樣能用。改掉或拿掉的名字，在 session 重開之前都還能用。
 
 ### 即時 vim 狀態（選用）
 
