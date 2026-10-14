@@ -1,0 +1,17 @@
+{
+  "name": "statusdrawer",
+  "version": "0.1.0",
+  "description": "A sidebar for Claude Code: usage limits, context, model, cost, git and session stats in a pane beside the transcript",
+  "author": { "name": "vulcanshen" },
+  "repository": "https://github.com/vulcanshen/claude-code-statusdrawer",
+  "license": "GPL-3.0",
+  "types": "./types/index.d.ts",
+  "userConfig": {
+    "alias": {
+      "type": "string",
+      "title": "Command alias",
+      "description": "An extra name for /sdrawer, such as sdr. Leave empty for none.",
+      "default": ""
+    }
+  }
+}
