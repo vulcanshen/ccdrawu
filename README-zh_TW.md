@@ -41,6 +41,19 @@ ccdrawu  0.1.0
 | Git、Path | branch 和增減行數、工作目錄 |
 | Claude、ccdrawu | 你的 Claude Code 版本（有新版時一併顯示），以及這個側邊欄自己的版本 |
 
+下面這些預設是關的，到 `ccdrawu` 裡打開：
+
+| 列 | 內容 |
+|---|---|
+| Style | `/config` 裡設的 output style |
+| ID、Account | 這個 session 的 id 開頭，以及登入的 Claude 帳號 |
+| Window | context 用了多少 token、視窗多大：`420k / 1M` |
+| Rate | 這個 session 到目前為止，平均每小時花多少 |
+| Tokens、Speed | 側邊欄載入後，對話累計的 input、output、cache token，以及上一次回覆每秒輸出幾個 token |
+| Skills | 這個 session 用過幾次 skill，以及最後一個 |
+| Sync、Files、Commit、Repo | 跟 upstream 差幾個 commit、staged／changed／new 的檔案數、HEAD 的短 hash，以及 origin 的 owner/repo（在 worktree 裡時加上 worktree 名稱）；沒有 upstream、commit 或 origin 時顯示 `no upstream`、`no commits`、`no origin`，不在 repo 裡時顯示 `not a repo` |
+| Status | [status.claude.com](https://status.claude.com) 的服務狀態：正常是綠色，有事故是橘色或紅色 |
+
 ## 需求
 
 - Claude Code 2.1.287 以上
@@ -115,7 +128,7 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 
 - 用 `shift+tab` 切換權限模式後，**Mode** 要等 Claude 跑完目前這一步的工具才會更新；Claude 閒著的時候，要等你送出下一則訊息。
 - 配色是 Catppuccin Mocha，目前不能更改。
-- 由組織管理的 Claude Code 環境裡，**Mode** 和 **Compact** 可能會是空的，壓縮對話後 **Context** 也要等下一次回覆才會更新：那些事件會略過使用者自己安裝的外掛。
+- 由組織管理的 Claude Code 環境裡，**Mode**、**Compact** 和 **Skills** 可能會是空的，壓縮對話後 **Context** 也要等下一次回覆才會更新：那些事件會略過使用者自己安裝的外掛。
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。
 
 ## 移除

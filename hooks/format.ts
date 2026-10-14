@@ -38,6 +38,68 @@ export function usageColor(percent: number): string {
   return '#f38ba8'
 }
 
+// A count kept short: 950, 1.5k, 152k, 1.2M
+export function compact(n: number): string {
+  const short = (v: number) => (v < 10 ? v.toFixed(1).replace(/\.0$/, '') : String(Math.round(v)))
+  if (n < 1000) return String(Math.round(n))
+  if (n < 999_500) return short(n / 1e3) + 'k'
+  return short(n / 1e6) + 'M'
+}
+
+// What `git status --porcelain=v2 --branch` says: the commit, how far it is from its upstream (left out
+// without one), and the files staged, unstaged and untracked
+export function parseStatusV2(text: string): {
+  sha?: string
+  ahead?: number
+  behind?: number
+  staged: number
+  unstaged: number
+  untracked: number
+} {
+  const out: ReturnType<typeof parseStatusV2> = { staged: 0, unstaged: 0, untracked: 0 }
+  for (const line of text.split('\n')) {
+    if (line.startsWith('# branch.oid ')) {
+      const oid = line.slice('# branch.oid '.length).trim()
+      if (oid !== '(initial)') out.sha = oid.slice(0, 7)
+    } else if (line.startsWith('# branch.ab ')) {
+      const m = /\+(\d+) -(\d+)/.exec(line)
+      if (m) {
+        out.ahead = Number(m[1])
+        out.behind = Number(m[2])
+      }
+    } else if (/^[12u] /.test(line)) {
+      // XY: the index's change, then the working tree's; . is none
+      if (line[2] !== '.') out.staged++
+      if (line[3] !== '.') out.unstaged++
+    } else if (line.startsWith('? ')) {
+      out.untracked++
+    }
+  }
+  return out
+}
+
+// owner/repo from a remote URL: git@host:owner/repo.git, https://host/owner/repo, ssh://git@host/owner/repo
+export function repoFromRemote(url: string): string | undefined {
+  return /[:/]([^/:]+\/[^/]+?)(?:\.git)?\/?$/.exec(url.trim())?.[1]
+}
+
+// The files a working tree has, by kind: "2 staged · 3 changed · 1 new"; "clean" when there are none
+export function filesText(staged: number, unstaged: number, untracked: number): string {
+  const parts = [
+    [staged, 'staged'],
+    [unstaged, 'changed'],
+    [untracked, 'new'],
+  ] as const
+  const shown = parts.filter(([n]) => n > 0).map(([n, what]) => `${n} ${what}`)
+  return shown.length > 0 ? shown.join(' · ') : 'clean'
+}
+
+// How far a branch is from its upstream: "↑2 ↓3", "↑2", or "up to date"
+export function syncText(ahead: number, behind: number): string {
+  const parts = [...(ahead > 0 ? [`↑${ahead}`] : []), ...(behind > 0 ? [`↓${behind}`] : [])]
+  return parts.length > 0 ? parts.join(' ') : 'up to date'
+}
+
 // The background work a reply's end reports, counted by type; subagents are left to $.agent.list(),
 // which follows them live
 export function countBackground(tasks: readonly { type: string }[]): Record<string, number> {

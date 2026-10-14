@@ -2,15 +2,20 @@ import { expect, test } from 'claude-code/testing'
 
 import {
   bar,
+  compact,
   commandNames,
   countBackground,
   countdown,
   duration,
   effortColor,
+  filesText,
   isNewer,
   modeLabel,
   parseShortstat,
+  parseStatusV2,
+  repoFromRemote,
   shortPath,
+  syncText,
   tasksText,
   truncateStart,
   usageColor,
@@ -41,6 +46,8 @@ const FULL: Snapshot = {
   usage: {
     startedAt: 0,
     contextPercent: 42,
+    contextTokens: 420_000,
+    contextWindow: 1_000_000,
     limits: [
       { kind: 'five_hour', percentUsed: 18, resetsAt: new Date(3_600_000).toISOString() },
       { kind: 'seven_day', percentUsed: 40 },
@@ -49,10 +56,25 @@ const FULL: Snapshot = {
     costUsd: 1.2,
   },
   model: { name: 'Opus 5.5', effort: 'high' },
-  git: { branch: 'main', added: 12, removed: 3 },
+  git: {
+    branch: 'main',
+    added: 12,
+    removed: 3,
+    sha: 'e73ac92',
+    ahead: 2,
+    behind: 0,
+    staged: 1,
+    unstaged: 2,
+    untracked: 0,
+    repo: 'vulcanshen/ccdrawu',
+  },
   path: '~/sideproj/ccdrawu',
   turns: 14,
   cache: { read: 92, total: 100 },
+  tokens: { input: 12_300, output: 3_400, cacheRead: 1_200_000, cacheWrite: 45_000, speed: 61.4 },
+  session: { id: '46daa4a7-76e0-44f1-be38-3216d29934ea', account: 'me@example.com', outputStyle: 'default' },
+  status: { indicator: 'none', description: 'All Systems Operational' },
+  skills: { count: 3, last: 'commit' },
   compacts: 1,
   agents: 2,
   background: { shell: 1 },
@@ -164,6 +186,83 @@ test('tasks count subagents live and the rest of the background by type, parted 
   expect(cellWidth('2 agents｜1 shell')).toBe(17)
   expect(cellWidth('~/專案')).toBe(6)
   expect(segWidth([{ text: '1 agent｜', color: '' }, { text: 'ab', color: '' }])).toBe(11)
+})
+
+test('counts read short, and git status, remotes and file counts are read as shown', async () => {
+  expect([950, 1000, 1500, 12_340, 152_000, 999_999, 1_200_000].map(compact)).toEqual([
+    '950',
+    '1k',
+    '1.5k',
+    '12k',
+    '152k',
+    '1M',
+    '1.2M',
+  ])
+  const status = [
+    '# branch.oid e73ac924a1b2c3d4e5f6',
+    '# branch.head main',
+    '# branch.upstream origin/main',
+    '# branch.ab +2 -3',
+    '1 M. N... 100644 100644 100644 aaa bbb hooks/items.ts',
+    '1 .M N... 100644 100644 100644 aaa bbb README.md',
+    '1 MM N... 100644 100644 100644 aaa bbb tests/a.ts',
+    '? notes.txt',
+  ].join('\n')
+  expect(parseStatusV2(status)).toEqual({ sha: 'e73ac92', ahead: 2, behind: 3, staged: 2, unstaged: 2, untracked: 1 })
+  // No upstream, no commit yet: no ahead or behind, no sha
+  expect(parseStatusV2('# branch.oid (initial)\n# branch.head main\n')).toEqual({ staged: 0, unstaged: 0, untracked: 0 })
+  for (const url of ['git@github.com:vulcanshen/ccdrawu.git', 'https://github.com/vulcanshen/ccdrawu', 'ssh://git@host:22/vulcanshen/ccdrawu.git\n']) {
+    expect(repoFromRemote(url)).toBe('vulcanshen/ccdrawu')
+  }
+  expect(filesText(1, 2, 0)).toBe('1 staged · 2 changed')
+  expect(filesText(0, 0, 0)).toBe('clean')
+  expect(syncText(2, 3)).toBe('↑2 ↓3')
+  expect(syncText(0, 0)).toBe('up to date')
+})
+
+test('the new items show what they hold, and nothing while they hold nothing, but Sync and Repo say what is missing', async () => {
+  const shown = (id: string, s: Snapshot = FULL) => view(id, s)?.value.map(g => g.text).join('')
+  expect(shown('style')).toBe('default')
+  expect(shown('id')).toBe('46daa4a7')
+  expect(shown('account')).toBe('me@example.com')
+  expect(shown('window')).toBe('420k / 1M')
+  expect(shown('rate')).toBe('$72.00/h')
+  expect(shown('tokens')).toBe('in 12k · out 3.4k · cache 1.2M')
+  expect(shown('speed')).toBe('61 tok/s')
+  expect(shown('skills')).toBe('3 · last commit')
+  expect(shown('sync')).toBe('↑2')
+  expect(shown('files')).toBe('1 staged · 2 changed')
+  expect(shown('commit')).toBe('e73ac92')
+  expect(shown('repo')).toBe('vulcanshen/ccdrawu')
+  expect(shown('status')).toBe('All Systems Operational')
+  expect(view('status', { ...FULL, status: { indicator: 'major', description: 'Major outage' } })?.value[0]?.color).toBe('#f38ba8')
+  // Before a minute has passed, the hourly rate would jump about
+  expect(shown('rate', { ...FULL, now: 30_000 })).toBeUndefined()
+  const empty: Snapshot = {
+    ...FULL,
+    tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
+    session: {},
+    status: null,
+    skills: { count: 0 },
+    git: { branch: 'main', added: 0, removed: 0 },
+  }
+  // Files has nothing to count only when git status itself failed
+  for (const id of ['style', 'id', 'account', 'tokens', 'speed', 'files', 'status']) {
+    expect(shown(id, empty)).toBeUndefined()
+  }
+  expect(shown('skills', empty)).toBe('none')
+  // A git row turned on is always there: it says what is missing, or that there is no repo
+  expect(shown('sync', empty)).toBe('no upstream')
+  expect(shown('commit', empty)).toBe('no commits')
+  expect(shown('repo', empty)).toBe('no origin')
+  for (const id of ['git', 'sync', 'files', 'commit', 'repo']) {
+    expect(shown(id, { ...FULL, git: null })).toBe('not a repo')
+  }
+  // New items start off: the drawer does not grow by itself
+  const added = ['style', 'id', 'account', 'window', 'rate', 'tokens', 'speed', 'skills', 'sync', 'files', 'commit', 'repo', 'status']
+  for (const item of ITEMS.filter(i => added.includes(i.id))) {
+    expect(item.dock || item.inline).toBe(false)
+  }
 })
 
 test('Claude Code and ccdrawu have a version row each', async () => {

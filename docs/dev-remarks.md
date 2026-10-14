@@ -22,6 +22,20 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 | Claude | `$.session.version()`、npm registry 的 `@anthropic-ai/claude-code/latest` | session 開始、每 6 小時 |
 | ccdrawu | 外掛自己的 `.claude-plugin/plugin.json`（`$.plugin` 只有 name 和 root，沒有版本） | session 開始 |
 
+下面這些是 2026-10-14 從 ccstatusline 搬的（user 挑的），預設 dock、inline 都關，免得側邊欄一下子變長：
+
+| 列 | 來源 | 更新時機 |
+|---|---|---|
+| Style | `$.config.list()` 裡 `outputStyle` 那一列 | session 開始、每輪結束 |
+| ID、Account | `$.session.id()` 的前 8 字；`$.session.identity()` 的 `email` | session 開始 |
+| Window | `usage().context` 的 `tokens`／`window` | 跟 Context 一樣 |
+| Rate | 花費 ÷ 開了幾小時，滿一分鐘才算（太早一個請求就讓數字亂跳） | 跟 Cost、Uptime 一樣 |
+| Tokens、Speed | `turn.step` 結果的 `usage` 累計（主對話；`SessionCost` 只有 usd，沒有累計 token，所以只能從 mod 載入後自己加，reload 或接續舊 session 會少算）；速度是 output tokens ÷ 從送出到收完的秒數（含等第一個字） | 每次主對話送出請求 |
+| Skills | `skill.prompt` 的次數與最後的 `skill` | 每次跑 skill |
+| Sync、Files、Commit | 一個 `git status --porcelain=v2 --branch`：`branch.ab`、XY 碼、`?`、`branch.oid` | 每 5 秒 |
+| Repo | `git remote get-url origin` 解析成 owner/repo（`$.session.repo().name` 只有內部 repo 才有）；`--git-dir` 跟 `--git-common-dir` 不同就是 linked worktree，取 toplevel 的資料夾名；工作目錄沒變就不重查 | 工作目錄改變時 |
+| Status | `https://status.claude.com/api/v2/status.json` 的 `status.indicator`／`description` | session 開始、每 5 分鐘 |
+
 ## 設計決定
 
 - **改名 ccdrawu，加入 terminu 家族（2026-10-14）。** 原名 statusdrawer、指令 `/sdrawer`。設定介面改用 terminu-go 做成獨立執行檔，由它安裝、設定 mod，入口本身就是 terminu app，所以照家族慣例取 `*u` 的名字。`cc` 點出是給 Claude Code 用的，又不把「Claude」放進產品名；repo 不加 `claude-code-` 前綴，跟家族其他 repo 一致。執行檔、外掛、斜線指令都叫 ccdrawu。
@@ -42,7 +56,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 - **權限模式有延遲。** 沒有「權限模式改變」的事件。Claude 工作中按 `shift+tab`，等目前這一步的工具跑完才更新；閒置時要等下一個 prompt。mod API 沒有讀目前模式的方法；`statusLine` 指令收到的 JSON 也沒有：2026-10-14 在 Claude Code 2.1.299 把它錄下來看過，按 `shift+tab` 時狀態列馬上重跑，但前後只差 `cost.total_duration_ms`，沒切換時它也會這樣重跑，連「重跑了」都不能當成模式變了的訊號。
 - **tmux 256 色。** Claude Code 偵測到 `$TMUX` 就把顏色限制在 256 色，hex 色會被換成最接近的 256 色（`#11111b` 會變成第 17 號深藍）。要全彩得設 `CLAUDE_CODE_TMUX_TRUECOLOR=1`。
-- **組織管理的環境。** `session.compact` 與 `classic.*` 事件在組織管理的 Claude Code 裡會略過使用者安裝的外掛，Mode 和 Compact 會是空的，compact 後的 Context 也要等下一輪結束才更新。
+- **組織管理的環境。** `session.compact`、`skill.prompt` 與 `classic.*` 事件在組織管理的 Claude Code 裡會略過使用者安裝的外掛，Mode、Compact 和 Skills 會是空的，compact 後的 Context 也要等下一輪結束才更新。
 
 ## 未做
 

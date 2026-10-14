@@ -1,16 +1,38 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
-import type { Background, CacheInfo, Config, GitInfo, ModelInfo, Modes, Usage, VersionInfo } from '../types'
+import type {
+  Background,
+  CacheInfo,
+  Config,
+  GitInfo,
+  ModelInfo,
+  Modes,
+  ServiceStatus,
+  SessionInfo,
+  SkillsInfo,
+  TokenInfo,
+  Usage,
+  VersionInfo,
+} from '../types'
 import { registerCommands } from './commands'
-import { bar, countBackground, parseShortstat, percentText, shortPath, usageColor } from './format'
+import {
+  bar,
+  countBackground,
+  parseShortstat,
+  parseStatusV2,
+  percentText,
+  repoFromRemote,
+  shortPath,
+  usageColor,
+} from './format'
 import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
 import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from './layout'
 import { locations } from './paths'
 
 const PANE = 'ccdrawu'
 const PANE_OPEN = { id: PANE, title: 'Status', columns: 34 } as const
-const LABEL = 9 // key column width beside the transcript; the longest key is "Thinking "
+const LABEL = 9 // key column width beside the transcript; keys are 8 characters at most, and a space
 
 const usage = atom({ plugin: 'ccdrawu', key: 'usage' } as const, null as Usage | null)
 const model = atom({ plugin: 'ccdrawu', key: 'model' } as const, null as ModelInfo | null)
@@ -18,6 +40,10 @@ const git = atom({ plugin: 'ccdrawu', key: 'git' } as const, null as GitInfo | n
 const path = atom({ plugin: 'ccdrawu', key: 'path' } as const, '')
 const turns = atom({ plugin: 'ccdrawu', key: 'turns' } as const, 0)
 const cache = atom({ plugin: 'ccdrawu', key: 'cache' } as const, null as CacheInfo | null)
+const tokens = atom({ plugin: 'ccdrawu', key: 'tokens' } as const, { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 } as TokenInfo)
+const sessionInfo = atom({ plugin: 'ccdrawu', key: 'session' } as const, {} as SessionInfo)
+const service = atom({ plugin: 'ccdrawu', key: 'status' } as const, null as ServiceStatus | null)
+const skills = atom({ plugin: 'ccdrawu', key: 'skills' } as const, { count: 0 } as SkillsInfo)
 const compacts = atom({ plugin: 'ccdrawu', key: 'compacts' } as const, 0)
 const agents = atom({ plugin: 'ccdrawu', key: 'agents' } as const, 0)
 const background = atom({ plugin: 'ccdrawu', key: 'background' } as const, {} as Background)
@@ -32,6 +58,8 @@ async function refreshUsage($: Engine) {
   await update($, usage, () => ({
     startedAt: u.startedAt,
     contextPercent: u.context.percent,
+    contextTokens: u.context.tokens,
+    contextWindow: u.context.window,
     limits: u.rateLimits.map(l => ({ kind: l.kind, percentUsed: l.percentUsed, resetsAt: l.resetsAt })),
     costUsd: u.cost?.usd,
   }))
@@ -135,7 +163,58 @@ async function refreshGit($: Engine) {
   let diff = await $.process.run(['git', 'diff', 'HEAD', '--shortstat'], { timeoutMs: 3_000 })
   if (diff.exitCode !== 0) diff = await $.process.run(['git', 'diff', '--shortstat'], { timeoutMs: 3_000 })
   const branch = head.stdout.trim()
-  await update($, git, () => ({ branch, ...parseShortstat(diff.stdout) }))
+  const status = await $.process.run(['git', 'status', '--porcelain=v2', '--branch'], { timeoutMs: 3_000 })
+  const place = await repoPlace($, cwd)
+  await update($, git, () => ({
+    branch,
+    ...parseShortstat(diff.stdout),
+    ...(status.exitCode === 0 ? parseStatusV2(status.stdout) : {}),
+    ...place,
+  }))
+}
+
+// origin's owner/repo, and the worktree's folder when the session is in a linked one; they change with the
+// working directory alone, so they are looked up again only when it moves
+let placeOf: { cwd: string; repo?: string; worktree?: string } | undefined
+
+async function repoPlace($: Engine, cwd: string): Promise<{ repo?: string; worktree?: string }> {
+  if (placeOf?.cwd !== cwd) {
+    const remote = await $.process.run(['git', 'remote', 'get-url', 'origin'], { timeoutMs: 3_000 })
+    const dirs = await $.process.run(
+      ['git', 'rev-parse', '--path-format=absolute', '--git-dir', '--git-common-dir', '--show-toplevel'],
+      { timeoutMs: 3_000 },
+    )
+    const [gitDir, commonDir, top] = dirs.stdout.trim().split('\n')
+    placeOf = {
+      cwd,
+      repo: remote.exitCode === 0 ? repoFromRemote(remote.stdout) : undefined,
+      worktree: dirs.exitCode === 0 && gitDir !== commonDir ? top?.split(/[\\/]/).pop() : undefined,
+    }
+  }
+  return { repo: placeOf.repo, worktree: placeOf.worktree }
+}
+
+// The session's id, the account signed in and the output style
+async function refreshSession($: Engine) {
+  const id = (await $.session.id()).replace(/\.jsonl$/, '')
+  const who = await $.session.identity().catch(() => undefined)
+  const style = (await $.config.list()).find(r => r.key === 'outputStyle')?.value
+  await update($, sessionInfo, () => ({
+    id,
+    account: who?.email,
+    outputStyle: typeof style === 'string' ? style : undefined,
+  }))
+}
+
+// status.claude.com's overall status, from its public status page API
+async function refreshStatus($: Engine) {
+  const res = await $.http.fetch('https://status.claude.com/api/v2/status.json')
+  if (!res.ok) return
+  const s = (JSON.parse(res.text) as { status?: { indicator?: string; description?: string } }).status
+  if (s?.indicator !== undefined && s.description !== undefined) {
+    const status = { indicator: s.indicator, description: s.description }
+    await update($, service, () => status)
+  }
 }
 
 async function refreshAgents($: Engine) {
@@ -181,13 +260,17 @@ export const register: Register = on => {
     quietly(refreshVersion($))
     quietly(refreshDrawer($))
     quietly(refreshTurns($))
+    quietly(refreshSession($))
+    quietly(refreshStatus($))
 
-    // Countdowns and uptime every 30 seconds; git, path and subagents every 5; the latest version every 6 hours
+    // Countdowns and uptime every 30 seconds; git, path and subagents every 5; Claude's status every 5
+    // minutes; the latest version every 6 hours
     $.clock.every(30_000, () => quietly(tick($)))
     $.clock.every(5_000, () => {
       quietly(refreshGit($))
       quietly(refreshAgents($))
     })
+    $.clock.every(5 * 60_000, () => quietly(refreshStatus($)))
     $.clock.every(6 * 60 * 60_000, () => quietly(refreshVersion($)))
     $.clock.every(1_000, () => quietly(refreshConfig($)))
 
@@ -213,8 +296,10 @@ export const register: Register = on => {
     return result
   })
 
-  // Each request of the main conversation: its effort, and how much the prompt cache served
+  // Each request of the main conversation: its effort, how much the prompt cache served, the tokens it
+  // took, and its output tokens a second (the time from asking to the last token, waiting included)
   on('turn.step', async function* ($, e, next) {
+    const start = await $.clock.now()
     const result = yield* next(e)
     if (e.agentId === undefined) {
       const effort = e.effort === undefined ? undefined : String(e.effort)
@@ -223,6 +308,14 @@ export const register: Register = on => {
       if (u) {
         const total = u.input_tokens + u.cache_read_input_tokens + u.cache_creation_input_tokens
         await update($, cache, () => ({ read: u.cache_read_input_tokens, total }))
+        const seconds = ((await $.clock.now()) - start) / 1000
+        await update($, tokens, t => ({
+          input: t.input + u.input_tokens,
+          output: t.output + u.output_tokens,
+          cacheRead: t.cacheRead + u.cache_read_input_tokens,
+          cacheWrite: t.cacheWrite + u.cache_creation_input_tokens,
+          speed: seconds > 0 && u.output_tokens > 0 ? u.output_tokens / seconds : t.speed,
+        }))
       }
     }
     return result
@@ -233,6 +326,8 @@ export const register: Register = on => {
     if (e.agentId === undefined) {
       quietly(refreshTurns($))
       quietly(refreshModelName($))
+      // The output style may have changed in /config meanwhile
+      quietly(refreshSession($))
     }
     quietly(refreshAgents($))
     return result
@@ -243,6 +338,13 @@ export const register: Register = on => {
   on('agent.spawn', async ($, e, next) => {
     const result = await next(e)
     quietly(refreshAgents($))
+    return result
+  }).catch(($, e, next) => next(e))
+
+  // A skill run in this session: count it, and keep its name
+  on('skill.prompt', async ($, e, next) => {
+    const result = await next(e)
+    quietly(update($, skills, s => ({ count: s.count + 1, last: e.skill })))
     return result
   }).catch(($, e, next) => next(e))
 
@@ -302,6 +404,10 @@ export const register: Register = on => {
       path: await read($, path),
       turns: await read($, turns),
       cache: await read($, cache),
+      tokens: await read($, tokens),
+      session: await read($, sessionInfo),
+      status: await read($, service),
+      skills: await read($, skills),
       compacts: await read($, compacts),
       agents: await read($, agents),
       background: await read($, background),

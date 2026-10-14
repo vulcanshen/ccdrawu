@@ -41,6 +41,19 @@ ccdrawu  0.1.0
 | Git, Path | The branch with its added and removed lines, and the working directory |
 | Claude, ccdrawu | Your Claude Code version, with the newest release when one is out, and this drawer's version |
 
+These start off; turn them on in `ccdrawu`:
+
+| Row | What it is |
+|---|---|
+| Style | The output style set in `/config` |
+| ID, Account | The start of this session's id, and the Claude account signed in |
+| Window | Tokens in the context window, out of its size: `420k / 1M` |
+| Rate | What the session costs an hour so far |
+| Tokens, Speed | Input, output and cache tokens of the conversation since the drawer loaded, and the last reply's output tokens a second |
+| Skills | Skills run in this session, and the last one |
+| Sync, Files, Commit, Repo | Commits ahead of and behind the upstream, files staged, changed and new, the short hash of HEAD, and origin's owner/repo with the worktree when you are in one; `no upstream`, `no commits` or `no origin` when there is none, and `not a repo` outside one |
+| Status | [status.claude.com](https://status.claude.com): all clear in green, an incident in peach or red |
+
 ## Requirements
 
 - Claude Code 2.1.287 or later
@@ -115,7 +128,7 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 
 - After you switch the permission mode with `shift+tab`, **Mode** changes once Claude finishes the tools of the step it is on; while Claude is idle, it changes when you send the next prompt.
 - The colors are Catppuccin Mocha and cannot be changed yet.
-- Where an organization manages Claude Code, **Mode** and **Compact** may stay empty, and **Context** catches up with a compaction only after the next reply: those events skip plugins the user installed.
+- Where an organization manages Claude Code, **Mode**, **Compact** and **Skills** may stay empty, and **Context** catches up with a compaction only after the next reply: those events skip plugins the user installed.
 - Claude Code's mod interface is in early access and may change between releases.
 
 ## Uninstall

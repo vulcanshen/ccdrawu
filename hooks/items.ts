@@ -1,8 +1,8 @@
 // The drawer's items: the catalog (written to ~/.ccdrawu/catalog.json for the TUI to list)
 // and what each one shows. None touches `$`, so tests can call them.
 
-import type { Background, CacheInfo, GitInfo, Limit, ModelInfo, Modes, Usage, VersionInfo } from '../types'
-import { countdown, duration, effortColor, isNewer, modeLabel, percentText, tasksText, usageColor } from './format'
+import type { Background, CacheInfo, GitInfo, Limit, ModelInfo, Modes, ServiceStatus, SessionInfo, SkillsInfo, TokenInfo, Usage, VersionInfo } from '../types'
+import { compact, countdown, duration, effortColor, filesText, isNewer, modeLabel, percentText, syncText, tasksText, usageColor } from './format'
 
 // Catppuccin Mocha: keys in blue, values in text.
 // The pane's background is not drawn here: it is the theme's composerSidebarBackground.
@@ -32,19 +32,32 @@ export const ITEMS: readonly Item[] = [
   { id: 'model', label: 'Model', name: 'Model', group: 'Model', description: 'The model answering in this session', dock: true, inline: true },
   { id: 'effort', label: 'Effort', name: 'Effort level', group: 'Model', description: "The last request's effort level, green for low to red for max", dock: true, inline: true },
   { id: 'mode', label: 'Mode', name: 'Permission mode', group: 'Model', description: 'auto, plan, accept edits, ...; after shift+tab it shows once Claude finishes the tools of a step, or with the next prompt', dock: true, inline: true },
+  { id: 'style', label: 'Style', name: 'Output style', group: 'Model', description: 'The output style set in /config', dock: false, inline: false },
+  { id: 'id', label: 'ID', name: 'Session ID', group: 'Session', description: "The start of this session's id", dock: false, inline: false },
+  { id: 'account', label: 'Account', name: 'Account', group: 'Session', description: 'The Claude account signed in', dock: false, inline: false },
   { id: 'context', label: 'Context', name: 'Context', group: 'Usage', description: 'How full the context window is', dock: true, inline: true },
+  { id: 'window', label: 'Window', name: 'Context size', group: 'Usage', description: 'Tokens in the context window, out of its size', dock: false, inline: false },
   { id: 'session', label: 'Session', name: 'Session limit', group: 'Usage', description: 'The 5-hour usage limit, and when it resets', dock: true, inline: true },
   { id: 'weekly', label: 'Weekly', name: 'Weekly limit', group: 'Usage', description: 'The 7-day usage limit, and when it resets', dock: true, inline: true },
   { id: 'spend', label: 'Spend', name: 'Spend limit', group: 'Usage', description: "A gateway's spend limit, where there is one", dock: true, inline: true },
   { id: 'cost', label: 'Cost', name: 'Session cost', group: 'Usage', description: 'What this session has cost so far, as /cost totals it', dock: true, inline: true },
+  { id: 'rate', label: 'Rate', name: 'Cost rate', group: 'Usage', description: 'What the session costs an hour, so far', dock: false, inline: false },
+  { id: 'tokens', label: 'Tokens', name: 'Tokens', group: 'Usage', description: 'Input, output and cache tokens of the main conversation since the drawer loaded', dock: false, inline: false },
+  { id: 'speed', label: 'Speed', name: 'Token speed', group: 'Usage', description: 'Output tokens a second in the last reply', dock: false, inline: false },
   { id: 'uptime', label: 'Uptime', name: 'Uptime and turns', group: 'Activity', description: 'How long the session has run, and how many turns', dock: true, inline: true },
   { id: 'cache', label: 'Cache', name: 'Cache hit rate', group: 'Activity', description: 'How much of the last request the prompt cache served', dock: true, inline: true },
   { id: 'compact', label: 'Compact', name: 'Compactions', group: 'Activity', description: 'How many times the context was compacted', dock: true, inline: true },
   { id: 'tasks', label: 'Tasks', name: 'Background tasks', group: 'Activity', description: "Subagents running now, and shells, monitors and workflows in the background as of Claude's last reply", dock: true, inline: true },
+  { id: 'skills', label: 'Skills', name: 'Skills', group: 'Activity', description: 'Skills run in this session, and the last one', dock: false, inline: false },
   { id: 'git', label: 'Git', name: 'Git branch and changes', group: 'Workspace', description: 'The branch, and lines added and removed since HEAD', dock: true, inline: true },
+  { id: 'sync', label: 'Sync', name: 'Ahead and behind', group: 'Workspace', description: 'Commits ahead of and behind the upstream', dock: false, inline: false },
+  { id: 'files', label: 'Files', name: 'Changed files', group: 'Workspace', description: 'Files staged, changed and new', dock: false, inline: false },
+  { id: 'commit', label: 'Commit', name: 'Commit', group: 'Workspace', description: 'The short hash of HEAD', dock: false, inline: false },
+  { id: 'repo', label: 'Repo', name: 'Repository', group: 'Workspace', description: "origin's owner/repo, and the worktree when the session is in one", dock: false, inline: false },
   { id: 'path', label: 'Path', name: 'Working directory', group: 'Workspace', description: "The session's working directory", dock: true, inline: true },
-  { id: 'version', label: 'Claude', name: 'Claude Code version', group: 'Version', description: 'This version, and the latest when a newer one is out', dock: true, inline: true },
-  { id: 'ccdrawu', label: 'ccdrawu', name: 'ccdrawu version', group: 'Version', description: "This drawer's own version", dock: true, inline: true },
+  { id: 'version', label: 'Claude', name: 'Claude Code version', group: 'About', description: 'This version, and the latest when a newer one is out', dock: true, inline: true },
+  { id: 'ccdrawu', label: 'ccdrawu', name: 'ccdrawu version', group: 'About', description: "This drawer's own version", dock: true, inline: true },
+  { id: 'status', label: 'Status', name: 'Claude status', group: 'About', description: 'status.claude.com: all clear in green, an incident in peach or red', dock: false, inline: false },
 ]
 
 // Everything an item may show, as the drawer holds it
@@ -55,6 +68,10 @@ export type Snapshot = {
   path: string
   turns: number
   cache: CacheInfo | null
+  tokens: TokenInfo
+  session: SessionInfo
+  status: ServiceStatus | null
+  skills: SkillsInfo
   compacts: number
   agents: number
   background: Background // by type, as of Claude's last reply
@@ -130,6 +147,52 @@ export function view(id: string, s: Snapshot): View | undefined {
     }
     case 'ccdrawu':
       return s.drawer ? text(s.drawer) : undefined
+    case 'style':
+      return s.session.outputStyle ? text(s.session.outputStyle) : undefined
+    case 'id':
+      return s.session.id ? text(s.session.id.slice(0, 8)) : undefined
+    case 'account':
+      return s.session.account ? text(s.session.account) : undefined
+    case 'window': {
+      const u = s.usage
+      if (u?.contextWindow === undefined) return undefined
+      return text(`${compact(u.contextTokens ?? 0)} / ${compact(u.contextWindow)}`)
+    }
+    case 'rate': {
+      // From a minute on: before that one request makes the hourly figure jump about
+      const hours = s.usage ? (s.now - s.usage.startedAt) / 3_600_000 : 0
+      if (s.usage?.costUsd === undefined || hours < 1 / 60) return undefined
+      return text(`$${(s.usage.costUsd / hours).toFixed(2)}/h`)
+    }
+    case 'tokens': {
+      const t = s.tokens
+      if (t.input + t.output + t.cacheRead + t.cacheWrite === 0) return undefined
+      return text(`in ${compact(t.input)} · out ${compact(t.output)} · cache ${compact(t.cacheRead + t.cacheWrite)}`)
+    }
+    case 'speed':
+      return s.tokens.speed === undefined ? undefined : text(`${Math.round(s.tokens.speed)} tok/s`)
+    case 'skills':
+      return text(s.skills.count === 0 ? 'none' : `${s.skills.count}` + (s.skills.last ? ` · last ${s.skills.last}` : ''))
+    case 'sync':
+      if (!s.git) return text('not a repo')
+      return text(s.git.ahead === undefined ? 'no upstream' : syncText(s.git.ahead, s.git.behind ?? 0))
+    case 'files':
+      if (!s.git) return text('not a repo')
+      return s.git.staged === undefined ? undefined : text(filesText(s.git.staged, s.git.unstaged ?? 0, s.git.untracked ?? 0))
+    case 'commit':
+      if (!s.git) return text('not a repo')
+      return text(s.git.sha ?? 'no commits')
+    case 'repo': {
+      const g = s.git
+      if (!g) return text('not a repo')
+      if (!g.repo && !g.worktree) return text('no origin')
+      return text([g.repo, g.worktree].filter(Boolean).join(' · '))
+    }
+    case 'status': {
+      if (!s.status) return undefined
+      const color = s.status.indicator === 'none' ? C.green : s.status.indicator === 'minor' ? C.peach : C.red
+      return text(s.status.description, color)
+    }
   }
   return undefined
 }
