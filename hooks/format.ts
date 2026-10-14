@@ -52,8 +52,11 @@ export function modeLabel(mode: string): string {
   return MODE_LABELS[mode] ?? mode
 }
 
+// A path under home starts with ~; on Windows it goes on with \
 export function shortPath(path: string, home: string | undefined): string {
-  if (home && (path === home || path.startsWith(home + '/'))) return '~' + path.slice(home.length)
+  if (home && (path === home || path.startsWith(home + '/') || path.startsWith(home + '\\'))) {
+    return '~' + path.slice(home.length)
+  }
   return path
 }
 

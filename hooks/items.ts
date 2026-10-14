@@ -1,4 +1,4 @@
-// The drawer's items: the catalog (written to ~/.claude/ccdrawu/catalog.json for the TUI to list)
+// The drawer's items: the catalog (written to ~/.ccdrawu/catalog.json for the TUI to list)
 // and what each one shows. None touches `$`, so tests can call them.
 
 import type { CacheInfo, GitInfo, Limit, ModelInfo, Modes, Usage, VersionInfo } from '../types'
@@ -32,8 +32,8 @@ export type Item = {
 export const ITEMS: readonly Item[] = [
   { id: 'model', label: 'Model', name: 'Model', group: 'Model', description: 'The model answering in this session', dock: true, inline: true },
   { id: 'thinking', label: 'Thinking', name: 'Thinking effort', group: 'Model', description: "The last request's effort level", dock: true, inline: true },
-  { id: 'mode', label: 'Mode', name: 'Permission mode', group: 'Model', description: 'auto, plan, accept edits, ...; after shift+tab it shows with the next prompt or reply', dock: true, inline: true },
-  { id: 'editor', label: 'Editor', name: 'Editor mode', group: 'Model', description: "normal or vim, with vim's INSERT / NORMAL through the status line bridge", dock: true, inline: true },
+  { id: 'mode', label: 'Mode', name: 'Permission mode', group: 'Model', description: 'auto, plan, accept edits, ...; after shift+tab it shows once Claude finishes the tools of a step, or with the next prompt', dock: true, inline: true },
+  { id: 'editor', label: 'Editor', name: 'Editor mode', group: 'Model', description: "normal or vim, with vim's INSERT / NORMAL through ccdrawu statusline", dock: true, inline: true },
   { id: 'context', label: 'Context', name: 'Context', group: 'Usage', description: 'How full the context window is', dock: true, inline: true },
   { id: 'session', label: 'Session', name: 'Session limit', group: 'Usage', description: 'The 5-hour usage limit, and when it resets', dock: true, inline: true },
   { id: 'weekly', label: 'Weekly', name: 'Weekly limit', group: 'Usage', description: 'The 7-day usage limit, and when it resets', dock: true, inline: true },

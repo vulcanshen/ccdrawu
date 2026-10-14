@@ -63,7 +63,7 @@ async function refreshEditor($: Engine) {
   await update($, modes, m => ({ ...m, editor: editorMode ?? 'normal' }))
 }
 
-// A mod cannot read vim's live state (INSERT / NORMAL). The status line bridge, statusline/statusline.sh,
+// A mod cannot read vim's live state (INSERT / NORMAL). `ccdrawu statusline`, run as the status line,
 // writes vim.mode to <data>/vim/<session id> each time the status line runs; this reads it
 let home: string | undefined
 let dataDir: string | undefined
@@ -71,8 +71,9 @@ let configFile: string | undefined
 let vimFile: string | undefined
 
 async function locateFiles($: Engine) {
-  home = await $.env.get('HOME')
-  if (home === undefined) return
+  // Windows has USERPROFILE, and often no HOME; the TUI's os.UserHomeDir reads them in this order too
+  home = (await $.env.get('USERPROFILE')) || (await $.env.get('HOME'))
+  if (!home) return
   const found = locations({
     home,
     data: await $.env.get('CCDRAWU__DATA'),
@@ -91,12 +92,6 @@ async function keepFile($: Engine, name: string, text: string) {
   const target = `${dataDir}/${name}`
   const current = await $.fs.read(target).catch(() => undefined)
   if (current !== text) await $.fs.write(target, text)
-}
-
-// Keep the bridge at a fixed path, ~/.ccdrawu/statusline.sh, so a statusLine setting
-// pointing at it survives plugin updates
-async function installBridge($: Engine) {
-  await keepFile($, 'statusline.sh', await $.fs.read(`${$.plugin.root}/statusline/statusline.sh`))
 }
 
 // The TUI lists what this version of the mod can show from catalog.json, so it needs no update of its own
@@ -187,7 +182,6 @@ export const register: Register = on => {
 
     await tick($)
     await locateFiles($).catch(() => undefined)
-    quietly(installBridge($))
     quietly(installCatalog($))
     quietly(refreshConfig($))
     quietly(refreshUsage($))

@@ -1,0 +1,72 @@
+version: 2
+
+project_name: ccdrawu
+
+builds:
+  - main: ./cmd/ccdrawu
+    binary: ccdrawu
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/vulcanshen/ccdrawu/internal/version.Version={{.Version}}
+    goos:
+      # Claude Code runs on all three, so ccdrawu does too: a windows build,
+      # as kbu has, where the rest of the u-family is unix-first.
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats:
+      - tar.gz
+    format_overrides:
+      - goos: windows
+        formats:
+          - zip
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  disable: true
+
+# A formula, not a cask, like kbu / filu / sshu / webu / locku: a formula
+# binary is never stamped com.apple.quarantine, so an unsigned binary runs
+# clean.
+brews:
+  - repository:
+      owner: vulcanshen
+      name: homebrew-tap
+      # One token for everything, GITHUB_TOKEN (user, 2026-09-25): a
+      # release run by hand takes the shell's; the workflow hands it a
+      # PAT when one is set, since the built-in token cannot write to the
+      # tap repository.
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    homepage: "https://github.com/vulcanshen/ccdrawu"
+    description: "status drawer for Claude Code (u-family) — usage limits, context, model, cost and git beside the transcript; ccdrawu picks what it shows"
+    caveats: |
+      The drawer itself is a Claude Code plugin: in Claude Code, run
+      /plugin install ccdrawu --marketplace vulcanshen/ccdrawu
+      Then `ccdrawu` picks what it shows, and every open session follows
+      within a second. For vim's live mode, set Claude Code's statusLine
+      command to `ccdrawu statusline`.
+
+      Settings live in ~/.config/ccdrawu, what the drawer and ccdrawu
+      share in ~/.ccdrawu. A Nerd Font terminal profile is required.
+    test: |
+      system "#{bin}/ccdrawu", "version"
+
+# Scoop for Windows, as kbu has.
+scoops:
+  - repository:
+      owner: vulcanshen
+      name: scoop-bucket
+      token: "{{ .Env.GITHUB_TOKEN }}"
+    homepage: "https://github.com/vulcanshen/ccdrawu"
+    description: "status drawer for Claude Code (u-family) — usage limits, context, model, cost and git beside the transcript; ccdrawu picks what it shows"

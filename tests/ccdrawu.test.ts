@@ -86,6 +86,8 @@ test('git shortstat, paths, modes and versions are read as shown', async () => {
   expect(parseShortstat('')).toEqual({ added: 0, removed: 0 })
   expect(shortPath('/Users/me/proj', '/Users/me')).toBe('~/proj')
   expect(shortPath('/Users/meow', '/Users/me')).toBe('/Users/meow')
+  expect(shortPath('C:\\Users\\me\\proj', 'C:\\Users\\me')).toBe('~\\proj')
+  expect(shortPath('C:\\Users\\meow', 'C:\\Users\\me')).toBe('C:\\Users\\meow')
   expect(truncateStart('~/sideproj/ccdrawu', 10)).toBe('…j/ccdrawu')
   expect(truncateStart('~/proj', 10)).toBe('~/proj')
   expect(modeLabel('auto')).toBe('auto')

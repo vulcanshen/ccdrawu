@@ -51,7 +51,8 @@ Version  2.1.299  ↑ 2.1.300
 - Claude Code 2.1.287 以上
 - fullscreen 渲染模式：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊
 - 終端機要夠寬：自動開啟的面板會等終端機寬到大約 110～144 欄才出現
-- `jq`，只有即時 vim 狀態需要
+- `ccdrawu` 指令，用來挑側邊欄顯示的項目、以及即時 vim 狀態；它需要終端機用 [Nerd Font](https://www.nerdfonts.com)
+- macOS、Linux 或 Windows
 
 ## 安裝
 
@@ -62,6 +63,25 @@ Version  2.1.299  ↑ 2.1.300
 ```
 
 詢問是否加入市集時回答 `y`，再選 user scope，每個 session 就都會有。
+
+再安裝 `ccdrawu` 指令：
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/install.sh | sh
+
+# Homebrew（macOS / Linux）
+brew install vulcanshen/tap/ccdrawu
+```
+
+```powershell
+# Windows PowerShell
+irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/install.ps1 | iex
+
+# Scoop（Windows）
+scoop bucket add vulcanshen https://github.com/vulcanshen/scoop-bucket
+scoop install ccdrawu
+```
 
 ## 使用方式
 
@@ -78,12 +98,12 @@ Version  2.1.299  ↑ 2.1.300
 
 ### 即時 vim 狀態（選用）
 
-外掛拿不到 vim 現在是 INSERT 還是 NORMAL，但狀態列程式拿得到。ccdrawu 附了一支小程式，它不畫任何東西，只負責把狀態轉交過來。在 `~/.claude/settings.json` 把狀態列指向它：
+外掛拿不到 vim 現在是 INSERT 還是 NORMAL，但狀態列程式拿得到。`ccdrawu statusline` 就是這樣一支程式，它不畫任何東西，只負責把狀態轉交過來。在 `~/.claude/settings.json` 把狀態列指向它：
 
 ```json
 "statusLine": {
   "type": "command",
-  "command": "sh ~/.claude/ccdrawu/statusline.sh"
+  "command": "ccdrawu statusline"
 }
 ```
 
@@ -107,7 +127,10 @@ Version  2.1.299  ↑ 2.1.300
 
 ## 資料存放位置
 
-`~/.claude/ccdrawu/` 放狀態列轉接程式（`statusline.sh`，由外掛複製過去），以及每個 session 一個記錄 vim 狀態的小檔案（`vim/`）。超過一週沒更新的檔案會自動刪除。
+- `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目和別名。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
+- `~/.ccdrawu/`：外掛寫的東西，`ccdrawu` 列出的項目清單（`catalog.json`），以及每個 session 一個記錄 vim 狀態的小檔案（`vim/`）；超過一週沒更新的檔案會自動刪除。`CCDRAWU__DATA` 可以改放別的資料夾。
+
+在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
 
 側邊欄每 6 小時會向 npm registry 查一次 Claude Code 的最新版本。
 
@@ -115,7 +138,7 @@ Version  2.1.299  ↑ 2.1.300
 
 - 用 `shift+tab` 切換權限模式後，**Mode** 要等 Claude 跑完目前這一步的工具才會更新；Claude 閒著的時候，要等你送出下一則訊息。
 - 配色是 Catppuccin Mocha，目前不能更改。
-- 由組織管理的 Claude Code 環境裡，**Mode** 和 **Compact** 可能會是空的：那些事件會略過使用者自己安裝的外掛。
+- 由組織管理的 Claude Code 環境裡，**Mode** 和 **Compact** 可能會是空的，壓縮對話後 **Context** 也要等下一次回覆才會更新：那些事件會略過使用者自己安裝的外掛。
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。
 
 ## 移除
@@ -124,7 +147,19 @@ Version  2.1.299  ↑ 2.1.300
 claude plugin uninstall ccdrawu@ccdrawu
 ```
 
-再移除你加的 `statusLine` 設定，以及 `~/.claude/ccdrawu/` 資料夾。
+再移除你加的 `statusLine` 設定，以及 `ccdrawu` 指令：
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.sh | sh
+```
+
+```powershell
+# Windows PowerShell
+irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | iex
+```
+
+兩者都會先問過你，才刪 `~/.config/ccdrawu/` 和 `~/.ccdrawu/`。用 Homebrew 或 Scoop 裝的，用 `brew uninstall ccdrawu` 或 `scoop uninstall ccdrawu`。
 
 ## 更多
 

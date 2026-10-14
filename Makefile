@@ -1,7 +1,7 @@
 # ccdrawu — build / run / test / package
 #
 # 跑 `make`（或 `make help`）列出所有指令。
-# unix-first（macOS + Linux），CGO_ENABLED=0 靜態編譯。
+# 在 macOS / Linux 上開發，CGO_ENABLED=0 靜態編譯；release 另有 Windows（goreleaser，跟 kbu 一樣）。
 
 BINARY   := ccdrawu
 PKG      := ./cmd/ccdrawu
@@ -33,6 +33,16 @@ uninstall: ## 移除已安裝的 ccdrawu（從 $$GOBIN，否則 $$GOPATH/bin）
 .PHONY: tidy
 tidy: ## go mod tidy
 	go mod tidy
+
+##@ 發布（release）
+
+.PHONY: release-check
+release-check: ## goreleaser check：驗證 .goreleaser.yaml（要有 GitHub remote）
+	goreleaser check
+
+.PHONY: snapshot
+snapshot: ## goreleaser 本機 snapshot 打包（不發布、不推 tap / bucket）→ dist/，含 Windows 的 zip
+	goreleaser release --snapshot --clean
 
 ##@ 執行（run）
 
@@ -85,4 +95,4 @@ clean: ## 移除 ./ccdrawu 與 dist/
 help: ## 顯示這份說明
 	@awk 'BEGIN {FS = ":.*?## "} \
 		/^##@/ {printf "\n\033[1m%s\033[0m\n", substr($$0, 5); next} \
-		/^[a-zA-Z0-9_-]+:.*?## / {printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+		/^[a-zA-Z0-9_-]+:.*?## / {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)

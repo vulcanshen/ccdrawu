@@ -14,7 +14,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 | Model | `$.session.model()` | session 開始、每輪結束 |
 | Thinking | `turn.step` 的 `e.effort`；session 剛開始還沒送過請求時，先用 settings 的 `modelSettings[model].effortLevel` 或 `effortLevel` | 每次主對話送出請求 |
 | Mode | 舊式 hook 事件（`classic.SessionStart`、`classic.UserPromptSubmit`、`classic.PostToolBatch`、`classic.Stop`）帶的 `permission_mode`，只認主對話 | 上述四個事件；PostToolBatch 是每一步的工具跑完後一次（`classic.PreToolUse` 在 mod 裡只有工具的內容、沒有 permission_mode，PostToolUse 每個工具一次、還帶整份輸出） |
-| Editor | settings 的 `editorMode`；vim 即時狀態讀 `~/.claude/ccdrawu/vim/<session id>` | session 開始；即時狀態每 0.5 秒 |
+| Editor | settings 的 `editorMode`；vim 即時狀態讀 `~/.ccdrawu/vim/<session id>`（`ccdrawu statusline` 寫的） | session 開始；即時狀態每 0.5 秒 |
 | Uptime | `usage().startedAt` 與 `$.session.turns()` | 每 30 秒、每輪結束 |
 | Cache | `turn.step` 結果的 `usage`：`cache_read / (input + cache_read + cache_creation)` | 每次主對話送出請求 |
 | Compact | `session.compact` 成功（非 `precompute`、非 skip、非子 agent）時加一 | 每次壓縮 |
@@ -22,11 +22,9 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 | Git、Path | `git rev-parse --abbrev-ref HEAD`、`git diff HEAD --shortstat`；`$.session.cwd()` | 每 5 秒 |
 | Version | `$.session.version()`、npm registry 的 `@anthropic-ai/claude-code/latest` | session 開始、每 6 小時 |
 
-### 狀態列轉接（`statusline/statusline.sh`）
+### 狀態列轉接（`ccdrawu statusline`，`internal/statusline`）
 
-mod 的 API 沒有 vim 的即時狀態，但 Claude Code 每次重跑狀態列都會從 stdin 給一包 JSON，裡面有 `vim.mode` 和 `session_id`，而且 vim 模式切換時會立刻重跑。轉接程式只把 `vim.mode` 寫進 `~/.claude/ccdrawu/vim/<session_id>`（先寫暫存檔再 `mv`，mod 不會讀到寫一半的內容），不輸出任何東西。
-
-mod 在 `session.start` 把外掛附帶的那份複製到 `~/.claude/ccdrawu/statusline.sh`，內容不同才覆寫。使用者的 `statusLine` 設定指向這個固定路徑，外掛更新、快取路徑變動都不受影響。用 `sh <path>` 執行，所以不需要執行權限。
+mod 的 API 沒有 vim 的即時狀態，但 Claude Code 每次重跑狀態列都會從 stdin 給一包 JSON，裡面有 `vim.mode` 和 `session_id`，而且 vim 模式切換時會立刻重跑。`ccdrawu statusline` 只把 `vim.mode` 寫進 `~/.ccdrawu/vim/<session_id>`（先寫暫存檔再 rename，mod 不會讀到寫一半的內容），清掉一週沒動的檔，不輸出任何東西（印出來的就是狀態列，所以錯誤只寫到 stderr）。session id 不像檔名（含 `/`、`\`、開頭是 `.`）就不寫，免得寫出資料夾。
 
 權限模式不在那包 JSON 裡（Claude Code 在權限模式改變時會重跑狀態列，但沒有告訴它改成什麼），所以 Mode 只能走舊式 hook 事件。2026-10-14 在 Claude Code 2.1.299 把狀態列收到的 JSON 錄下來再確認一次：按 `shift+tab` 時狀態列馬上重跑，但前後只差 `cost.total_duration_ms`；沒切換時它也會這樣重跑，所以連「重跑了」都不能當成模式變了的訊號。mod API 也沒有讀目前模式的方法或模式改變的事件。
 
@@ -36,11 +34,13 @@ mod 在 `session.start` 把外掛附帶的那份複製到 `~/.claude/ccdrawu/sta
 - **指令叫 `/ccdrawu`，別名交給使用者（2026-10-14）。** 要開源，所以選不容易跟內建指令或其他外掛撞名的名字。嫌長的人自己設別名，例如 `ccd`。`command.run` 因此是不帶 matcher 的 hook，每個斜線指令都會經過，所以加了 `.catch`：出錯時不是自己的指令就照常放行。
 - **別名存在 config.json 的 `alias`，不用 `userConfig`（2026-10-14）。** 跟項目開關放同一個檔、由 TUI 設定，開著的 session 1 秒內讀到新名字就 `$.command.register`（`hooks/commands.ts`）。mod API 沒有移除指令的方法，所以一個名字註冊過就留到 session 結束：改掉或清空的別名在那之前照樣能用、也還列在選單裡。否決：TUI 改 Claude Code 的 `settings.json` 的 `pluginConfigs`（跟 `/config` 那一列同步）——要動別人的設定檔，開著的 session 也不確定會不會跟著換。
 - **設定 TUI 是側欄＋明細（2026-10-14）。** `[1] PREFERENCES` 分組：DRAWER（sidebar、inline）、SETTINGS（alias）；`[2]` 是游標那一項，即時換內容與 label（tdp v0.6.2 `components/layout/panel` 的「分組」「明細」，terminu-go v0.1.2 的 `Row.Group`、`List.OnMove`）。側欄寬 24，跟 locku、webu 一樣。在 `[1]` 按 `Enter` 進 `[2]`（tdp v0.6.3 給 K3 開的明細例外，terminu-go v0.1.3 的 `Panel.Details`、`Action.ToDetails`），`Tab`、`2` 也行；三項都有明細，所以每一項都進得去。別名的檢查（`config.CleanAlias`）照 mod 的 `commandNames`，mod 不收的名字在輸入框就擋下。
+- **也給 Windows 用，建置照 kbu（2026-10-14）。** Claude Code 三個平台都有，家族其他 app 是 unix-first，只有 kbu 出 Windows 版。goreleaser 多出 windows 的 amd64、arm64（zip）、發到 Scoop（`vulcanshen/scoop-bucket`），`install.ps1`／`uninstall.ps1` 照 kbu（裝到 `%LOCALAPPDATA%\ccdrawu`、加進使用者的 PATH）；release 的測試也在 windows-latest 跑（那邊沒有 cgo，不加 `-race`）。位置照 E3 字面，`~` 就是 `%USERPROFILE%`（user 選的；E3 沒寫 Windows，記在 tdp 盲點紀錄 CD4，規範定了再跟著改）。mod 先讀 `USERPROFILE` 再讀 `HOME`，跟 Go 的 `os.UserHomeDir` 同一個順序，兩邊才會算出同一個資料夾。
+- **狀態列轉接改由執行檔做（2026-10-14）。** 原本是外掛附的 sh 腳本（mod 複製到資料夾、`sh <path>` 執行）、要有 jq，Windows 上不一定有 sh 和 jq。改成 `ccdrawu statusline`，三個平台同一份，也不用 jq。代價：只裝外掛、沒裝執行檔的人沒有即時 vim 狀態（其他都照常）。否決：維持 sh＋jq。
 - **不畫底色（2026-10-14）。** 停靠的 pane 外框（上方 × 那列、左邊分隔欄、下方）由引擎的容器畫，底色是主題的 `composerSidebarBackground`（`dark-ansi` 是 `ansi:blackBright`，`dark` 是 `rgb(38, 38, 38)`）。mod 只能畫 body，蓋不到外框；只蓋 body 會變成「外框一個色、內容一個色」。所以底色交給主題，README 教使用者自訂主題。這個 token 不在官方文件的清單裡，是從 Claude Code 程式找到的，改名時主題會忽略它，退回灰底。
 - **不用 Fragment。** 這個 surface 把 `<>…</>` 當直排容器排版，放在 row 裡的「·」和 effort 會被疊成上下兩行。同一列的元素都直接放進 `flexDirection="row"` 的 Box。
 - **bar 寬度要扣 paddingX。** 外層 Box 左右各 1 格 padding，`bodyColumns` 沒扣掉的話，bar 會超出寬度、折到下一行，看起來像兩條 bar。
 - **key 欄寬 9。** 最長的 key 是 `Thinking`，8 個字加一格空白。
-- **會擋住引擎動作的 hook 都有 `.catch`。** `agent.spawn`、`session.compact`、三個 `classic.*` 事件都是 gating hook；側邊欄出錯時 `.catch(($, e, next) => next(e))` 讓引擎照常進行（`next` 已呼叫過就沿用那次結果，不會重跑）。
+- **會擋住引擎動作的 hook 都有 `.catch`。** `agent.spawn`、`session.compact`、`classic.*` 事件都是 gating hook；側邊欄出錯時 `.catch(($, e, next) => next(e))` 讓引擎照常進行（`next` 已呼叫過就沿用那次結果，不會重跑）。
 
 ## 已知的牆
 
@@ -53,7 +53,9 @@ mod 在 `session.start` 把外掛附帶的那份複製到 `~/.claude/ccdrawu/sta
 
 - 配色可設定（目前寫死 Catppuccin Mocha）
 - README 的截圖或 demo
-- CHANGELOG
+- CHANGELOG：release workflow 從它取 release notes，第一次發布前要有
+- `ccdrawu install`／`uninstall`：在那之前，安裝腳本、Homebrew caveats、README 都教使用者在 Claude Code 裡 `/plugin install`、自己改 `statusLine`
+- 沒在真的 Windows 上跑過：Claude Code 在 Windows 上怎麼執行 `statusLine` 指令、mod 的 `$.fs` 收不收 `C:\Users\me/.ccdrawu/...` 這種混用分隔的路徑、Windows 上 rename 蓋過 mod 正在讀的檔會不會失敗（TUI 存設定、`ccdrawu statusline` 都靠 rename）、`.ps1` 的語法（這台 Mac 沒有 PowerShell）
 
 ## 開發
 
@@ -69,7 +71,8 @@ mod 在 `session.start` 把外掛附帶的那份複製到 `~/.claude/ccdrawu/sta
 
 ### 設定程式（Go）
 
-- 跟家族其他 app 同一套建置：`cmd/ccdrawu`（命令列）、`internal/config`（E3 位置、catalog 與設定檔）、`internal/ui`（TUI 與 splash）、`internal/version`（release 時由 goreleaser 的 ldflags 注入）。`make` 列出所有指令；`make run` 跑 TUI，`make build` 編出 `./ccdrawu`。
+- 跟家族其他 app 同一套建置：`cmd/ccdrawu`（命令列）、`internal/config`（E3 位置、catalog 與設定檔）、`internal/ui`（TUI 與 splash）、`internal/statusline`（`ccdrawu statusline`）、`internal/version`（release 時由 goreleaser 的 ldflags 注入）。`make` 列出所有指令；`make run` 跑 TUI，`make build` 編出 `./ccdrawu`。
+- Windows 版編不編得過：`GOOS=windows GOARCH=amd64 go build ./cmd/ccdrawu`（arm64 同），或 `make snapshot` 一次打六個平台的包到 `dist/`。`make release-check`（`goreleaser check`）要有 GitHub remote 才過。
 - 本機同時改 terminu-go 時用 `go work init . ../terminu-go`（`go.work` 不進版控）。
 - `internal/ui/icon.svg` 是 `docs/icon.svg` 的複本：splash 用 `go:embed` 讀 icon，讀不到上層目錄。換 icon 時兩個一起換，`TestSplashIconIsDocsIcon` 會抓不一致。
 

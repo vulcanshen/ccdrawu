@@ -5,8 +5,10 @@ package main
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/vulcanshen/ccdrawu/internal/config"
+	"github.com/vulcanshen/ccdrawu/internal/statusline"
 	"github.com/vulcanshen/ccdrawu/internal/ui"
 	"github.com/vulcanshen/ccdrawu/internal/version"
 )
@@ -19,6 +21,9 @@ func main() {
 			return
 		case "help", "--help", "-h":
 			fmt.Print(usage)
+			return
+		case "statusline":
+			statusLine()
 			return
 		default:
 			fmt.Fprintf(os.Stderr, "ccdrawu: unknown command %q\n\n%s", os.Args[1], usage)
@@ -35,12 +40,25 @@ func main() {
 	}
 }
 
+// statusLine is what Claude Code's statusLine setting runs. What it prints is
+// the status line, so it prints nothing; a failure goes to stderr alone.
+func statusLine() {
+	loc, err := config.UserLocations()
+	if err == nil {
+		err = statusline.Write(os.Stdin, loc.Data, time.Now())
+	}
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "ccdrawu statusline:", err)
+	}
+}
+
 const usage = `ccdrawu — a status drawer for Claude Code
 
 Usage:
-  ccdrawu            pick the items the drawer shows
-  ccdrawu version    print the version (also --version, -v)
-  ccdrawu help       print this (also --help, -h)
+  ccdrawu              pick the items the drawer shows
+  ccdrawu statusline   for Claude Code's statusLine: hands vim's live mode to the drawer
+  ccdrawu version      print the version (also --version, -v)
+  ccdrawu help         print this (also --help, -h)
 
 Environment:
   CCDRAWU__CONFIG            the settings folder, instead of ~/.config/ccdrawu

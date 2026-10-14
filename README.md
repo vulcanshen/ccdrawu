@@ -51,7 +51,8 @@ Version  2.1.299  ↑ 2.1.300
 - Claude Code 2.1.287 or later
 - Fullscreen rendering: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript
 - A terminal wide enough for a sidebar: a pane opened on its own waits until the terminal is about 110–144 columns wide
-- `jq`, only for the live vim mode
+- The `ccdrawu` command, to pick what the drawer shows and for the live vim mode; it needs a [Nerd Font](https://www.nerdfonts.com) in your terminal
+- macOS, Linux or Windows
 
 ## Install
 
@@ -62,6 +63,25 @@ At the Claude Code prompt:
 ```
 
 Answer `y` to add the marketplace, then choose the user scope to have the drawer in every session.
+
+Then install the `ccdrawu` command:
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/install.sh | sh
+
+# Homebrew (macOS / Linux)
+brew install vulcanshen/tap/ccdrawu
+```
+
+```powershell
+# Windows PowerShell
+irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/install.ps1 | iex
+
+# Scoop (Windows)
+scoop bucket add vulcanshen https://github.com/vulcanshen/scoop-bucket
+scoop install ccdrawu
+```
 
 ## Usage
 
@@ -78,12 +98,12 @@ The alias is kept in `~/.config/ccdrawu/config.json` as `"alias": "ccd"`, so you
 
 ### Live vim mode (optional)
 
-A plugin cannot read whether vim is in INSERT or NORMAL mode, but a status line command can. ccdrawu ships a small one that draws nothing and passes the mode on. Point your status line at it in `~/.claude/settings.json`:
+A plugin cannot read whether vim is in INSERT or NORMAL mode, but a status line command can. `ccdrawu statusline` is one that draws nothing and passes the mode on. Point your status line at it in `~/.claude/settings.json`:
 
 ```json
 "statusLine": {
   "type": "command",
-  "command": "sh ~/.claude/ccdrawu/statusline.sh"
+  "command": "ccdrawu statusline"
 }
 ```
 
@@ -107,7 +127,10 @@ Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` 
 
 ## Where it keeps things
 
-`~/.claude/ccdrawu/` holds the status line bridge (`statusline.sh`, copied there by the plugin) and one small file per session with its vim mode (`vim/`). Files untouched for a week are removed.
+- `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`, the items and the alias. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
+- `~/.ccdrawu/`: what the plugin writes, the list of items `ccdrawu` offers (`catalog.json`), and one small file per session with its vim mode (`vim/`); files untouched for a week are removed. `CCDRAWU__DATA` names another folder for it.
+
+On Windows, `~` is your user folder (`%USERPROFILE%`).
 
 Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 
@@ -115,7 +138,7 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 
 - After you switch the permission mode with `shift+tab`, **Mode** changes once Claude finishes the tools of the step it is on; while Claude is idle, it changes when you send the next prompt.
 - The colors are Catppuccin Mocha and cannot be changed yet.
-- Where an organization manages Claude Code, **Mode** and **Compact** may stay empty: those events skip plugins the user installed.
+- Where an organization manages Claude Code, **Mode** and **Compact** may stay empty, and **Context** catches up with a compaction only after the next reply: those events skip plugins the user installed.
 - Claude Code's mod interface is in early access and may change between releases.
 
 ## Uninstall
@@ -124,7 +147,19 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 claude plugin uninstall ccdrawu@ccdrawu
 ```
 
-Then remove the `statusLine` entry if you added it, and the `~/.claude/ccdrawu/` folder.
+Then remove the `statusLine` entry if you added it, and the `ccdrawu` command:
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.sh | sh
+```
+
+```powershell
+# Windows PowerShell
+irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | iex
+```
+
+Both ask before removing `~/.config/ccdrawu/` and `~/.ccdrawu/`. With Homebrew or Scoop, `brew uninstall ccdrawu` or `scoop uninstall ccdrawu`.
 
 ## More
 
