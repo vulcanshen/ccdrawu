@@ -122,23 +122,70 @@ func press(d *drawer, msg tea.Msg) {
 
 func frameText(d *drawer) string { return terminu.StripStyles(strings.Join(d.app.Frame(), "\n")) }
 
-func TestEnterTogglesAndSavesAtOnce(t *testing.T) {
+var space = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}
+
+// [2] of sidebar and inline lists what each group shows; Enter on any row, or
+// e, opens every item in one checkbox popup, where Space checks, Esc drops it
+// all and Enter applies it all
+func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 	d, loc := newTestDrawer(t)
-	// [1] starts on sidebar; Enter goes into [2] (tdp K3, details), whose cursor is on Model
+	// [1] starts on sidebar; Enter goes into [2] (tdp K3, details)
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	if d.app.Screen().Focused() != d.detail {
 		t.Fatalf("Enter on [1] left the focus there:\n%s", frameText(d))
 	}
-	d.app.Update(tea.KeyMsg{Type: tea.KeyEnter})
-	c, err := config.ReadConfig(loc.ConfigFile)
-	if err != nil {
-		t.Fatal(err)
+	text := frameText(d)
+	for _, want := range []string{"Model Mode", "Context", "none", "Enter:edit"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("no %q on the sidebar page:\n%s", want, text)
+		}
 	}
-	if want := []string{"mode", "context"}; !slices.Equal(c.Dock, want) {
-		t.Fatalf("dock = %v, want %v", c.Dock, want)
+	if strings.Contains(text, "e:edit") {
+		t.Fatalf("the hint names e as well as Enter:\n%s", text)
 	}
-	if c.Inline != nil {
-		t.Fatalf("inline = %v, want it left on its defaults", c.Inline)
+
+	dock := func() []string {
+		t.Helper()
+		c, err := config.ReadConfig(loc.ConfigFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if c.Inline != nil {
+			t.Fatalf("inline = %v, want it left on its defaults", c.Inline)
+		}
+		return c.Dock
+	}
+
+	press(d, key("j"))
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // on Usage: the popup of every item, on Usage's first
+	if text := frameText(d); !strings.Contains(text, "EDIT: sidebar") || !strings.Contains(text, "Mode     Permission mode") {
+		t.Fatalf("Enter on a row did not open the popup of every item with their keys:\n%s", text)
+	}
+	press(d, space) // Context off
+	press(d, tea.KeyMsg{Type: tea.KeyEsc})
+	if _, err := os.Stat(loc.ConfigFile); err == nil {
+		t.Fatal("Esc kept what was checked")
+	}
+
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	press(d, space) // Context off
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if got, want := dock(), []string{"model", "mode"}; !slices.Equal(got, want) {
+		t.Fatalf("dock = %v from Usage, want %v", got, want)
+	}
+
+	press(d, key("e")) // the same popup, on the first item of all
+	press(d, space)    // Model off
+	for range 3 {      // Mode, Context, Git
+		press(d, key("j"))
+	}
+	press(d, space) // Git on
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if got, want := dock(), []string{"mode", "git"}; !slices.Equal(got, want) {
+		t.Fatalf("dock = %v after e, want %v", got, want)
+	}
+	if !strings.Contains(frameText(d), "Git") {
+		t.Fatalf("[2] does not show Git once applied:\n%s", frameText(d))
 	}
 }
 
@@ -159,7 +206,7 @@ func TestNoCatalogSaysWhatToDo(t *testing.T) {
 func TestDetailFollowsTheSidebar(t *testing.T) {
 	d, _ := newTestDrawer(t)
 	text := frameText(d)
-	for _, want := range []string{"[1] PREFERENCES", "DRAWER", "SETTINGS", "[2] SIDEBAR", "Permission mode"} {
+	for _, want := range []string{"[1] PREFERENCES", "DRAWER", "SETTINGS", "[2] SIDEBAR", "Model Mode"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("no %q in\n%s", want, text)
 		}

@@ -98,6 +98,10 @@ It installs the ccdrawu plugin for your user, so every session has the drawer. S
 - Click the `×` at its top right to close it, or press `Ctrl+X Tab` to focus it and then `Ctrl+X X`.
 - `Ctrl+X ←` and `Ctrl+X →` make it wider or narrower while it has focus.
 
+### Pick what it shows
+
+Run `ccdrawu`, pick **sidebar** (beside the transcript) or **inline** (above the prompt) under Drawer and press `Enter`: the right side lists what each group shows now. Press `Enter` on any group for the list of every item, opened at that group (`e` opens it at the top): `Space` checks or unchecks one, `Enter` applies, `Esc` leaves things as they were, and `/` filters as you type. Open sessions follow within a second.
+
 ### A shorter command
 
 Run `ccdrawu`, move to **preferences** under Settings and press `Enter`, then `Enter` on **Alias** and type a name such as `ccd`. Within a second `/ccd` works as well as `/ccdrawu`, in every open session. A name you change or remove keeps working in a session until you restart it.

@@ -98,6 +98,10 @@ ccdrawu install claude
 - 點右上角的 `×` 關閉，或按 `Ctrl+X Tab` 移過去再按 `Ctrl+X X`。
 - 焦點在側邊欄上時，`Ctrl+X ←`、`Ctrl+X →` 可以調寬或調窄。
 
+### 挑要顯示的項目
+
+執行 `ccdrawu`，在 Drawer 底下選 **sidebar**（對話旁邊）或 **inline**（輸入框上方）按 `Enter`，右邊會列出每一組現在顯示哪些。在任一組上按 `Enter`，打開所有項目的清單、停在那一組（按 `e` 從第一項開始）：`Space` 勾或取消勾、`Enter` 套用、`Esc` 不改，`/` 可以打字篩選。一秒內，開著的 session 就會跟著換。
+
 ### 比較短的指令
 
 執行 `ccdrawu`，移到 Settings 底下的 **preferences** 按 `Enter`，在 **Alias** 上再按 `Enter`，輸入例如 `ccd`。一秒內，每個開著的 session 裡 `/ccd` 就跟 `/ccdrawu` 一樣能用。改掉或拿掉的名字，在 session 重開之前都還能用。

@@ -46,7 +46,7 @@ const (
 
 var placements = map[string]config.Placement{rowSidebar: config.Dock, rowInline: config.Inline}
 
-const glyphPencil = "\U000F03EB" // nf-md-pencil, the alias input's title
+const glyphPencil = "\U000F03EB" // nf-md-pencil, the title of the alias input and of the items popup
 
 type catalogTick struct{}
 
@@ -96,7 +96,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 		d.show(r.ID)
 		return nil
 	}
-	d.detail = &terminu.Panel{Actions: []terminu.Action{d.resetBackground()}}
+	d.detail = &terminu.Panel{Actions: []terminu.Action{d.editItems(), d.resetBackground()}}
 	d.show(rowSidebar)
 	// Enter goes into the row's page in [2]: the one change of panels Enter
 	// makes (tdp v0.6.3 K3, details). Every row has a page.
@@ -147,8 +147,8 @@ func (d *drawer) load() {
 		return
 	}
 	d.cat, d.stamp = cat, info.ModTime()
-	for id, p := range placements {
-		d.pages[id].Fields = d.fields(p)
+	for id := range placements {
+		d.pages[id].Fields = d.summary(id)
 	}
 }
 
@@ -169,39 +169,82 @@ func (d *drawer) onMsg(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// fields are the catalog's groups for p, each a group of checkboxes.
-func (d *drawer) fields(p config.Placement) []*terminu.Field {
+// summary is the page id in [2]: a row for each of the catalog's groups, the
+// drawer's keys for the items of it shown there. They are all set in one popup,
+// which Enter on a row opens on that group's first item, and e (editItems) on
+// the first of all.
+func (d *drawer) summary(id string) []*terminu.Field {
+	p := placements[id]
 	var fields []*terminu.Field
-	var ids [][]string
-	for _, it := range d.cat.Items {
+	for i, it := range d.cat.Items {
 		if len(fields) == 0 || fields[len(fields)-1].Label != it.Group {
-			fields = append(fields, &terminu.Field{Label: it.Group, Multi: true})
-			ids = append(ids, nil)
+			group := it.Group
+			fields = append(fields, &terminu.Field{
+				Label: group, Empty: "none",
+				Value: func() string { return d.shown(p, group) },
+				Edit:  func() tea.Cmd { return d.pick(id, i) },
+			})
 		}
-		f := fields[len(fields)-1]
-		f.Options = append(f.Options, it.Name)
-		f.Checked = append(f.Checked, d.cfg.On(p, it))
-		ids[len(ids)-1] = append(ids[len(ids)-1], it.ID)
-	}
-	for i, f := range fields {
-		group := ids[i]
-		f.OnChange = func() tea.Cmd { return d.toggled(p, f, group) }
 	}
 	return fields
 }
 
-// toggled writes the change of one checkbox in f.
-func (d *drawer) toggled(p config.Placement, f *terminu.Field, ids []string) tea.Cmd {
-	byID := map[string]config.Item{}
+func (d *drawer) shown(p config.Placement, group string) string {
+	var keys []string
 	for _, it := range d.cat.Items {
-		byID[it.ID] = it
-	}
-	for k, id := range ids {
-		if on := k < len(f.Checked) && f.Checked[k]; on != d.cfg.On(p, byID[id]) {
-			d.cfg.Set(p, d.cat, id, on)
+		if it.Group == group && d.cfg.On(p, it) {
+			keys = append(keys, it.Label)
 		}
 	}
-	return d.save()
+	return strings.Join(keys, " ")
+}
+
+// editItems is [2]'s panel operation on the sidebar and inline pages: one
+// checkbox popup of every item, more than five so a popup (tdp
+// components/input/checkbox), where Space checks and Enter applies them all.
+// Enter on a row opens it too and is the one in the hint.
+func (d *drawer) editItems() terminu.Action {
+	return terminu.Action{
+		Key: "e", Label: "Edit", Desc: "pick the items it shows", Scope: terminu.PanelScope,
+		Hidden: func() bool {
+			_, ok := placements[d.detail.Label]
+			return !ok
+		},
+		Disabled: func() bool { return len(d.cat.Items) == 0 },
+		Do:       func() tea.Cmd { return d.pick(d.detail.Label, 0) },
+	}
+}
+
+// pick opens the checkbox popup for the page id on the item at cursor: the
+// items in the catalog's order, each as its group, its key in the drawer and,
+// where that says more, its name.
+func (d *drawer) pick(id string, cursor int) tea.Cmd {
+	p, cat := placements[id], d.cat
+	gw, lw := 0, 0
+	for _, it := range cat.Items {
+		gw, lw = max(gw, terminu.Width(it.Group)), max(lw, terminu.Width(it.Label))
+	}
+	options := make([]string, len(cat.Items))
+	checked := make([]bool, len(cat.Items))
+	for i, it := range cat.Items {
+		row := terminu.Pad(it.Group, gw) + "  " + terminu.Pad(it.Label, lw)
+		if it.Name != it.Label {
+			row += "  " + it.Name
+		}
+		options[i] = strings.TrimRight(row, " ")
+		checked[i] = d.cfg.On(p, it)
+	}
+	return d.app.Checks(terminu.Checks{
+		Title: "Edit", Glyph: glyphPencil, Subject: id, Options: options, Checked: checked, Cursor: cursor,
+		Done: func(on []bool) tea.Cmd {
+			for i, it := range cat.Items {
+				if on[i] != d.cfg.On(p, it) {
+					d.cfg.Set(p, cat, it.ID, on[i])
+				}
+			}
+			return d.save()
+		},
+	})
 }
 
 // aliasField is the alias row: one more name for /ccdrawu, set in an input
