@@ -20,9 +20,12 @@ export type VersionInfo = { current: string; latest?: string }
 // vim: vim's live state (INSERT, NORMAL, ...), passed on by the status line bridge
 export type Modes = { permission?: string; editor?: string; vim?: string }
 
+// The items on in each placement, as the TUI wrote them; one left out takes the catalog's defaults
+export type Config = { dock?: string[]; inline?: string[] }
+
 declare module 'claude-code' {
   interface PluginState {
-    statusdrawer: {
+    ccdrawu: {
       usage: Usage | null
       model: ModelInfo | null
       git: GitInfo | null
@@ -34,6 +37,7 @@ declare module 'claude-code' {
       version: VersionInfo | null
       modes: Modes
       now: number
+      config: Config
     }
   }
 }

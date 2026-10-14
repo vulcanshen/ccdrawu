@@ -1,8 +1,8 @@
 #!/bin/sh
-# statusdrawer's status line bridge. Claude Code runs the status line again on each new message,
+# ccdrawu's status line bridge. Claude Code runs the status line again on each new message,
 # vim mode switch and permission mode change, handing it JSON on stdin. This draws nothing: it only
-# writes vim.mode where the statusdrawer mod reads it, since a mod cannot read vim's live state.
-dir="$HOME/.claude/statusdrawer/vim"
+# writes vim.mode where the ccdrawu mod reads it, since a mod cannot read vim's live state.
+dir="$HOME/.claude/ccdrawu/vim"
 mkdir -p "$dir"
 
 jq -r '[.session_id // "", .vim.mode // ""] | @tsv' | {

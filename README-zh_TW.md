@@ -1,6 +1,6 @@
-# statusdrawer
+# ccdrawu
 
-[![License](https://img.shields.io/github/license/vulcanshen/claude-code-statusdrawer)](LICENSE)
+[![License](https://img.shields.io/github/license/vulcanshen/ccdrawu)](LICENSE)
 
 [English](README.md)
 
@@ -58,7 +58,7 @@ Version  2.1.299  ↑ 2.1.300
 在 Claude Code 的輸入框輸入：
 
 ```
-/plugin install statusdrawer --marketplace vulcanshen/claude-code-statusdrawer
+/plugin install ccdrawu --marketplace vulcanshen/ccdrawu
 ```
 
 詢問是否加入市集時回答 `y`，再選 user scope，每個 session 就都會有。
@@ -66,22 +66,22 @@ Version  2.1.299  ↑ 2.1.300
 ## 使用方式
 
 - session 開始時會自動打開。
-- `/sdrawer` 開關側邊欄，Claude 回覆到一半也能用。
+- `/ccdrawu` 開關側邊欄，Claude 回覆到一半也能用。
 - 點右上角的 `×` 關閉，或按 `Ctrl+X Tab` 移過去再按 `Ctrl+X X`。
 - 焦點在側邊欄上時，`Ctrl+X ←`、`Ctrl+X →` 可以調寬或調窄。
 
 ### 比較短的指令
 
-`/config` 裡有 statusdrawer 的 **Command alias** 欄位。填入例如 `sdr`，`/sdr` 就跟 `/sdrawer` 一樣能用。
+`/config` 裡有 ccdrawu 的 **Command alias** 欄位。填入例如 `ccd`，`/ccd` 就跟 `/ccdrawu` 一樣能用。
 
 ### 即時 vim 狀態（選用）
 
-外掛拿不到 vim 現在是 INSERT 還是 NORMAL，但狀態列程式拿得到。statusdrawer 附了一支小程式，它不畫任何東西，只負責把狀態轉交過來。在 `~/.claude/settings.json` 把狀態列指向它：
+外掛拿不到 vim 現在是 INSERT 還是 NORMAL，但狀態列程式拿得到。ccdrawu 附了一支小程式，它不畫任何東西，只負責把狀態轉交過來。在 `~/.claude/settings.json` 把狀態列指向它：
 
 ```json
 "statusLine": {
   "type": "command",
-  "command": "sh ~/.claude/statusdrawer/statusline.sh"
+  "command": "sh ~/.claude/ccdrawu/statusline.sh"
 }
 ```
 
@@ -105,7 +105,7 @@ Version  2.1.299  ↑ 2.1.300
 
 ## 資料存放位置
 
-`~/.claude/statusdrawer/` 放狀態列轉接程式（`statusline.sh`，由外掛複製過去），以及每個 session 一個記錄 vim 狀態的小檔案（`vim/`）。超過一週沒更新的檔案會自動刪除。
+`~/.claude/ccdrawu/` 放狀態列轉接程式（`statusline.sh`，由外掛複製過去），以及每個 session 一個記錄 vim 狀態的小檔案（`vim/`）。超過一週沒更新的檔案會自動刪除。
 
 側邊欄每 6 小時會向 npm registry 查一次 Claude Code 的最新版本。
 
@@ -119,10 +119,10 @@ Version  2.1.299  ↑ 2.1.300
 ## 移除
 
 ```
-claude plugin uninstall statusdrawer@claude-code-statusdrawer
+claude plugin uninstall ccdrawu@ccdrawu
 ```
 
-再移除你加的 `statusLine` 設定，以及 `~/.claude/statusdrawer/` 資料夾。
+再移除你加的 `statusLine` 設定，以及 `~/.claude/ccdrawu/` 資料夾。
 
 ## 更多
 

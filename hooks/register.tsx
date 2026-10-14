@@ -1,50 +1,27 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
-import type { CacheInfo, GitInfo, ModelInfo, Modes, Usage, VersionInfo } from '../types'
-import {
-  bar,
-  commandNames,
-  countdown,
-  duration,
-  isNewer,
-  limitLabel,
-  modeLabel,
-  parseShortstat,
-  percentText,
-  shortPath,
-  usageColor,
-} from './format'
+import type { CacheInfo, Config, GitInfo, ModelInfo, Modes, Usage, VersionInfo } from '../types'
+import { bar, commandNames, parseShortstat, percentText, shortPath, usageColor } from './format'
+import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
+import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from './layout'
 
-const PANE = 'statusdrawer'
+const PANE = 'ccdrawu'
 const PANE_OPEN = { id: PANE, title: 'Status', columns: 34 } as const
-const LABEL = 9 // key column width; the longest key is "Thinking "
+const LABEL = 9 // key column width beside the transcript; the longest key is "Thinking "
 
-// Catppuccin Mocha: keys in blue, values in text.
-// The pane's background is not drawn here: it is the theme's composerSidebarBackground.
-const C = {
-  text: '#cdd6f4',
-  blue: '#89b4fa',
-  lavender: '#b4befe',
-  sky: '#89dceb',
-  flamingo: '#f2cdcd',
-  surface: '#45475a',
-  green: '#a6e3a1',
-  red: '#f38ba8',
-  peach: '#fab387',
-}
-
-const usage = atom({ plugin: 'statusdrawer', key: 'usage' } as const, null as Usage | null)
-const model = atom({ plugin: 'statusdrawer', key: 'model' } as const, null as ModelInfo | null)
-const git = atom({ plugin: 'statusdrawer', key: 'git' } as const, null as GitInfo | null)
-const path = atom({ plugin: 'statusdrawer', key: 'path' } as const, '')
-const turns = atom({ plugin: 'statusdrawer', key: 'turns' } as const, 0)
-const cache = atom({ plugin: 'statusdrawer', key: 'cache' } as const, null as CacheInfo | null)
-const compacts = atom({ plugin: 'statusdrawer', key: 'compacts' } as const, 0)
-const agents = atom({ plugin: 'statusdrawer', key: 'agents' } as const, 0)
-const version = atom({ plugin: 'statusdrawer', key: 'version' } as const, null as VersionInfo | null)
-const modes = atom({ plugin: 'statusdrawer', key: 'modes' } as const, {} as Modes)
-const now = atom({ plugin: 'statusdrawer', key: 'now' } as const, 0)
+const usage = atom({ plugin: 'ccdrawu', key: 'usage' } as const, null as Usage | null)
+const model = atom({ plugin: 'ccdrawu', key: 'model' } as const, null as ModelInfo | null)
+const git = atom({ plugin: 'ccdrawu', key: 'git' } as const, null as GitInfo | null)
+const path = atom({ plugin: 'ccdrawu', key: 'path' } as const, '')
+const turns = atom({ plugin: 'ccdrawu', key: 'turns' } as const, 0)
+const cache = atom({ plugin: 'ccdrawu', key: 'cache' } as const, null as CacheInfo | null)
+const compacts = atom({ plugin: 'ccdrawu', key: 'compacts' } as const, 0)
+const agents = atom({ plugin: 'ccdrawu', key: 'agents' } as const, 0)
+const version = atom({ plugin: 'ccdrawu', key: 'version' } as const, null as VersionInfo | null)
+const modes = atom({ plugin: 'ccdrawu', key: 'modes' } as const, {} as Modes)
+const now = atom({ plugin: 'ccdrawu', key: 'now' } as const, 0)
+const config = atom({ plugin: 'ccdrawu', key: 'config' } as const, {} as Config)
 
 async function refreshUsage($: Engine) {
   const u = await $.session.usage()
@@ -85,24 +62,52 @@ async function refreshEditor($: Engine) {
 }
 
 // A mod cannot read vim's live state (INSERT / NORMAL). The status line bridge, statusline/statusline.sh,
-// writes vim.mode to ~/.claude/statusdrawer/vim/<session id> each time the status line runs; this reads it
+// writes vim.mode to ~/.claude/ccdrawu/vim/<session id> each time the status line runs; this reads it
 let home: string | undefined
 let vimFile: string | undefined
 
 async function locateFiles($: Engine) {
   home = await $.env.get('HOME')
   const id = (await $.session.id()).replace(/\.jsonl$/, '')
-  vimFile = `${home}/.claude/statusdrawer/vim/${id}`
+  vimFile = `${home}/.claude/ccdrawu/vim/${id}`
 }
 
-// Keep the bridge at a fixed path, ~/.claude/statusdrawer/statusline.sh, so a statusLine setting
-// pointing at it survives plugin updates; rewritten only when the shipped copy changed
-async function installBridge($: Engine) {
+// Write `text` to ~/.claude/ccdrawu/<name> unless it already holds it
+async function keepFile($: Engine, name: string, text: string) {
   if (home === undefined) return
-  const shipped = await $.fs.read(`${$.plugin.root}/statusline/statusline.sh`)
-  const target = `${home}/.claude/statusdrawer/statusline.sh`
+  const target = `${home}/.claude/ccdrawu/${name}`
   const current = await $.fs.read(target).catch(() => undefined)
-  if (current !== shipped) await $.fs.write(target, shipped)
+  if (current !== text) await $.fs.write(target, text)
+}
+
+// Keep the bridge at a fixed path, ~/.claude/ccdrawu/statusline.sh, so a statusLine setting
+// pointing at it survives plugin updates
+async function installBridge($: Engine) {
+  await keepFile($, 'statusline.sh', await $.fs.read(`${$.plugin.root}/statusline/statusline.sh`))
+}
+
+// The TUI lists what this version of the mod can show from catalog.json, so it needs no update of its own
+async function installCatalog($: Engine) {
+  await keepFile($, 'catalog.json', JSON.stringify({ version: 1, items: ITEMS }, null, 2) + '\n')
+}
+
+// The TUI writes ~/.claude/ccdrawu/config.json; every open session looks at it each second and takes
+// a change at once. A file not there means the catalog's defaults
+let configStamp: number | undefined
+
+async function refreshConfig($: Engine) {
+  if (home === undefined) return
+  const file = `${home}/.claude/ccdrawu/config.json`
+  const stamp = await $.fs.stat(file).then(
+    s => s.mtimeMs,
+    () => 0,
+  )
+  if (stamp === configStamp) return
+  const parsed = stamp === 0 ? {} : parseConfig(await $.fs.read(file))
+  // Half written: keep what shows and read it again next second
+  if (parsed === undefined) return
+  configStamp = stamp
+  await update($, config, () => parsed)
 }
 
 async function refreshVim($: Engine) {
@@ -163,13 +168,15 @@ export const register: Register = (on, options) => {
   on('session.start', async ($, e, next) => {
     for (const name of names) {
       const description =
-        name === 'sdrawer' ? 'Toggle the status drawer' : 'Toggle the status drawer (alias of /sdrawer)'
+        name === 'ccdrawu' ? 'Toggle the status drawer' : 'Toggle the status drawer (alias of /ccdrawu)'
       await $.command.register({ name, description, immediate: true })
     }
 
     await tick($)
     await locateFiles($).catch(() => undefined)
     quietly(installBridge($))
+    quietly(installCatalog($))
+    quietly(refreshConfig($))
     quietly(refreshUsage($))
     quietly(refreshModelName($))
     quietly(refreshEditor($))
@@ -187,6 +194,7 @@ export const register: Register = (on, options) => {
     $.clock.every(6 * 60 * 60_000, () => quietly(refreshVersion($)))
     // vim: the status line already waits 300ms to batch changes, so reading every half second is enough
     $.clock.every(500, () => quietly(refreshVim($)))
+    $.clock.every(1_000, () => quietly(refreshConfig($)))
 
     // In a terminal too narrow for a sidebar the engine holds the pane until it widens
     void $.ui.open(PANE_OPEN)
@@ -273,104 +281,120 @@ export const register: Register = (on, options) => {
 
   on('ui.render', { component: 'Pane', requestId: PANE }, async ($, e) => {
     const { Box, Text } = $.ui.resolve(e)
-    // Leave out the paddingX on either side, or a bar runs past the width and wraps to a second row
+    // Leave out the paddingX on either side, or a row runs past the width and wraps
     const inner = Math.max(22, e.props.bodyColumns - 2)
-    const barWidth = Math.max(4, inner - LABEL - 5)
+    const placement = e.props.placement
 
-    const u = await read($, usage)
-    const m = await read($, model)
-    const g = await read($, git)
-    const p = await read($, path)
-    const t = await read($, turns)
-    const c = await read($, cache)
-    const k = await read($, compacts)
-    const a = await read($, agents)
-    const v = await read($, version)
-    const md = await read($, modes)
-    const at = await read($, now)
+    const s: Snapshot = {
+      usage: await read($, usage),
+      model: await read($, model),
+      git: await read($, git),
+      path: await read($, path),
+      turns: await read($, turns),
+      cache: await read($, cache),
+      compacts: await read($, compacts),
+      agents: await read($, agents),
+      version: await read($, version),
+      modes: await read($, modes),
+      now: await read($, now),
+    }
+    const shown = enabledItems(await read($, config), placement).flatMap(item => {
+      const v = view(item.id, s)
+      return v ? [{ item, view: v }] : []
+    })
 
-    const label = (text: string) => <Text color={C.blue}>{text.padEnd(LABEL)}</Text>
-    const meter = (name: string, percent: number) => {
-      const b = bar(percent, barWidth)
-      return (
+    // No Fragments here: this surface lays a Fragment out as a column, so siblings go in a row Box
+    const segs = (list: readonly Seg[]) =>
+      list.map(g => (
+        <Text color={g.color} bold={g.bold === true}>
+          {g.text}
+        </Text>
+      ))
+
+    // Above the prompt: text alone, in columns side by side
+    if (placement === 'inline') {
+      const cells = shown.map(({ item, view: v }) => {
+        const value = inlineValue(v)
+        return { label: item.label, value, width: segWidth(value) }
+      })
+      const rows = columnRows(
+        cells.map(c => ({ label: c.label.length, value: c.width })),
+        inner,
+      )
+      const columns = chunk(cells, rows).map(list => ({
+        list,
+        label: Math.max(...list.map(c => c.label.length)) + 1,
+        value: Math.max(...list.map(c => c.width)),
+      }))
+      const lines = Array.from({ length: Math.min(rows, cells.length) }, (_, r) => (
         <Box flexDirection="row">
-          {label(name)}
-          <Text color={usageColor(percent)}>{b.filled}</Text>
-          <Text color={C.surface}>{b.empty}</Text>
-          <Text color={C.text}>{percentText(percent).padStart(5)}</Text>
+          {columns.flatMap((col, i) => {
+            const cell = col.list[r]
+            if (cell === undefined) return []
+            const isLast = i === columns.length - 1
+            return [
+              <Text color={C.blue}>{cell.label.padEnd(col.label)}</Text>,
+              ...segs(cell.value),
+              ...(isLast ? [] : [<Text>{' '.repeat(col.value - cell.width)}</Text>, <Text color={C.surface}>{COLUMN_GAP}</Text>]),
+            ]
+          })}
+        </Box>
+      ))
+      return (
+        <Box flexDirection="column" paddingX={1}>
+          {lines}
         </Box>
       )
     }
-    const row = (name: string, value: string, color: string = C.text) => (
-      <Box flexDirection="row">
-        {label(name)}
-        <Text color={color}>{value}</Text>
-      </Box>
-    )
-    const gap = () => <Text> </Text>
 
-    const cachePercent = c && c.total > 0 ? (c.read / c.total) * 100 : undefined
-    const editor = md.editor === 'vim' && md.vim ? `vim · ${md.vim}` : md.editor
+    // Beside the transcript: a key column, bars for meters, a blank row between groups
+    const barWidth = Math.max(4, inner - LABEL - 5)
+    const label = (text: string) => <Text color={C.blue}>{text.padEnd(LABEL)}</Text>
+    const dockRow = (key: string, v: View) => {
+      if (v.meter !== undefined) {
+        const b = bar(v.meter, barWidth)
+        return (
+          <Box flexDirection="row">
+            {label(key)}
+            <Text color={usageColor(v.meter)}>{b.filled}</Text>
+            <Text color={C.surface}>{b.empty}</Text>
+            <Text color={C.text}>{percentText(v.meter).padStart(5)}</Text>
+          </Box>
+        )
+      }
+      return (
+        <Box flexDirection="row">
+          {label(key)}
+          {v.cutStart ? (
+            <Text color={C.text} wrap="truncate-start">
+              {v.value.map(g => g.text).join('')}
+            </Text>
+          ) : (
+            segs(v.value)
+          )}
+        </Box>
+      )
+    }
 
-    // No Fragments here: this surface lays a Fragment out as a column, so siblings go in a row Box
+    const rows = []
+    let group: string | undefined
+    for (const { item, view: v } of shown) {
+      if (group !== undefined && item.group !== group) rows.push(<Text> </Text>)
+      group = item.group
+      rows.push(dockRow(item.label, v))
+      if (v.resets !== undefined) {
+        rows.push(
+          <Box flexDirection="row">
+            {label('')}
+            <Text color={C.flamingo}>{'resets '}</Text>
+            <Text color={C.text}>{v.resets}</Text>
+          </Box>,
+        )
+      }
+    }
     return (
       <Box flexDirection="column" paddingX={1}>
-        <Box flexDirection="row">
-          {label('Model')}
-          <Text color={C.lavender} bold>
-            {m?.name ?? '…'}
-          </Text>
-        </Box>
-        {m?.effort !== undefined && row('Thinking', m.effort, C.sky)}
-        {md.permission !== undefined && row('Mode', modeLabel(md.permission))}
-        {editor !== undefined && row('Editor', editor)}
-        {gap()}
-        {meter('Context', u?.contextPercent ?? 0)}
-        {(u?.limits ?? []).map(l => (
-          <Box flexDirection="column">
-            {meter(limitLabel(l.kind), l.percentUsed)}
-            {l.resetsAt !== undefined && (
-              <Box flexDirection="row">
-                {label('')}
-                <Text color={C.flamingo}>{'resets '}</Text>
-                <Text color={C.text}>{countdown(Date.parse(l.resetsAt) - at)}</Text>
-              </Box>
-            )}
-          </Box>
-        ))}
-        {u?.costUsd !== undefined && row('Cost', '$' + u.costUsd.toFixed(2))}
-        {gap()}
-        {row('Uptime', (u ? duration(at - u.startedAt) : '…') + ` · ${t} turns`)}
-        {cachePercent !== undefined && row('Cache', percentText(cachePercent))}
-        {row('Compact', String(k))}
-        {row('Agents', a > 0 ? `${a} running` : 'none')}
-        {gap()}
-        {g ? (
-          <Box flexDirection="row">
-            {label('Git')}
-            <Text color={C.text}>{g.branch}</Text>
-            <Text color={C.green}>{'  +' + g.added}</Text>
-            <Text color={C.red}>{' -' + g.removed}</Text>
-          </Box>
-        ) : (
-          row('Git', 'not a repo')
-        )}
-        <Box flexDirection="row">
-          {label('Path')}
-          <Text color={C.text} wrap="truncate-start">
-            {p}
-          </Text>
-        </Box>
-        {gap()}
-        {v && (
-          <Box flexDirection="row">
-            {label('Version')}
-            <Text color={C.text}>{v.current}</Text>
-            {v.latest !== undefined && isNewer(v.latest, v.current) && (
-              <Text color={C.peach}>{'  ↑ ' + v.latest}</Text>
-            )}
-          </Box>
-        )}
+        {rows}
       </Box>
     )
   })

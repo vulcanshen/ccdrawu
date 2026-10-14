@@ -1,6 +1,6 @@
-# statusdrawer
+# ccdrawu
 
-[![License](https://img.shields.io/github/license/vulcanshen/claude-code-statusdrawer)](LICENSE)
+[![License](https://img.shields.io/github/license/vulcanshen/ccdrawu)](LICENSE)
 
 [繁體中文](README-zh_TW.md)
 
@@ -58,7 +58,7 @@ Version  2.1.299  ↑ 2.1.300
 At the Claude Code prompt:
 
 ```
-/plugin install statusdrawer --marketplace vulcanshen/claude-code-statusdrawer
+/plugin install ccdrawu --marketplace vulcanshen/ccdrawu
 ```
 
 Answer `y` to add the marketplace, then choose the user scope to have the drawer in every session.
@@ -66,22 +66,22 @@ Answer `y` to add the marketplace, then choose the user scope to have the drawer
 ## Usage
 
 - The drawer opens by itself when a session starts.
-- `/sdrawer` opens or closes it, even while Claude is working.
+- `/ccdrawu` opens or closes it, even while Claude is working.
 - Click the `×` at its top right to close it, or press `Ctrl+X Tab` to focus it and then `Ctrl+X X`.
 - `Ctrl+X ←` and `Ctrl+X →` make it wider or narrower while it has focus.
 
 ### A shorter command
 
-`/config` has a **Command alias** row for statusdrawer. Type a name such as `sdr`, and `/sdr` works as well as `/sdrawer`.
+`/config` has a **Command alias** row for ccdrawu. Type a name such as `ccd`, and `/ccd` works as well as `/ccdrawu`.
 
 ### Live vim mode (optional)
 
-A plugin cannot read whether vim is in INSERT or NORMAL mode, but a status line command can. statusdrawer ships a small one that draws nothing and passes the mode on. Point your status line at it in `~/.claude/settings.json`:
+A plugin cannot read whether vim is in INSERT or NORMAL mode, but a status line command can. ccdrawu ships a small one that draws nothing and passes the mode on. Point your status line at it in `~/.claude/settings.json`:
 
 ```json
 "statusLine": {
   "type": "command",
-  "command": "sh ~/.claude/statusdrawer/statusline.sh"
+  "command": "sh ~/.claude/ccdrawu/statusline.sh"
 }
 ```
 
@@ -105,7 +105,7 @@ Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` 
 
 ## Where it keeps things
 
-`~/.claude/statusdrawer/` holds the status line bridge (`statusline.sh`, copied there by the plugin) and one small file per session with its vim mode (`vim/`). Files untouched for a week are removed.
+`~/.claude/ccdrawu/` holds the status line bridge (`statusline.sh`, copied there by the plugin) and one small file per session with its vim mode (`vim/`). Files untouched for a week are removed.
 
 Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 
@@ -119,10 +119,10 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 ## Uninstall
 
 ```
-claude plugin uninstall statusdrawer@claude-code-statusdrawer
+claude plugin uninstall ccdrawu@ccdrawu
 ```
 
-Then remove the `statusLine` entry if you added it, and the `~/.claude/statusdrawer/` folder.
+Then remove the `statusLine` entry if you added it, and the `~/.claude/ccdrawu/` folder.
 
 ## More
 

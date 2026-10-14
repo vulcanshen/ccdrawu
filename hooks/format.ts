@@ -52,15 +52,15 @@ export function modeLabel(mode: string): string {
   return MODE_LABELS[mode] ?? mode
 }
 
-export function limitLabel(kind: string): string {
-  if (kind === 'five_hour') return 'Session'
-  if (kind === 'seven_day') return 'Weekly'
-  return kind
-}
-
 export function shortPath(path: string, home: string | undefined): string {
   if (home && (path === home || path.startsWith(home + '/'))) return '~' + path.slice(home.length)
   return path
+}
+
+// A text cut to `max` characters keeping its end: …roj/ccdrawu
+export function truncateStart(text: string, max: number): string {
+  const chars = [...text]
+  return chars.length <= max ? text : '…' + chars.slice(chars.length - max + 1).join('')
 }
 
 // `git diff --shortstat` prints " 3 files changed, 12 insertions(+), 3 deletions(-)"
@@ -82,9 +82,9 @@ export function isNewer(latest: string, current: string): boolean {
   return false
 }
 
-// The command is always /sdrawer; the alias setting adds one more name (a leading slash is dropped)
+// The command is always /ccdrawu; the alias setting adds one more name (a leading slash is dropped)
 export function commandNames(alias: unknown): string[] {
   const extra = typeof alias === 'string' ? alias.trim().replace(/^\/+/, '') : ''
-  if (extra === '' || extra === 'sdrawer' || !/^[a-z0-9][a-z0-9-]*$/i.test(extra)) return ['sdrawer']
-  return ['sdrawer', extra]
+  if (extra === '' || extra === 'ccdrawu' || !/^[a-z0-9][a-z0-9-]*$/i.test(extra)) return ['ccdrawu']
+  return ['ccdrawu', extra]
 }

@@ -1,0 +1,66 @@
+// Which items show where, from the config the TUI writes, and how they fall into columns above the prompt.
+// None touches `$`, so tests can call them.
+
+import type { Config } from '../types'
+import { truncateStart } from './format'
+import { C, ITEMS, type Item, type Seg, type View } from './items'
+
+export type Placement = 'dock' | 'inline'
+
+// ~/.claude/ccdrawu/config.json: { "dock": [ids], "inline": [ids] }. Undefined when it is not JSON,
+// as when caught half written: read it again on the next tick
+export function parseConfig(text: string): Config | undefined {
+  let raw: unknown
+  try {
+    raw = JSON.parse(text)
+  } catch {
+    return undefined
+  }
+  const config: Config = {}
+  if (typeof raw !== 'object' || raw === null) return config
+  for (const placement of ['dock', 'inline'] as const) {
+    const ids = (raw as Record<string, unknown>)[placement]
+    if (Array.isArray(ids)) config[placement] = ids.filter((id): id is string => typeof id === 'string')
+  }
+  return config
+}
+
+// In the catalog's order; a placement the config leaves out takes the catalog's defaults
+export function enabledItems(config: Config, placement: Placement): Item[] {
+  const ids = config[placement]
+  return ITEMS.filter(item => (ids === undefined ? item[placement] : ids.includes(item.id)))
+}
+
+const INLINE_PATH = 32 // above the prompt a path keeps its last 32 characters
+export const COLUMN_GAP = ' │ '
+
+// Above the prompt: no bars, the reset countdown after the percentage
+export function inlineValue(v: View): Seg[] {
+  const value = v.cutStart ? v.value.map(s => ({ ...s, text: truncateStart(s.text, INLINE_PATH) })) : v.value
+  if (v.resets === undefined) return value
+  return [...value, { text: ' · ', color: C.surface }, { text: v.resets, color: C.text }]
+}
+
+export function segWidth(segs: readonly Seg[]): number {
+  return segs.reduce((n, s) => n + [...s.text].length, 0)
+}
+
+// Above the prompt the items fill columns top to bottom, side by side: the fewest rows whose columns
+// fit in `width`, each column a key (its longest plus a space) and a value; one column when none fit
+export function columnRows(cells: readonly { label: number; value: number }[], width: number): number {
+  for (let rows = 1; rows < cells.length; rows++) {
+    let total = -COLUMN_GAP.length
+    for (let i = 0; i < cells.length; i += rows) {
+      const column = cells.slice(i, i + rows)
+      total += COLUMN_GAP.length + Math.max(...column.map(c => c.label)) + 1 + Math.max(...column.map(c => c.value))
+    }
+    if (total <= width) return rows
+  }
+  return Math.max(1, cells.length)
+}
+
+export function chunk<T>(list: readonly T[], size: number): T[][] {
+  const out: T[][] = []
+  for (let i = 0; i < list.length; i += size) out.push(list.slice(i, i + size))
+  return out
+}
