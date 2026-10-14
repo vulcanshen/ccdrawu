@@ -8,50 +8,45 @@
 
 ```
 Model    claude-opus-5-5
-Thinking xhigh
+Effort   xhigh
 Mode     auto
-Editor   vim · INSERT
-
-Context  ████████░░░░░░  65%
-Session  █░░░░░░░░░░░░░   6%
+Context  ▰▰▰▰▰▰▰▰▱▱▱▱▱▱  65%
+Session  ▰▱▱▱▱▱▱▱▱▱▱▱▱▱   6%
          resets 2h12m
-Weekly   ███░░░░░░░░░░░  23%
+Weekly   ▰▰▰▱▱▱▱▱▱▱▱▱▱▱  23%
          resets 3d17h
 Cost     $35.46
-
 Uptime   11h39m · 43 turns
 Cache    100%
 Compact  0
-Agents   none
-
+Tasks    none
 Git      main  +12 -3
 Path     ~/projects/app
-
-Version  2.1.299  ↑ 2.1.300
+Claude   2.1.299  ↑ 2.1.300
+ccdrawu  0.1.0
 ```
 
 ## 顯示的內容
 
 | 列 | 內容 |
 |---|---|
-| Model、Thinking | 這個 session 的模型和 effort 等級 |
+| Model、Effort | 這個 session 的模型，以及上一次請求的 effort 等級：`low` 綠色，一路到 `max` 紅色 |
 | Mode | 權限模式：`auto`、`plan`、`accept edits`… |
-| Editor | `vim` 或 `normal`；開了[狀態列轉接](#即時-vim-狀態選用)時，vim 會加上即時狀態 |
 | Context、Session、Weekly | context 用量，以及方案的 5 小時和每週用量與重置倒數。bar 在 50%、70%、90% 分別從綠變黃、橘、紅 |
 | Cost | 這個 session 到目前為止的花費 |
 | Uptime | session 開了多久、你送出了幾則訊息 |
 | Cache | 上一次請求有多少是從 prompt cache 讀的 |
 | Compact | 對話被壓縮過幾次 |
-| Agents | 正在執行的子 agent |
+| Tasks | 正在跑的 subagent，以及 Claude 上一次回覆結束時還在背景跑的 shell、monitor、workflow，各種類分別計數：`2 agents｜1 shell` |
 | Git、Path | branch 和增減行數、工作目錄 |
-| Version | 你的 Claude Code 版本，有新版時一併顯示 |
+| Claude、ccdrawu | 你的 Claude Code 版本（有新版時一併顯示），以及這個側邊欄自己的版本 |
 
 ## 需求
 
 - Claude Code 2.1.287 以上
 - fullscreen 渲染模式：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊
 - 終端機要夠寬：自動開啟的面板會等終端機寬到大約 110～144 欄才出現
-- `ccdrawu` 指令，用來挑側邊欄顯示的項目、以及即時 vim 狀態；它需要終端機用 [Nerd Font](https://www.nerdfonts.com)
+- `ccdrawu` 指令，用來挑側邊欄顯示的項目；它需要終端機用 [Nerd Font](https://www.nerdfonts.com)
 - macOS、Linux 或 Windows
 
 ## 安裝
@@ -96,19 +91,6 @@ scoop install ccdrawu
 
 別名存在 `~/.config/ccdrawu/config.json` 的 `"alias": "ccd"`，也可以直接改那裡。
 
-### 即時 vim 狀態（選用）
-
-外掛拿不到 vim 現在是 INSERT 還是 NORMAL，但狀態列程式拿得到。`ccdrawu statusline` 就是這樣一支程式，它不畫任何東西，只負責把狀態轉交過來。在 `~/.claude/settings.json` 把狀態列指向它：
-
-```json
-"statusLine": {
-  "type": "command",
-  "command": "ccdrawu statusline"
-}
-```
-
-這會取代你現在的狀態列。它不輸出任何東西，但原本狀態列的位置會留下一行空白。
-
 ### 讓底色跟終端機一樣
 
 側邊欄的底色由 Claude Code 的主題決定，不是外掛。要讓它跟終端機同色，在 `~/.claude/themes/` 建一個自訂主題，例如 `~/.claude/themes/my-theme.json`：
@@ -128,7 +110,7 @@ scoop install ccdrawu
 ## 資料存放位置
 
 - `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目和別名。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
-- `~/.ccdrawu/`：外掛寫的東西，`ccdrawu` 列出的項目清單（`catalog.json`），以及每個 session 一個記錄 vim 狀態的小檔案（`vim/`）；超過一週沒更新的檔案會自動刪除。`CCDRAWU__DATA` 可以改放別的資料夾。
+- `~/.ccdrawu/`：外掛寫的東西，`ccdrawu` 列出的項目清單（`catalog.json`）。`CCDRAWU__DATA` 可以改放別的資料夾。
 
 在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
 
@@ -147,7 +129,7 @@ scoop install ccdrawu
 claude plugin uninstall ccdrawu@ccdrawu
 ```
 
-再移除你加的 `statusLine` 設定，以及 `ccdrawu` 指令：
+再移除 `ccdrawu` 指令：
 
 ```sh
 # macOS / Linux

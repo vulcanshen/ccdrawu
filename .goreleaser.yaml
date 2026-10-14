@@ -54,8 +54,7 @@ brews:
       The drawer itself is a Claude Code plugin: in Claude Code, run
       /plugin install ccdrawu --marketplace vulcanshen/ccdrawu
       Then `ccdrawu` picks what it shows, and every open session follows
-      within a second. For vim's live mode, set Claude Code's statusLine
-      command to `ccdrawu statusline`.
+      within a second.
 
       Settings live in ~/.config/ccdrawu, what the drawer and ccdrawu
       share in ~/.ccdrawu. A Nerd Font terminal profile is required.

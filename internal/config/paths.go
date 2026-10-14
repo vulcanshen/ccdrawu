@@ -8,10 +8,9 @@ import (
 )
 
 // Locations are where ccdrawu keeps its files (tdp E3), the same places the mod
-// reads (hooks/paths.ts): Data is CCDRAWU__DATA, else ~/.ccdrawu (the status
-// line bridge, the catalog, vim's state per session); ConfigFile is
-// config.json in CCDRAWU__CONFIG, else $XDG_CONFIG_HOME/ccdrawu, else
-// ~/.config/ccdrawu. A variable set but empty counts as unset.
+// reads (hooks/paths.ts): Data is CCDRAWU__DATA, else ~/.ccdrawu (the catalog);
+// ConfigFile is config.json in CCDRAWU__CONFIG, else $XDG_CONFIG_HOME/ccdrawu,
+// else ~/.config/ccdrawu. A variable set but empty counts as unset.
 type Locations struct {
 	Data, ConfigFile string
 }

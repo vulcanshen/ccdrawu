@@ -16,9 +16,12 @@ export type CacheInfo = { read: number; total: number }
 
 export type VersionInfo = { current: string; latest?: string }
 
-// permission: the permission mode (auto, plan, ...); editor: settings' editorMode (vim / normal);
-// vim: vim's live state (INSERT, NORMAL, ...), passed on by the status line bridge
-export type Modes = { permission?: string; editor?: string; vim?: string }
+// permission: the permission mode (auto, plan, ...)
+export type Modes = { permission?: string }
+
+// The background work in flight as of Claude's last reply, counted by type (shell, monitor, workflow, ...);
+// subagents are counted live from $.agent.list() instead
+export type Background = Record<string, number>
 
 // The items on in each placement, as the TUI wrote them; one left out takes the catalog's defaults.
 // alias: one more name for /ccdrawu
@@ -35,7 +38,9 @@ declare module 'claude-code' {
       cache: CacheInfo | null
       compacts: number
       agents: number
+      background: Background
       version: VersionInfo | null
+      drawer: string | null
       modes: Modes
       now: number
       config: Config

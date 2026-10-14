@@ -3,7 +3,7 @@
 
 export type Env = { home: string; data?: string; config?: string; xdgConfig?: string }
 
-// data: CCDRAWU__DATA, else ~/.ccdrawu (the status line bridge, the catalog, vim's state per session);
+// data: CCDRAWU__DATA, else ~/.ccdrawu (the catalog);
 // configFile: config.json in CCDRAWU__CONFIG, else $XDG_CONFIG_HOME/ccdrawu, else ~/.config/ccdrawu.
 // A variable set but empty counts as unset
 export function locations(env: Env): { data: string; configFile: string } {

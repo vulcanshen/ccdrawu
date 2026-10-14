@@ -8,50 +8,45 @@
 
 ```
 Model    claude-opus-5-5
-Thinking xhigh
+Effort   xhigh
 Mode     auto
-Editor   vim · INSERT
-
-Context  ████████░░░░░░  65%
-Session  █░░░░░░░░░░░░░   6%
+Context  ▰▰▰▰▰▰▰▰▱▱▱▱▱▱  65%
+Session  ▰▱▱▱▱▱▱▱▱▱▱▱▱▱   6%
          resets 2h12m
-Weekly   ███░░░░░░░░░░░  23%
+Weekly   ▰▰▰▱▱▱▱▱▱▱▱▱▱▱  23%
          resets 3d17h
 Cost     $35.46
-
 Uptime   11h39m · 43 turns
 Cache    100%
 Compact  0
-Agents   none
-
+Tasks    none
 Git      main  +12 -3
 Path     ~/projects/app
-
-Version  2.1.299  ↑ 2.1.300
+Claude   2.1.299  ↑ 2.1.300
+ccdrawu  0.1.0
 ```
 
 ## What it shows
 
 | Row | What it is |
 |---|---|
-| Model, Thinking | The session's model and its effort level |
+| Model, Effort | The session's model, and the last request's effort level: green for `low` through red for `max` |
 | Mode | The permission mode: `auto`, `plan`, `accept edits`, … |
-| Editor | `vim` or `normal`; with vim, its live state when the [status line bridge](#live-vim-mode-optional) is on |
 | Context, Session, Weekly | How full the context window is, and your 5-hour and weekly plan limits with their reset countdowns. Bars turn green, yellow, peach, then red at 50%, 70% and 90% |
 | Cost | What the session has cost so far |
 | Uptime | How long the session has run, and how many prompts you sent |
 | Cache | How much of the last request the prompt cache served |
 | Compact | How many times the conversation was compacted |
-| Agents | Subagents running now |
+| Tasks | Subagents running now, and the shells, monitors and workflows still running in the background when Claude last replied, a count per type: `2 agents｜1 shell` |
 | Git, Path | The branch with its added and removed lines, and the working directory |
-| Version | Your Claude Code version, with the newest release when one is out |
+| Claude, ccdrawu | Your Claude Code version, with the newest release when one is out, and this drawer's version |
 
 ## Requirements
 
 - Claude Code 2.1.287 or later
 - Fullscreen rendering: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript
 - A terminal wide enough for a sidebar: a pane opened on its own waits until the terminal is about 110–144 columns wide
-- The `ccdrawu` command, to pick what the drawer shows and for the live vim mode; it needs a [Nerd Font](https://www.nerdfonts.com) in your terminal
+- The `ccdrawu` command, to pick what the drawer shows; it needs a [Nerd Font](https://www.nerdfonts.com) in your terminal
 - macOS, Linux or Windows
 
 ## Install
@@ -96,19 +91,6 @@ Run `ccdrawu`, move to **alias** under Settings, press `Enter` twice, and type a
 
 The alias is kept in `~/.config/ccdrawu/config.json` as `"alias": "ccd"`, so you can also set it there.
 
-### Live vim mode (optional)
-
-A plugin cannot read whether vim is in INSERT or NORMAL mode, but a status line command can. `ccdrawu statusline` is one that draws nothing and passes the mode on. Point your status line at it in `~/.claude/settings.json`:
-
-```json
-"statusLine": {
-  "type": "command",
-  "command": "ccdrawu statusline"
-}
-```
-
-This replaces any status line you have now. It prints nothing, but Claude Code keeps an empty line where the status line was.
-
 ### Match the background
 
 The drawer's background comes from your Claude Code theme, not from the plugin. To make it the same color as your terminal, create a custom theme in `~/.claude/themes/`, for example `~/.claude/themes/my-theme.json`:
@@ -128,7 +110,7 @@ Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` 
 ## Where it keeps things
 
 - `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`, the items and the alias. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
-- `~/.ccdrawu/`: what the plugin writes, the list of items `ccdrawu` offers (`catalog.json`), and one small file per session with its vim mode (`vim/`); files untouched for a week are removed. `CCDRAWU__DATA` names another folder for it.
+- `~/.ccdrawu/`: what the plugin writes, the list of items `ccdrawu` offers (`catalog.json`). `CCDRAWU__DATA` names another folder for it.
 
 On Windows, `~` is your user folder (`%USERPROFILE%`).
 
@@ -147,7 +129,7 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 claude plugin uninstall ccdrawu@ccdrawu
 ```
 
-Then remove the `statusLine` entry if you added it, and the `ccdrawu` command:
+Then remove the `ccdrawu` command:
 
 ```sh
 # macOS / Linux

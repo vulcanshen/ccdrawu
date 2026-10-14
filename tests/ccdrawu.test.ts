@@ -3,18 +3,21 @@ import { expect, test } from 'claude-code/testing'
 import {
   bar,
   commandNames,
+  countBackground,
   countdown,
   duration,
+  effortColor,
   isNewer,
   modeLabel,
   parseShortstat,
   shortPath,
+  tasksText,
   truncateStart,
   usageColor,
 } from '../hooks/format'
 import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
-import { columnRows, enabledItems, inlineValue, parseConfig } from '../hooks/layout'
+import { cellWidth, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from '../hooks/layout'
 import { locations } from '../hooks/paths'
 
 const PANE = {
@@ -52,8 +55,10 @@ const FULL: Snapshot = {
   cache: { read: 92, total: 100 },
   compacts: 1,
   agents: 2,
+  background: { shell: 1 },
   version: { current: '2.1.299', latest: '2.1.300' },
-  modes: { permission: 'auto', editor: 'vim', vim: 'INSERT' },
+  drawer: '0.1.0',
+  modes: { permission: 'auto' },
   now: 60_000,
 }
 
@@ -66,9 +71,9 @@ test('reset countdowns read as days, hours or minutes', async () => {
 })
 
 test('the bar fills in proportion and keeps its width', async () => {
-  expect(bar(50, 10)).toEqual({ filled: '█████', empty: '░░░░░' })
-  expect(bar(130, 4)).toEqual({ filled: '████', empty: '' })
-  expect(bar(-5, 4)).toEqual({ filled: '', empty: '░░░░' })
+  expect(bar(50, 10)).toEqual({ filled: '▰▰▰▰▰', empty: '▱▱▱▱▱' })
+  expect(bar(130, 4)).toEqual({ filled: '▰▰▰▰', empty: '' })
+  expect(bar(-5, 4)).toEqual({ filled: '', empty: '▱▱▱▱' })
 })
 
 test('usage turns green, yellow, peach, then red', async () => {
@@ -78,6 +83,17 @@ test('usage turns green, yellow, peach, then red', async () => {
   expect(usageColor(70)).toBe('#fab387')
   expect(usageColor(89)).toBe('#fab387')
   expect(usageColor(90)).toBe('#f38ba8')
+})
+
+test('effort turns from green at low to red at max', async () => {
+  expect(['low', 'medium', 'high', 'xhigh', 'max'].map(effortColor)).toEqual([
+    '#a6e3a1',
+    '#f9e2af',
+    '#fab387',
+    '#eba0ac',
+    '#f38ba8',
+  ])
+  expect(effortColor('16000')).toBe('#89dceb')
 })
 
 test('git shortstat, paths, modes and versions are read as shown', async () => {
@@ -129,6 +145,34 @@ test('every catalog item has a unique id, a short key and something to show', as
   expect(view('no-such-item', FULL)).toBeUndefined()
 })
 
+test('tasks count subagents live and the rest of the background by type, parted by ｜', async () => {
+  const reported = [
+    { type: 'shell' },
+    { type: 'subagent' },
+    { type: 'shell' },
+    { type: 'workflow' },
+    { type: 'MCP task' },
+  ]
+  expect(countBackground(reported)).toEqual({ shell: 2, workflow: 1, 'MCP task': 1 })
+  expect(tasksText(2, { shell: 1 })).toBe('2 agents｜1 shell')
+  expect(tasksText(1, { workflow: 1, 'MCP task': 2, shell: 2, monitor: 1 })).toBe(
+    '1 agent｜2 shells｜1 monitor｜1 workflow｜2 MCP tasks',
+  )
+  expect(tasksText(0, { shell: 0 })).toBe('none')
+  expect(tasksText(0, {})).toBe('none')
+  // ｜ and CJK take two cells, so columns above the prompt still line up
+  expect(cellWidth('2 agents｜1 shell')).toBe(17)
+  expect(cellWidth('~/專案')).toBe(6)
+  expect(segWidth([{ text: '1 agent｜', color: '' }, { text: 'ab', color: '' }])).toBe(11)
+})
+
+test('Claude Code and ccdrawu have a version row each', async () => {
+  const shown = (id: string, s: Snapshot) => view(id, s)?.value.map(g => g.text).join('')
+  expect(shown('version', FULL)).toBe('2.1.299  ↑ 2.1.300')
+  expect(shown('ccdrawu', FULL)).toBe('0.1.0')
+  expect(shown('ccdrawu', { ...FULL, drawer: null })).toBeUndefined()
+})
+
 test('files sit where terminu design E3 puts them, unless CCDRAWU__ variables say otherwise', async () => {
   expect(locations({ home: '/h' })).toEqual({ data: '/h/.ccdrawu', configFile: '/h/.config/ccdrawu/config.json' })
   expect(locations({ home: '/h', xdgConfig: '/x', data: '' })).toEqual({ data: '/h/.ccdrawu', configFile: '/x/ccdrawu/config.json' })
@@ -165,7 +209,9 @@ test('the pane draws on the terminal before any figures arrive, a key on every r
   for (const key of ['Model', 'Context', 'Uptime', 'Git', 'Path']) {
     expect(await ui.find({ type: 'Text', text: new RegExp('^' + key + ' ') })).toBeDefined()
   }
-  expect(await ui.find({ type: 'Text', text: /█|░/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /▰|▱/ })).toBeDefined()
+  // One row after another: no blank row between groups
+  expect(await ui.find({ type: 'Text', text: /^ $/ })).toBeUndefined()
   expect((await ui.find({ type: 'Box' }))?.props.backgroundColor).toBeUndefined()
   await ui.unmount()
 })
@@ -173,7 +219,7 @@ test('the pane draws on the terminal before any figures arrive, a key on every r
 test('above the prompt the pane draws columns of text with no bars', async $ => {
   const ui = await $.ui.mount({ ...MOUNT, props: { ...PANE, placement: 'inline', bodyColumns: 100 } })
   expect(await ui.find({ type: 'Text', text: /│/ })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /█|░/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /▰|▱/ })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: /^Context / })).toBeDefined()
   await ui.unmount()
 })

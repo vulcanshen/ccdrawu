@@ -1,9 +1,9 @@
 import { atom, read, update } from 'claude-code'
 import type { EngineInterface as Engine, Register } from 'claude-code'
 
-import type { CacheInfo, Config, GitInfo, ModelInfo, Modes, Usage, VersionInfo } from '../types'
+import type { Background, CacheInfo, Config, GitInfo, ModelInfo, Modes, Usage, VersionInfo } from '../types'
 import { registerCommands } from './commands'
-import { bar, parseShortstat, percentText, shortPath, usageColor } from './format'
+import { bar, countBackground, parseShortstat, percentText, shortPath, usageColor } from './format'
 import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
 import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from './layout'
 import { locations } from './paths'
@@ -20,7 +20,9 @@ const turns = atom({ plugin: 'ccdrawu', key: 'turns' } as const, 0)
 const cache = atom({ plugin: 'ccdrawu', key: 'cache' } as const, null as CacheInfo | null)
 const compacts = atom({ plugin: 'ccdrawu', key: 'compacts' } as const, 0)
 const agents = atom({ plugin: 'ccdrawu', key: 'agents' } as const, 0)
+const background = atom({ plugin: 'ccdrawu', key: 'background' } as const, {} as Background)
 const version = atom({ plugin: 'ccdrawu', key: 'version' } as const, null as VersionInfo | null)
+const drawer = atom({ plugin: 'ccdrawu', key: 'drawer' } as const, null as string | null)
 const modes = atom({ plugin: 'ccdrawu', key: 'modes' } as const, {} as Modes)
 const now = atom({ plugin: 'ccdrawu', key: 'now' } as const, 0)
 const config = atom({ plugin: 'ccdrawu', key: 'config' } as const, {} as Config)
@@ -57,18 +59,9 @@ async function refreshModelName($: Engine) {
   await update($, model, m => ({ name, effort: m?.effort ?? configured }))
 }
 
-// Whether vim is on is settings' editorMode
-async function refreshEditor($: Engine) {
-  const { editorMode } = (await $.settings.read()) as unknown as { editorMode?: string }
-  await update($, modes, m => ({ ...m, editor: editorMode ?? 'normal' }))
-}
-
-// A mod cannot read vim's live state (INSERT / NORMAL). `ccdrawu statusline`, run as the status line,
-// writes vim.mode to <data>/vim/<session id> each time the status line runs; this reads it
 let home: string | undefined
 let dataDir: string | undefined
 let configFile: string | undefined
-let vimFile: string | undefined
 
 async function locateFiles($: Engine) {
   // Windows has USERPROFILE, and often no HOME; the TUI's os.UserHomeDir reads them in this order too
@@ -82,8 +75,6 @@ async function locateFiles($: Engine) {
   })
   dataDir = found.data
   configFile = found.configFile
-  const id = (await $.session.id()).replace(/\.jsonl$/, '')
-  vimFile = `${dataDir}/vim/${id}`
 }
 
 // Write `text` to <data>/<name> unless it already holds it
@@ -119,13 +110,6 @@ async function refreshConfig($: Engine) {
   configStamp = stamp
   await update($, config, () => parsed)
   await registerCommands(spec => $.command.register(spec), commands, parsed.alias)
-}
-
-async function refreshVim($: Engine) {
-  if (vimFile === undefined) return
-  const state = (await $.fs.read(vimFile)).trim() || undefined
-  if ((await read($, modes)).vim === state) return
-  await update($, modes, m => ({ ...m, vim: state }))
 }
 
 // No API reports the permission mode; Claude Code's own hook events carry permission_mode,
@@ -170,6 +154,12 @@ async function refreshVersion($: Engine) {
   await update($, version, () => ({ current, latest }))
 }
 
+// $.plugin has no version: read this plugin's own plugin.json
+async function refreshDrawer($: Engine) {
+  const manifest = JSON.parse(await $.fs.read(`${$.plugin.root}/.claude-plugin/plugin.json`)) as { version?: string }
+  await update($, drawer, () => manifest.version ?? null)
+}
+
 // A failed background refresh (git timing out, offline for the version check) affects its row alone
 function quietly(work: Promise<unknown>) {
   void work.catch(() => undefined)
@@ -186,10 +176,10 @@ export const register: Register = on => {
     quietly(refreshConfig($))
     quietly(refreshUsage($))
     quietly(refreshModelName($))
-    quietly(refreshEditor($))
     quietly(refreshGit($))
     quietly(refreshAgents($))
     quietly(refreshVersion($))
+    quietly(refreshDrawer($))
     quietly(refreshTurns($))
 
     // Countdowns and uptime every 30 seconds; git, path and subagents every 5; the latest version every 6 hours
@@ -199,8 +189,6 @@ export const register: Register = on => {
       quietly(refreshAgents($))
     })
     $.clock.every(6 * 60 * 60_000, () => quietly(refreshVersion($)))
-    // vim: the status line already waits 300ms to batch changes, so reading every half second is enough
-    $.clock.every(500, () => quietly(refreshVim($)))
     $.clock.every(1_000, () => quietly(refreshConfig($)))
 
     // In a terminal too narrow for a sidebar the engine holds the pane until it widens
@@ -297,6 +285,7 @@ export const register: Register = on => {
   on('classic.Stop', async ($, e, next) => {
     const result = await next(e)
     quietly(rememberMode($, e))
+    if (e.agent_id === undefined) quietly(update($, background, () => countBackground(e.background_tasks ?? [])))
     return result
   }).catch(($, e, next) => next(e))
 
@@ -315,7 +304,9 @@ export const register: Register = on => {
       cache: await read($, cache),
       compacts: await read($, compacts),
       agents: await read($, agents),
+      background: await read($, background),
       version: await read($, version),
+      drawer: await read($, drawer),
       modes: await read($, modes),
       now: await read($, now),
     }
@@ -368,9 +359,15 @@ export const register: Register = on => {
       )
     }
 
-    // Beside the transcript: a key column, bars for meters, a blank row between groups
+    // Beside the transcript: a key column and bars for meters, one row after another
     const barWidth = Math.max(4, inner - LABEL - 5)
-    const label = (text: string) => <Text color={C.blue}>{text.padEnd(LABEL)}</Text>
+    // The key keeps its width: a value too long for the row (a path) would squeeze it, and its padding
+    // would wrap to an empty second row
+    const label = (text: string) => (
+      <Box flexShrink={0}>
+        <Text color={C.blue}>{text.padEnd(LABEL)}</Text>
+      </Box>
+    )
     const dockRow = (key: string, v: View) => {
       if (v.meter !== undefined) {
         const b = bar(v.meter, barWidth)
@@ -398,10 +395,7 @@ export const register: Register = on => {
     }
 
     const rows = []
-    let group: string | undefined
     for (const { item, view: v } of shown) {
-      if (group !== undefined && item.group !== group) rows.push(<Text> </Text>)
-      group = item.group
       rows.push(dockRow(item.label, v))
       if (v.resets !== undefined) {
         rows.push(

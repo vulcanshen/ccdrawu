@@ -43,16 +43,15 @@ if ($env:CCDRAWU__CONFIG) {
 }
 Ask-Remove $configDir "ccdrawu settings (the drawer's items and the alias)"
 
-# What the plugin writes: the catalog and vim's state per session
+# What the plugin writes: the catalog.
 if ($env:CCDRAWU__DATA) {
     $dataDir = $env:CCDRAWU__DATA
 } else {
     $dataDir = Join-Path $env:USERPROFILE ".ccdrawu"
 }
-Ask-Remove $dataDir "ccdrawu data (the catalog and vim's state)"
+Ask-Remove $dataDir "ccdrawu data (the catalog)"
 
 Write-Host ""
 Write-Host "ccdrawu uninstalled. Restart your terminal for PATH changes to take effect." -ForegroundColor Green
 Write-Host "The drawer itself is a Claude Code plugin: remove it in Claude Code with" -ForegroundColor Cyan
-Write-Host "/plugin uninstall ccdrawu, and the statusLine entry in" -ForegroundColor Cyan
-Write-Host "%USERPROFILE%\.claude\settings.json if you pointed it at 'ccdrawu statusline'." -ForegroundColor Cyan
+Write-Host "/plugin uninstall ccdrawu." -ForegroundColor Cyan

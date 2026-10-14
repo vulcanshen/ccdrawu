@@ -43,8 +43,28 @@ export function inlineValue(v: View): Seg[] {
   return [...value, { text: ' · ', color: C.surface }, { text: v.resets, color: C.text }]
 }
 
+// Cells a text takes on the terminal: East Asian wide and fullwidth characters (CJK, the ｜ between
+// task counts) take two, the rest one
+export function cellWidth(text: string): number {
+  let n = 0
+  for (const ch of text) {
+    const c = ch.codePointAt(0) ?? 0
+    const wide =
+      (c >= 0x1100 && c <= 0x115f) ||
+      (c >= 0x2e80 && c <= 0xa4cf) ||
+      (c >= 0xac00 && c <= 0xd7a3) ||
+      (c >= 0xf900 && c <= 0xfaff) ||
+      (c >= 0xfe30 && c <= 0xfe4f) ||
+      (c >= 0xff00 && c <= 0xff60) ||
+      (c >= 0xffe0 && c <= 0xffe6) ||
+      (c >= 0x20000 && c <= 0x3fffd)
+    n += wide ? 2 : 1
+  }
+  return n
+}
+
 export function segWidth(segs: readonly Seg[]): number {
-  return segs.reduce((n, s) => n + [...s.text].length, 0)
+  return segs.reduce((n, s) => n + cellWidth(s.text), 0)
 }
 
 // Above the prompt the items fill columns top to bottom, side by side: the fewest rows whose columns

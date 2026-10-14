@@ -52,10 +52,9 @@ else
 fi
 ask "$CONFIG_DIR" "ccdrawu settings (the drawer's items and the alias)"
 
-# What the plugin writes: the catalog and vim's state per session.
-ask "${CCDRAWU__DATA:-$HOME/.ccdrawu}" "ccdrawu data (the catalog and vim's state)"
+# What the plugin writes: the catalog.
+ask "${CCDRAWU__DATA:-$HOME/.ccdrawu}" "ccdrawu data (the catalog)"
 
 echo ""
 echo "ccdrawu uninstalled. The drawer itself is a Claude Code plugin: remove it"
-echo "in Claude Code with /plugin uninstall ccdrawu, and the statusLine entry"
-echo "in ~/.claude/settings.json if you pointed it at 'ccdrawu statusline'."
+echo "in Claude Code with /plugin uninstall ccdrawu."

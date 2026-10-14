@@ -23,7 +23,7 @@ export function duration(ms: number): string {
 // A bar's filled and empty parts, `width` cells in all
 export function bar(percent: number, width: number): { filled: string; empty: string } {
   const n = Math.round((Math.min(100, Math.max(0, percent)) / 100) * width)
-  return { filled: '█'.repeat(n), empty: '░'.repeat(width - n) }
+  return { filled: '▰'.repeat(n), empty: '▱'.repeat(width - n) }
 }
 
 export function percentText(percent: number): string {
@@ -36,6 +36,44 @@ export function usageColor(percent: number): string {
   if (percent < 70) return '#f9e2af'
   if (percent < 90) return '#fab387'
   return '#f38ba8'
+}
+
+// The background work a reply's end reports, counted by type; subagents are left to $.agent.list(),
+// which follows them live
+export function countBackground(tasks: readonly { type: string }[]): Record<string, number> {
+  const counts: Record<string, number> = {}
+  for (const t of tasks) if (t.type !== 'subagent') counts[t.type] = (counts[t.type] ?? 0) + 1
+  return counts
+}
+
+const TASK_ORDER = ['shell', 'monitor', 'workflow']
+
+// What runs in the background, a count per type: "2 agents｜1 shell"; "none" when nothing does
+export function tasksText(agents: number, background: Readonly<Record<string, number>>): string {
+  const rank = (type: string) => (TASK_ORDER.includes(type) ? TASK_ORDER.indexOf(type) : TASK_ORDER.length)
+  const types = Object.keys(background).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
+  const parts = [['agent', agents] as const, ...types.map(t => [t, background[t] ?? 0] as const)]
+    .filter(([, n]) => n > 0)
+    .map(([type, n]) => `${n} ${type}${n === 1 ? '' : 's'}`)
+  return parts.length > 0 ? parts.join('｜') : 'none'
+}
+
+// Effort color (Catppuccin Mocha), low to max: green, yellow, peach, maroon, red; anything else (an
+// integer budget, a level added later) sky
+export function effortColor(effort: string): string {
+  switch (effort) {
+    case 'low':
+      return '#a6e3a1'
+    case 'medium':
+      return '#f9e2af'
+    case 'high':
+      return '#fab387'
+    case 'xhigh':
+      return '#eba0ac'
+    case 'max':
+      return '#f38ba8'
+  }
+  return '#89dceb'
 }
 
 const MODE_LABELS: Record<string, string> = {
