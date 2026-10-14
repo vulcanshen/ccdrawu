@@ -8,6 +8,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/vulcanshen/ccdrawu/internal/claude"
 	"github.com/vulcanshen/ccdrawu/internal/config"
 	terminu "github.com/vulcanshen/terminu-go"
 )
@@ -25,14 +26,22 @@ type drawer struct {
 	detail *terminu.Panel
 	pages  map[string]*terminu.Values // [2]'s body for each row of [1]
 	fail   *terminu.Failure           // what an empty page of items says
+
+	theme      *terminu.Field // the theme's radio, set back to off by an uninstall
+	background *terminu.Field // the drawer background, which x resets
+	run        claude.Run     // what runs `claude plugin ...`
+	plugin     string         // the plugin row's value; "" while it is being found
+	pluginID   string         // the plugin's id in Claude Code, "" when not there
+	busy       bool           // an install or uninstall under way
 }
 
-// The rows of [1]: the drawer beside the transcript and above the prompt,
-// then the command's alias
+// The rows of [1]: the drawer beside the transcript and above the prompt, then
+// the preferences, every setting on one page (the alias here, the rest in
+// settings.go)
 const (
-	rowSidebar = "sidebar"
-	rowInline  = "inline"
-	rowAlias   = "alias"
+	rowSidebar     = "sidebar"
+	rowInline      = "inline"
+	rowPreferences = "preferences"
 )
 
 var placements = map[string]config.Placement{rowSidebar: config.Dock, rowInline: config.Inline}
@@ -43,14 +52,14 @@ type catalogTick struct{}
 
 // Run opens the TUI on the files in loc.
 func Run(loc config.Locations) error {
-	d, err := newDrawer(loc)
+	d, err := newDrawer(loc, claude.Exec)
 	if err != nil {
 		return err
 	}
 	return d.app.Run()
 }
 
-func newDrawer(loc config.Locations) (*drawer, error) {
+func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	cfg, err := config.ReadConfig(loc.ConfigFile)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", loc.ConfigFile, err)
@@ -58,34 +67,36 @@ func newDrawer(loc config.Locations) (*drawer, error) {
 	d := &drawer{
 		loc: loc,
 		cfg: cfg,
+		run: run,
 		pages: map[string]*terminu.Values{
 			rowSidebar: {},
 			rowInline:  {},
 		},
 		fail: &terminu.Failure{
 			Fact: "Nothing to list until ccdrawu runs in Claude Code",
-			Hint: "Run ccdrawu install, then start Claude Code",
+			Hint: "Run ccdrawu install claude, then start Claude Code",
 		},
 	}
 	a := terminu.New("ccdrawu")
 	a.Splash = splash()
 	a.Status = d.status
 	a.OnMsg = d.onMsg
-	a.Start = func() tea.Cmd { return d.reload() }
+	a.Start = func() tea.Cmd { return tea.Batch(d.reload(), d.checkPlugin()) }
 	d.app = a
-	d.pages[rowAlias] = &terminu.Values{Fields: []*terminu.Field{d.aliasField()}}
+	d.theme, d.background = d.themeField(), d.backgroundField()
+	d.pages[rowPreferences] = &terminu.Values{Fields: []*terminu.Field{d.aliasField(), d.theme, d.background, d.pluginField()}}
 
 	list := &terminu.List{}
 	list.SetRows([]terminu.Row{
 		{ID: rowSidebar, Cells: []string{rowSidebar}, Group: "Drawer"},
 		{ID: rowInline, Cells: []string{rowInline}, Group: "Drawer"},
-		{ID: rowAlias, Cells: []string{rowAlias}, Group: "Settings"},
+		{ID: rowPreferences, Cells: []string{rowPreferences}, Group: "Settings"},
 	})
 	list.OnMove = func(r terminu.Row) tea.Cmd {
 		d.show(r.ID)
 		return nil
 	}
-	d.detail = &terminu.Panel{}
+	d.detail = &terminu.Panel{Actions: []terminu.Action{d.resetBackground()}}
 	d.show(rowSidebar)
 	// Enter goes into the row's page in [2]: the one change of panels Enter
 	// makes (tdp v0.6.3 K3, details). Every row has a page.
@@ -147,8 +158,13 @@ func (d *drawer) reload() tea.Cmd {
 }
 
 func (d *drawer) onMsg(msg tea.Msg) tea.Cmd {
-	if _, ok := msg.(catalogTick); ok {
+	switch m := msg.(type) {
+	case catalogTick:
 		return d.reload()
+	case pluginChecked:
+		d.pluginChecked(m)
+	case pluginDone:
+		return d.pluginDone(m)
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package ui
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"slices"
@@ -11,6 +12,7 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/vulcanshen/ccdrawu/internal/claude"
 	"github.com/vulcanshen/ccdrawu/internal/config"
 	terminu "github.com/vulcanshen/terminu-go"
 )
@@ -22,18 +24,50 @@ var testCatalog = config.Catalog{Version: 1, Items: []config.Item{
 	{ID: "git", Label: "Git", Name: "Git branch and changes", Group: "Workspace", Dock: false, Inline: true},
 }}
 
+// claudeFake answers `claude plugin ...` as Claude Code does, and keeps what ran
+type claudeFake struct {
+	installed bool
+	ran       []string
+}
+
+func (f *claudeFake) run(name string, args ...string) ([]byte, error) {
+	line := strings.Join(args, " ")
+	f.ran = append(f.ran, line)
+	switch {
+	case strings.HasPrefix(line, "plugin list"):
+		if f.installed {
+			return []byte(`[{"id": "ccdrawu@ccdrawu", "enabled": true}]`), nil
+		}
+		return []byte(`[]`), nil
+	case strings.HasPrefix(line, "plugin install"):
+		f.installed = true
+		return []byte(`{"outcome": "ok", "message": "Installed ccdrawu"}`), nil
+	case strings.HasPrefix(line, "plugin uninstall"), strings.HasPrefix(line, "plugin marketplace remove"):
+		f.installed = false
+		return []byte(`{"outcome": "ok", "message": "Uninstalled ccdrawu"}`), nil
+	}
+	return nil, errors.New("no answer for " + line)
+}
+
+// newTestDrawer opens the TUI on files in a temporary folder: a catalog, and a
+// Claude Code folder whose settings.json selects the dark theme
 func newTestDrawer(t *testing.T) (*drawer, config.Locations) {
 	t.Helper()
 	dir := t.TempDir()
-	loc := config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.json")}
-	if err := os.MkdirAll(loc.Data, 0o755); err != nil {
-		t.Fatal(err)
+	loc := config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.json"), Claude: filepath.Join(dir, "claude")}
+	for _, d := range []string{loc.Data, loc.Claude} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
 	}
 	data, _ := json.Marshal(testCatalog)
 	if err := os.WriteFile(filepath.Join(loc.Data, "catalog.json"), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	d, err := newDrawer(loc)
+	if err := os.WriteFile(filepath.Join(loc.Claude, "settings.json"), []byte("{\n  \"theme\": \"dark\"\n}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := newDrawer(loc, (&claudeFake{}).run)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -110,7 +144,7 @@ func TestEnterTogglesAndSavesAtOnce(t *testing.T) {
 
 func TestNoCatalogSaysWhatToDo(t *testing.T) {
 	dir := t.TempDir()
-	d, err := newDrawer(config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config.json")})
+	d, err := newDrawer(config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config.json")}, (&claudeFake{}).run)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -135,14 +169,22 @@ func TestDetailFollowsTheSidebar(t *testing.T) {
 		t.Fatalf("[2] is %q after j, want inline", d.detail.Label)
 	}
 	d.app.Update(key("j")) // over the SETTINGS title
-	if text := frameText(d); d.detail.Label != rowAlias || !strings.Contains(text, "[2] ALIAS") || !strings.Contains(text, "none") {
-		t.Fatalf("[2] is %q after j j, want alias, none set:\n%s", d.detail.Label, text)
+	text = frameText(d)
+	if d.detail.Label != rowPreferences || !strings.Contains(text, "[2] PREFERENCES") {
+		t.Fatalf("[2] is %q after j j, want preferences:\n%s", d.detail.Label, text)
+	}
+	// Every setting on that one page
+	for _, want := range []string{"ALIAS", "none", "CLAUDE THEME", "DRAWER BACKGROUND", "PLUGIN"} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("no %q on the preferences page:\n%s", want, text)
+		}
 	}
 }
 
 func TestAliasIsCheckedAndSaved(t *testing.T) {
 	d, loc := newTestDrawer(t)
-	press(d, key("G")) // the last row: alias
+	press(d, key("j"))
+	press(d, key("j")) // sidebar, inline, preferences; its first field is the alias
 	press(d, tea.KeyMsg{Type: tea.KeyTab})
 	edit := func(v string) {
 		press(d, tea.KeyMsg{Type: tea.KeyEnter})
@@ -160,6 +202,100 @@ func TestAliasIsCheckedAndSaved(t *testing.T) {
 	edit("/ccd")
 	if c, _ := config.ReadConfig(loc.ConfigFile); c.Alias != "ccd" {
 		t.Fatalf("alias = %q, want ccd", c.Alias)
+	}
+}
+
+func claudeTheme(t *testing.T, loc config.Locations) string {
+	t.Helper()
+	var s struct{ Theme string }
+	data, _ := os.ReadFile(filepath.Join(loc.Claude, "settings.json"))
+	if err := json.Unmarshal(data, &s); err != nil {
+		t.Fatalf("settings.json: %v\n%s", err, data)
+	}
+	return s.Theme
+}
+
+func TestThemeGoesIntoClaudeCodeAndBack(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	for range 2 { // sidebar, inline, preferences
+		press(d, key("j"))
+	}
+	if d.detail.Label != rowPreferences {
+		t.Fatalf("[2] is %q, want preferences", d.detail.Label)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	for range 6 { // alias, then the theme's off, dark, light, dark-daltonized, light-daltonized, dark-ansi
+		press(d, key("j"))
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if got := claudeTheme(t, loc); got != claude.ThemeSetting {
+		t.Fatalf("Claude Code's theme = %q, want %q", got, claude.ThemeSetting)
+	}
+	c, _ := config.ReadConfig(loc.ConfigFile)
+	if c.Theme.Base != "dark-ansi" || c.Theme.Before != "dark" {
+		t.Fatalf("theme kept as %+v, want dark-ansi over the dark it replaced", c.Theme)
+	}
+	if _, err := os.Stat(filepath.Join(loc.Claude, "themes", "ccdrawu.json")); err != nil {
+		t.Fatal("no themes/ccdrawu.json:", err)
+	}
+
+	for range 5 {
+		press(d, key("k"))
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if got := claudeTheme(t, loc); got != "dark" {
+		t.Fatalf("Claude Code's theme = %q after off, want dark back", got)
+	}
+}
+
+func TestXResetsTheBackground(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	d.cfg.Theme = config.Theme{Base: "dark-ansi", Background: "#ff0000"}
+	d.applyTheme()
+	for range 2 { // to preferences
+		press(d, key("j"))
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	for range 8 { // past the alias and the theme's 7 options
+		press(d, key("j"))
+	}
+	if d.pages[rowPreferences].Current() != d.background {
+		t.Fatalf("the cursor is not on the background:\n%s", frameText(d))
+	}
+	press(d, key("x"))
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Theme.Background != "" || c.Theme.Base != "dark-ansi" {
+		t.Fatalf("theme kept as %+v, want dark-ansi with no background", c.Theme)
+	}
+	raw, _ := os.ReadFile(filepath.Join(loc.Claude, "themes", "ccdrawu.json"))
+	if strings.Contains(string(raw), "composerSidebarBackground") {
+		t.Fatalf("themes/ccdrawu.json still sets the background:\n%s", raw)
+	}
+}
+
+func TestPluginRowInstallsAfterAsking(t *testing.T) {
+	t.Setenv("CCDRAWU__MARKETPLACE", "")
+	d, _ := newTestDrawer(t)
+	f := &claudeFake{}
+	d.run = f.run
+	d.app.Update(d.checkPlugin()())
+	if d.plugin != "not installed" {
+		t.Fatalf("plugin row = %q, want not installed", d.plugin)
+	}
+	for range 2 { // to preferences
+		press(d, key("j"))
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // into [2]
+	press(d, key("G"))                       // the last field: the plugin
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // the confirm
+	if !f.installed && slices.Contains(f.ran, "plugin install ccdrawu --marketplace vulcanshen/ccdrawu --json") {
+		t.Fatal("installed before the confirm was answered")
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // install
+	if !slices.Contains(f.ran, "plugin install ccdrawu --marketplace vulcanshen/ccdrawu --json") {
+		t.Fatalf("ran %q, want the install:\n%s", f.ran, frameText(d))
+	}
+	if d.plugin != "installed" {
+		t.Fatalf("plugin row = %q after installing, want installed", d.plugin)
 	}
 }
 

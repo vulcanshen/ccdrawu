@@ -58,6 +58,6 @@ Write-Host ""
 Write-Host "ccdrawu $version installed successfully!" -ForegroundColor Green
 Write-Host "ccdrawu draws with Nerd Font glyphs: use a Nerd Font in your terminal profile." -ForegroundColor Yellow
 Write-Host ""
-Write-Host "The drawer itself is a Claude Code plugin. In Claude Code, run:" -ForegroundColor Cyan
-Write-Host "  /plugin install ccdrawu --marketplace $repo"
-Write-Host "Then run 'ccdrawu' to pick what it shows." -ForegroundColor Cyan
+Write-Host "Run 'ccdrawu install claude' to add the drawer to Claude Code," -ForegroundColor Cyan
+Write-Host "then 'ccdrawu' to pick what it shows." -ForegroundColor Cyan
+Write-Host "(In a new terminal: PATH changes take effect there.)" -ForegroundColor Cyan

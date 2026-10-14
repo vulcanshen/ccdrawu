@@ -18,15 +18,15 @@ var testCatalog = Catalog{Version: 1, Items: []Item{
 func TestLocateFollowsE3(t *testing.T) {
 	env := func(vars map[string]string) func(string) string { return func(k string) string { return vars[k] } }
 	got := locate(env(nil), "/h")
-	if got != (Locations{Data: "/h/.ccdrawu", ConfigFile: "/h/.config/ccdrawu/config.json"}) {
+	if got != (Locations{Data: "/h/.ccdrawu", ConfigFile: "/h/.config/ccdrawu/config.json", Claude: "/h/.claude"}) {
 		t.Fatalf("defaults: %+v", got)
 	}
 	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "CCDRAWU__DATA": ""}), "/h")
-	if got != (Locations{Data: "/h/.ccdrawu", ConfigFile: "/x/ccdrawu/config.json"}) {
+	if got != (Locations{Data: "/h/.ccdrawu", ConfigFile: "/x/ccdrawu/config.json", Claude: "/h/.claude"}) {
 		t.Fatalf("XDG: %+v", got)
 	}
 	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "CCDRAWU__CONFIG": "/c", "CCDRAWU__DATA": "/d"}), "/h")
-	if got != (Locations{Data: "/d", ConfigFile: "/c/config.json"}) {
+	if got != (Locations{Data: "/d", ConfigFile: "/c/config.json", Claude: "/h/.claude"}) {
 		t.Fatalf("CCDRAWU__: %+v", got)
 	}
 }

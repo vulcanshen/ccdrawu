@@ -10,6 +10,10 @@ if (-not (Test-Path "$installDir\ccdrawu.exe")) {
     exit 1
 }
 
+# Take the drawer out of Claude Code while the command is still here; with no
+# plugin there (or no Claude Code) it says so and the uninstall goes on.
+& "$installDir\ccdrawu.exe" uninstall claude
+
 Remove-Item $installDir -Recurse -Force
 Write-Host "removed $installDir" -ForegroundColor Green
 
@@ -53,5 +57,3 @@ Ask-Remove $dataDir "ccdrawu data (the catalog)"
 
 Write-Host ""
 Write-Host "ccdrawu uninstalled. Restart your terminal for PATH changes to take effect." -ForegroundColor Green
-Write-Host "The drawer itself is a Claude Code plugin: remove it in Claude Code with" -ForegroundColor Cyan
-Write-Host "/plugin uninstall ccdrawu." -ForegroundColor Cyan

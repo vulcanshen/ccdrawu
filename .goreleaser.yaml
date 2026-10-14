@@ -51,10 +51,10 @@ brews:
     homepage: "https://github.com/vulcanshen/ccdrawu"
     description: "status drawer for Claude Code (u-family) — usage limits, context, model, cost and git beside the transcript; ccdrawu picks what it shows"
     caveats: |
-      The drawer itself is a Claude Code plugin: in Claude Code, run
-      /plugin install ccdrawu --marketplace vulcanshen/ccdrawu
-      Then `ccdrawu` picks what it shows, and every open session follows
-      within a second.
+      `ccdrawu install claude` adds the drawer to Claude Code (its ccdrawu
+      plugin); `ccdrawu` then picks what it shows, and every open session
+      follows within a second. Before `brew uninstall ccdrawu`, run
+      `ccdrawu uninstall claude` to take the drawer out again.
 
       Settings live in ~/.config/ccdrawu, what the drawer and ccdrawu
       share in ~/.ccdrawu. A Nerd Font terminal profile is required.

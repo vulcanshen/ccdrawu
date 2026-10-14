@@ -5,14 +5,17 @@ package config
 import (
 	"os"
 	"path/filepath"
+
+	"github.com/vulcanshen/ccdrawu/internal/claude"
 )
 
 // Locations are where ccdrawu keeps its files (tdp E3), the same places the mod
 // reads (hooks/paths.ts): Data is CCDRAWU__DATA, else ~/.ccdrawu (the catalog);
 // ConfigFile is config.json in CCDRAWU__CONFIG, else $XDG_CONFIG_HOME/ccdrawu,
-// else ~/.config/ccdrawu. A variable set but empty counts as unset.
+// else ~/.config/ccdrawu. A variable set but empty counts as unset. Claude is
+// Claude Code's own folder, where the theme goes.
 type Locations struct {
-	Data, ConfigFile string
+	Data, ConfigFile, Claude string
 }
 
 func locate(getenv func(string) string, home string) Locations {
@@ -28,7 +31,7 @@ func locate(getenv func(string) string, home string) Locations {
 			config = filepath.Join(home, ".config", "ccdrawu")
 		}
 	}
-	return Locations{Data: data, ConfigFile: filepath.Join(config, "config.json")}
+	return Locations{Data: data, ConfigFile: filepath.Join(config, "config.json"), Claude: claude.Dir(getenv, home)}
 }
 
 func UserLocations() (Locations, error) {

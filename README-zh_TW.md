@@ -51,15 +51,7 @@ ccdrawu  0.1.0
 
 ## 安裝
 
-在 Claude Code 的輸入框輸入：
-
-```
-/plugin install ccdrawu --marketplace vulcanshen/ccdrawu
-```
-
-詢問是否加入市集時回答 `y`，再選 user scope，每個 session 就都會有。
-
-再安裝 `ccdrawu` 指令：
+先安裝 `ccdrawu` 指令：
 
 ```sh
 # macOS / Linux
@@ -78,6 +70,14 @@ scoop bucket add vulcanshen https://github.com/vulcanshen/scoop-bucket
 scoop install ccdrawu
 ```
 
+再把側邊欄加進 Claude Code：
+
+```sh
+ccdrawu install claude
+```
+
+它會幫你的使用者裝好 ccdrawu 外掛，之後每個 session 都有側邊欄；已經開著的 session 跑一次 `/reload-plugins`。接著執行 `ccdrawu` 挑要顯示的項目。
+
 ## 使用方式
 
 - session 開始時會自動打開。
@@ -87,23 +87,18 @@ scoop install ccdrawu
 
 ### 比較短的指令
 
-執行 `ccdrawu`，移到 Settings 底下的 **alias**，按兩次 `Enter`，輸入例如 `ccd`。一秒內，每個開著的 session 裡 `/ccd` 就跟 `/ccdrawu` 一樣能用。改掉或拿掉的名字，在 session 重開之前都還能用。
+執行 `ccdrawu`，移到 Settings 底下的 **preferences** 按 `Enter`，在 **Alias** 上再按 `Enter`，輸入例如 `ccd`。一秒內，每個開著的 session 裡 `/ccd` 就跟 `/ccdrawu` 一樣能用。改掉或拿掉的名字，在 session 重開之前都還能用。
 
 別名存在 `~/.config/ccdrawu/config.json` 的 `"alias": "ccd"`，也可以直接改那裡。
 
 ### 讓底色跟終端機一樣
 
-側邊欄的底色由 Claude Code 的主題決定，不是外掛。要讓它跟終端機同色，在 `~/.claude/themes/` 建一個自訂主題，例如 `~/.claude/themes/my-theme.json`：
+側邊欄的底色由 Claude Code 的主題決定，不是外掛。要讓它跟終端機同色，執行 `ccdrawu`，在 Settings 底下的 **preferences** 設定：
 
-```json
-{
-  "name": "My theme",
-  "base": "dark-ansi",
-  "overrides": { "composerSidebarBackground": "#11111b" }
-}
-```
+- **Claude theme**：選一個 Claude Code 內建主題當底（`dark-ansi`、`dark`…）。
+- **Drawer background**：選你終端機的底色；在它上面按 `x` 會改回主題原本的底色。
 
-再用 `/theme` 選它。`base` 填你現在用的主題，值填你終端機的底色。
+ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底色（`~/.claude/themes/ccdrawu.json`），並在 Claude Code 裡選用它。把 Claude theme 設回 `off`，或執行 `ccdrawu uninstall claude`，會換回你原本的主題。
 
 在 tmux 裡，Claude Code 會把顏色限制在 256 色，像 `#11111b` 這種顏色會被換成別的顏色。如果你的 tmux 會傳遞全彩，在 `~/.claude/settings.json` 的 `env` 加上 `"CLAUDE_CODE_TMUX_TRUECOLOR": "1"`，再重開 Claude Code。
 
@@ -125,8 +120,10 @@ scoop install ccdrawu
 
 ## 移除
 
-```
-claude plugin uninstall ccdrawu@ccdrawu
+先把側邊欄從 Claude Code 拿掉：
+
+```sh
+ccdrawu uninstall claude
 ```
 
 再移除 `ccdrawu` 指令：

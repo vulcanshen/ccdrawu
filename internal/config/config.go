@@ -74,11 +74,23 @@ const (
 // Config is what the TUI writes and every open session reads within a second
 // (hooks/layout.ts): the ids on in each placement. A placement left out takes
 // the catalog's defaults: it is written as null, while [] is every item off.
-// Alias is one more name for /ccdrawu (hooks/commands.ts), "" for none.
+// Alias is one more name for /ccdrawu (hooks/commands.ts), "" for none. Theme
+// is the Claude Code theme ccdrawu selected, if any; the mod never reads it.
 type Config struct {
 	Dock   []string `json:"dock"`
 	Inline []string `json:"inline"`
 	Alias  string   `json:"alias,omitempty"`
+	Theme  Theme    `json:"theme,omitzero"`
+}
+
+// Theme is ccdrawu's Claude Code theme (internal/claude): Base, a built-in
+// theme ("" for none, the user's own theme as it was), with Background over
+// the drawer ("" for the base's own). Before is the theme selected until
+// ccdrawu's was, to go back to ("" when none was set).
+type Theme struct {
+	Base       string `json:"base,omitempty"`
+	Background string `json:"background,omitempty"`
+	Before     string `json:"before,omitempty"`
 }
 
 func (c *Config) ids(p Placement) *[]string {

@@ -1,0 +1,193 @@
+package ui
+
+import (
+	"os"
+	"regexp"
+	"slices"
+
+	tea "github.com/charmbracelet/bubbletea"
+	"github.com/vulcanshen/ccdrawu/internal/claude"
+	terminu "github.com/vulcanshen/terminu-go"
+)
+
+// The preferences past the alias: Claude Code's theme with the drawer's
+// background (internal/claude, theme), and whether the plugin is in Claude Code.
+
+const glyphPalette = "\U000F03D8" // nf-md-palette, the background picker's title
+
+var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// themeField picks the built-in theme ccdrawu's stands on, or off: the user's
+// own theme as it was. It is drawn in place and takes effect when picked.
+func (d *drawer) themeField() *terminu.Field {
+	options := append([]string{"off"}, claude.Themes...)
+	f := &terminu.Field{Label: "Claude theme", Options: options, Selected: max(0, slices.Index(options, d.cfg.Theme.Base))}
+	f.OnChange = func() tea.Cmd {
+		d.cfg.Theme.Base = ""
+		if f.Selected > 0 {
+			d.cfg.Theme.Base = options[f.Selected]
+		}
+		return d.applyTheme()
+	}
+	return f
+}
+
+// backgroundField is the drawer's background over that theme, in a color
+// picker; none keeps the theme's own. Off with the theme.
+func (d *drawer) backgroundField() *terminu.Field {
+	return &terminu.Field{
+		Label: "Drawer background", Value: func() string { return d.cfg.Theme.Background }, Empty: "the theme's own",
+		Disabled: func() bool { return d.cfg.Theme.Base == "" },
+		Edit: func() tea.Cmd {
+			var old terminu.Color
+			if hexColor.MatchString(d.cfg.Theme.Background) {
+				old = terminu.Hex(d.cfg.Theme.Background)
+			}
+			return d.app.PickColor(terminu.ColorPicker{Title: "Background", Glyph: glyphPalette, Value: old,
+				Done: func(c terminu.Color) tea.Cmd {
+					d.cfg.Theme.Background = ""
+					if c.Set {
+						d.cfg.Theme.Background = c.String()
+					}
+					return d.applyTheme()
+				}})
+		},
+	}
+}
+
+// resetBackground is x on the drawer background: back to the theme's own. The
+// color picker has no way to choose none (tdp components/input/color-picker),
+// so it is an item operation of its own, there only on that field.
+func (d *drawer) resetBackground() terminu.Action {
+	return terminu.Action{
+		Key: "x", Label: "Reset", Desc: "the drawer background to the theme's own", Scope: terminu.ItemScope, Hint: "reset",
+		Hidden: func() bool {
+			page := d.pages[rowPreferences]
+			return d.detail.Body != page || page.Current() != d.background
+		},
+		Disabled: func() bool { return d.cfg.Theme.Background == "" },
+		Do: func() tea.Cmd {
+			d.cfg.Theme.Background = ""
+			return d.applyTheme()
+		},
+	}
+}
+
+// applyTheme puts the theme as picked into Claude Code: ccdrawu's, or the
+// user's own as it was before it.
+func (d *drawer) applyTheme() tea.Cmd {
+	t := &d.cfg.Theme
+	note := "Claude Code has its own theme back"
+	if t.Base == "" {
+		if err := claude.RestoreTheme(d.loc.Claude, t.Before); err != nil {
+			return d.app.Error("Can't put the theme back", err.Error())
+		}
+		t.Before = ""
+	} else {
+		before, switched, err := claude.ApplyTheme(d.loc.Claude, t.Base, t.Background)
+		if err != nil {
+			return d.app.Error("Can't set the theme", err.Error())
+		}
+		if switched {
+			t.Before = before
+		}
+		note = "Claude Code's theme is now " + t.Base
+		if t.Background != "" {
+			note += " with " + t.Background
+		}
+	}
+	return tea.Batch(d.save(), d.app.Toast(terminu.Info, note))
+}
+
+// The plugin row: whether Claude Code has the ccdrawu plugin, found with
+// `claude plugin list` off the screen's loop; Enter installs or uninstalls
+// it, after asking, as `ccdrawu install claude` and `uninstall claude` do.
+type pluginChecked struct {
+	id      string
+	enabled bool
+	err     error
+}
+
+type pluginDone struct {
+	msg       string
+	uninstall bool
+	err       error
+}
+
+func (d *drawer) pluginField() *terminu.Field {
+	return &terminu.Field{
+		Label: "Plugin", Value: func() string { return d.plugin }, Empty: "checking…",
+		Disabled: func() bool { return d.plugin == "" || d.busy },
+		Edit:     d.pluginAction,
+	}
+}
+
+func (d *drawer) checkPlugin() tea.Cmd {
+	run := d.run
+	return func() tea.Msg {
+		id, enabled, err := claude.Installed(run)
+		return pluginChecked{id, enabled, err}
+	}
+}
+
+func (d *drawer) pluginChecked(m pluginChecked) {
+	d.busy, d.pluginID = false, m.id
+	switch {
+	case m.err != nil:
+		d.plugin = "can't tell: " + m.err.Error()
+	case m.id == "":
+		d.plugin = "not installed"
+	case !m.enabled:
+		d.plugin = "installed, turned off"
+	default:
+		d.plugin = "installed"
+	}
+}
+
+func (d *drawer) pluginAction() tea.Cmd {
+	run, source := d.run, claude.SourceFrom(os.Getenv)
+	if d.pluginID == "" {
+		return d.app.Confirm(terminu.Ask{
+			Title: "Install", Subject: "Claude Code", Question: "Add the drawer to Claude Code?", Verb: "install",
+			Details: []string{
+				"Installs the ccdrawu plugin for your user, as ccdrawu install claude does.",
+				"New sessions have the drawer; open ones take it with /reload-plugins.",
+			},
+		}, func() tea.Cmd {
+			d.busy = true
+			return func() tea.Msg {
+				msg, err := claude.Install(run, source)
+				return pluginDone{msg: msg, err: err}
+			}
+		})
+	}
+	return d.app.Confirm(terminu.Ask{
+		Title: "Uninstall", Subject: "Claude Code", Question: "Take the drawer out of Claude Code?", Verb: "uninstall",
+		Details: []string{
+			"Removes the ccdrawu plugin and its marketplace, as ccdrawu uninstall claude does.",
+			"ccdrawu's theme goes too; your picks here stay.",
+		},
+	}, func() tea.Cmd {
+		d.busy = true
+		return func() tea.Msg {
+			msg, _, err := claude.Uninstall(run)
+			return pluginDone{msg: msg, uninstall: true, err: err}
+		}
+	})
+}
+
+// pluginDone says how it went and looks again; an uninstall puts the user's
+// own theme back, as the command line's does.
+func (d *drawer) pluginDone(m pluginDone) tea.Cmd {
+	if m.err != nil {
+		d.busy = false
+		return tea.Batch(d.app.Error("Claude Code said no", m.err.Error()), d.checkPlugin())
+	}
+	cmds := []tea.Cmd{d.app.Toast(terminu.Info, m.msg), d.checkPlugin()}
+	if m.uninstall && d.cfg.Theme.Base != "" {
+		d.cfg.Theme.Base = ""
+		d.theme.Selected = 0
+		cmds = append(cmds, d.applyTheme())
+	}
+	return tea.Batch(cmds...)
+}

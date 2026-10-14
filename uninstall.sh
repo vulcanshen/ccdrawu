@@ -20,6 +20,10 @@ if [ -z "$FOUND" ]; then
   exit 1
 fi
 
+# Take the drawer out of Claude Code while the command is still here; with no
+# plugin there (or no Claude Code) it says so and the uninstall goes on.
+"$FOUND" uninstall claude || true
+
 rm "$FOUND"
 echo "removed $FOUND"
 
@@ -56,5 +60,4 @@ ask "$CONFIG_DIR" "ccdrawu settings (the drawer's items and the alias)"
 ask "${CCDRAWU__DATA:-$HOME/.ccdrawu}" "ccdrawu data (the catalog)"
 
 echo ""
-echo "ccdrawu uninstalled. The drawer itself is a Claude Code plugin: remove it"
-echo "in Claude Code with /plugin uninstall ccdrawu."
+echo "ccdrawu uninstalled."
