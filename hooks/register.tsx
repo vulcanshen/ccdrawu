@@ -5,6 +5,7 @@ import type { CacheInfo, Config, GitInfo, ModelInfo, Modes, Usage, VersionInfo }
 import { bar, commandNames, parseShortstat, percentText, shortPath, usageColor } from './format'
 import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
 import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from './layout'
+import { locations } from './paths'
 
 const PANE = 'ccdrawu'
 const PANE_OPEN = { id: PANE, title: 'Status', columns: 34 } as const
@@ -62,25 +63,36 @@ async function refreshEditor($: Engine) {
 }
 
 // A mod cannot read vim's live state (INSERT / NORMAL). The status line bridge, statusline/statusline.sh,
-// writes vim.mode to ~/.claude/ccdrawu/vim/<session id> each time the status line runs; this reads it
+// writes vim.mode to <data>/vim/<session id> each time the status line runs; this reads it
 let home: string | undefined
+let dataDir: string | undefined
+let configFile: string | undefined
 let vimFile: string | undefined
 
 async function locateFiles($: Engine) {
   home = await $.env.get('HOME')
+  if (home === undefined) return
+  const found = locations({
+    home,
+    data: await $.env.get('CCDRAWU__DATA'),
+    config: await $.env.get('CCDRAWU__CONFIG'),
+    xdgConfig: await $.env.get('XDG_CONFIG_HOME'),
+  })
+  dataDir = found.data
+  configFile = found.configFile
   const id = (await $.session.id()).replace(/\.jsonl$/, '')
-  vimFile = `${home}/.claude/ccdrawu/vim/${id}`
+  vimFile = `${dataDir}/vim/${id}`
 }
 
-// Write `text` to ~/.claude/ccdrawu/<name> unless it already holds it
+// Write `text` to <data>/<name> unless it already holds it
 async function keepFile($: Engine, name: string, text: string) {
-  if (home === undefined) return
-  const target = `${home}/.claude/ccdrawu/${name}`
+  if (dataDir === undefined) return
+  const target = `${dataDir}/${name}`
   const current = await $.fs.read(target).catch(() => undefined)
   if (current !== text) await $.fs.write(target, text)
 }
 
-// Keep the bridge at a fixed path, ~/.claude/ccdrawu/statusline.sh, so a statusLine setting
+// Keep the bridge at a fixed path, ~/.ccdrawu/statusline.sh, so a statusLine setting
 // pointing at it survives plugin updates
 async function installBridge($: Engine) {
   await keepFile($, 'statusline.sh', await $.fs.read(`${$.plugin.root}/statusline/statusline.sh`))
@@ -91,13 +103,13 @@ async function installCatalog($: Engine) {
   await keepFile($, 'catalog.json', JSON.stringify({ version: 1, items: ITEMS }, null, 2) + '\n')
 }
 
-// The TUI writes ~/.claude/ccdrawu/config.json; every open session looks at it each second and takes
+// The TUI writes ~/.config/ccdrawu/config.json; every open session looks at it each second and takes
 // a change at once. A file not there means the catalog's defaults
 let configStamp: number | undefined
 
 async function refreshConfig($: Engine) {
-  if (home === undefined) return
-  const file = `${home}/.claude/ccdrawu/config.json`
+  const file = configFile
+  if (file === undefined) return
   const stamp = await $.fs.stat(file).then(
     s => s.mtimeMs,
     () => 0,

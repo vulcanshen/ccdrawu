@@ -14,6 +14,7 @@ import {
 } from '../hooks/format'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
 import { columnRows, enabledItems, inlineValue, parseConfig } from '../hooks/layout'
+import { locations } from '../hooks/paths'
 
 const PANE = {
   title: 'Status',
@@ -110,6 +111,12 @@ test('every catalog item has a unique id, a short key and something to show', as
     expect(view(item.id, FULL)).toBeDefined()
   }
   expect(view('no-such-item', FULL)).toBeUndefined()
+})
+
+test('files sit where terminu design E3 puts them, unless CCDRAWU__ variables say otherwise', async () => {
+  expect(locations({ home: '/h' })).toEqual({ data: '/h/.ccdrawu', configFile: '/h/.config/ccdrawu/config.json' })
+  expect(locations({ home: '/h', xdgConfig: '/x', data: '' })).toEqual({ data: '/h/.ccdrawu', configFile: '/x/ccdrawu/config.json' })
+  expect(locations({ home: '/h', xdgConfig: '/x', config: '/c', data: '/d' })).toEqual({ data: '/d', configFile: '/c/config.json' })
 })
 
 test('the config picks items per placement, in the catalog order', async () => {

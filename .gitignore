@@ -1,3 +1,15 @@
 # Written by Claude Code each time it loads the plugin from this folder
 .claude-plugin/types/
 tsconfig.json
+
+/ccdrawu
+/dist/
+.DS_Store
+.local/
+.idea/
+.vscode/
+*.test
+*.out
+go.work
+go.work.sum
+.claude/settings.local.json
