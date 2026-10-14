@@ -98,7 +98,7 @@ The drawer's background comes from your Claude Code theme, not from the plugin. 
 - **Claude theme**: pick the built-in Claude Code theme to stand on (`dark-ansi`, `dark`, …).
 - **Drawer background**: pick your terminal's background color; `x` on it goes back to the theme's own.
 
-ccdrawu writes its own theme, that built-in one with your background (`~/.claude/themes/ccdrawu.json`), and selects it in Claude Code. Setting Claude theme back to `off`, or `ccdrawu uninstall claude`, selects the theme you had before.
+ccdrawu writes its own theme, that built-in one with your background (`~/.claude/themes/ccdrawu.json`), and selects it in Claude Code. Setting Claude theme back to `off`, or `ccdrawu uninstall claude`, selects the theme you had before. Open Claude Code sessions change at once.
 
 Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` comes out as a different one. If your tmux passes truecolor through, add `"CLAUDE_CODE_TMUX_TRUECOLOR": "1"` to the `env` block of `~/.claude/settings.json` and restart Claude Code.
 
