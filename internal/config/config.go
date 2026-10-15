@@ -1,6 +1,7 @@
 package config
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"io/fs"
@@ -108,15 +109,39 @@ type Drawer struct {
 // first); Separator what stands between items ("" for "|"); Refresh how many
 // seconds Claude Code waits to run it again while nothing happens (0 for
 // DefaultRefresh). Before is the statusLine Claude Code had until ccdrawu's,
-// to put back: JSON null when it had none.
+// to put back as it was written: JSON null when it had none.
 type Statusline struct {
-	On        bool            `json:"on"`
-	Items     []string        `json:"items"`
-	Format    string          `json:"format,omitempty"`
-	Color     string          `json:"color,omitempty"`
-	Separator string          `json:"separator,omitempty"`
-	Refresh   int             `json:"refresh,omitempty"`
-	Before    json.RawMessage `json:"before,omitempty"`
+	On        bool     `json:"on"`
+	Items     []string `json:"items"`
+	Format    string   `json:"format,omitempty"`
+	Color     string   `json:"color,omitempty"`
+	Separator string   `json:"separator,omitempty"`
+	Refresh   int      `json:"refresh,omitempty"`
+	Before    Kept     `json:"before,omitempty"`
+}
+
+// Kept is a JSON value kept byte for byte as it was written elsewhere.
+// config.json holds it as a string: held as JSON, writing the config would
+// lay it out anew. One held as JSON, as ccdrawu 0.1.1 wrote it, reads too,
+// compacted, its own spacing gone already.
+type Kept json.RawMessage
+
+func (k Kept) MarshalJSON() ([]byte, error) {
+	return json.Marshal(string(k))
+}
+
+func (k *Kept) UnmarshalJSON(data []byte) error {
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		*k = Kept(s)
+		return nil
+	}
+	var b bytes.Buffer
+	if err := json.Compact(&b, data); err != nil {
+		return err
+	}
+	*k = Kept(b.Bytes())
+	return nil
 }
 
 // Formats are how an item reads in the statusline: its label and value

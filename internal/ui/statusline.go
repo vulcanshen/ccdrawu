@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -74,7 +75,7 @@ func (d *drawer) statuslineOn() tea.Cmd {
 		return d.app.Error("Can't set the status line", err.Error())
 	}
 	if switched {
-		s.Before = before
+		s.Before = config.Kept(before)
 	}
 	s.On = true
 	return tea.Batch(d.save(), d.app.Toast(terminu.Info, "Claude Code's status line is now ccdrawu's"))
@@ -83,7 +84,7 @@ func (d *drawer) statuslineOn() tea.Cmd {
 // statuslineOff puts back the status line ccdrawu's replaced, or none.
 func (d *drawer) statuslineOff() tea.Cmd {
 	s := &d.cfg.Statusline
-	if err := claude.RestoreStatusline(d.loc.Claude, s.Before); err != nil {
+	if err := claude.RestoreStatusline(d.loc.Claude, json.RawMessage(s.Before)); err != nil {
 		d.statusOn.Selected = 1
 		return d.app.Error("Can't put the status line back", err.Error())
 	}

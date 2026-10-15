@@ -151,3 +151,35 @@ func TestConfigKeepsTheAliasAndPet(t *testing.T) {
 		t.Fatalf("alias = %q, pet = %+v after a toggle, want ccd and the duck", c.Alias, c.Pet)
 	}
 }
+
+// The status line a config keeps to put back comes back as it was written,
+// its own spacing and all, however the config is laid out around it; one a
+// config of ccdrawu 0.1.1 held as JSON reads too
+func TestKeptComesBackByteForByte(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	for _, before := range []string{
+		`{"type": "command", "command": "my-line"}`,
+		"{\n    \"type\": \"command\",\n    \"command\": \"npx -y ccstatusline@latest\",\n    \"padding\": 0\n  }",
+		"null",
+	} {
+		if err := WriteConfig(path, Config{Statusline: Statusline{On: true, Before: Kept(before)}}); err != nil {
+			t.Fatal(err)
+		}
+		c, err := ReadConfig(path)
+		if err != nil || string(c.Statusline.Before) != before {
+			t.Fatalf("kept %q, read back %q (%v)", before, c.Statusline.Before, err)
+		}
+	}
+	if err := os.WriteFile(path, []byte("{\"statusline\": {\"on\": true, \"before\": {\n  \"type\": \"command\", \"command\": \"my-line\"\n}}}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if c, err := ReadConfig(path); err != nil || string(c.Statusline.Before) != `{"type":"command","command":"my-line"}` {
+		t.Fatalf("0.1.1 object read as %q (%v)", c.Statusline.Before, err)
+	}
+	if err := os.WriteFile(path, []byte(`{"statusline": {"on": true, "before": null}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if c, err := ReadConfig(path); err != nil || len(c.Statusline.Before) != 0 {
+		t.Fatalf("0.1.1 null read as %q (%v)", c.Statusline.Before, err)
+	}
+}

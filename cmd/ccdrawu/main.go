@@ -3,7 +3,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"time"
@@ -77,15 +79,27 @@ func integrate(install bool) error {
 	if err != nil {
 		return err
 	}
-	if !ok {
+	if ok {
+		fmt.Println(msg)
+	} else {
 		fmt.Println("The ccdrawu plugin is not in Claude Code.")
-		return nil
 	}
-	fmt.Println(msg)
 	loc, err := config.UserLocations()
 	if err != nil {
 		return err
 	}
+	// With the plugin gone already too: a status line left set would run a ccdrawu that the
+	// uninstall script is about to remove
+	if err := putBack(loc, os.Stdout); err != nil {
+		return err
+	}
+	fmt.Printf("Your picks stay in %s, the plugin's data in %s.\n", loc.ConfigFile, loc.Data)
+	return nil
+}
+
+// putBack gives Claude Code the user's own theme and status line back where
+// ccdrawu's are set, or none where the user had none, and says so on out.
+func putBack(loc config.Locations, out io.Writer) error {
 	// ccdrawu's theme goes with the drawer: Claude Code has the user's own back
 	if cfg, err := config.ReadConfig(loc.ConfigFile); err == nil && cfg.Theme.Base != "" {
 		if err := claude.RestoreTheme(loc.Claude, cfg.Theme.Before); err != nil {
@@ -95,20 +109,19 @@ func integrate(install bool) error {
 		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
 			return err
 		}
-		fmt.Println("Claude Code has its own theme back.")
+		fmt.Fprintln(out, "Claude Code has its own theme back.")
 	}
 	// So does the statusline: Claude Code has the user's own status line back, or none
 	if cfg, err := config.ReadConfig(loc.ConfigFile); err == nil && cfg.Statusline.On {
-		if err := claude.RestoreStatusline(loc.Claude, cfg.Statusline.Before); err != nil {
+		if err := claude.RestoreStatusline(loc.Claude, json.RawMessage(cfg.Statusline.Before)); err != nil {
 			return err
 		}
 		cfg.Statusline.On, cfg.Statusline.Before = false, nil
 		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
 			return err
 		}
-		fmt.Println("Claude Code has its own status line back.")
+		fmt.Fprintln(out, "Claude Code has its own status line back.")
 	}
-	fmt.Printf("Your picks stay in %s, the plugin's data in %s.\n", loc.ConfigFile, loc.Data)
 	return nil
 }
 

@@ -149,7 +149,7 @@ func TestStatuslineFormatAndItems(t *testing.T) {
 // statusline off
 func TestStatuslineReplacedSinceReadsOff(t *testing.T) {
 	d, loc := newTestDrawer(t)
-	d.cfg.Statusline = config.Statusline{On: true, Before: json.RawMessage("null")}
+	d.cfg.Statusline = config.Statusline{On: true, Before: config.Kept("null")}
 	if err := config.WriteConfig(loc.ConfigFile, d.cfg); err != nil {
 		t.Fatal(err)
 	}
