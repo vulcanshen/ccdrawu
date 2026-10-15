@@ -87,8 +87,9 @@ You can also add only the plugin, from inside Claude Code: `/plugin install ccdr
 
 ## Usage
 
-- The drawer opens by itself when a session starts. To start without it, run `ccdrawu` and set **Drawer** to `off` on the sidebar or inline page; open sessions close it within a second.
-- `/ccdrawu` opens or closes it, even while Claude is working, and even with **Drawer** off.
+- The drawer opens by itself when a session starts.
+- **Drawer**, atop the sidebar page and the inline page in `ccdrawu`, turns it off in that place alone. Off on the inline page, a terminal narrowed below the sidebar's width hides the drawer instead of moving it above the prompt, and widening it again brings the drawer back beside the transcript. Off on both, sessions start without it. Open sessions follow within a second.
+- `/ccdrawu` opens or closes it, even while Claude is working, and even where **Drawer** is off: it stays where it opens until it moves.
 - Click the `×` at its top right to close it, or press `Ctrl+X Tab` to focus it and then `Ctrl+X X`.
 - `Ctrl+X ←` and `Ctrl+X →` make it wider or narrower while it has focus.
 
@@ -104,7 +105,7 @@ ccdrawu can also be Claude Code's status line, the row under the prompt: with th
 
 Run `ccdrawu`, pick **statusline** under Statusline and press `Enter`, then set **Statusline** to `on`. ccdrawu sets `ccdrawu statusline` as Claude Code's status line in `~/.claude/settings.json`. If you already have one, such as ccstatusline, it asks before replacing it and keeps it: setting **Statusline** back to `off`, or `ccdrawu uninstall claude`, puts yours back. Open sessions change at once.
 
-Set it to `on when inline` instead to have it only while the drawer is not beside the transcript: while it sits above the prompt, waits for a wider terminal, or is closed. With the drawer beside the transcript, the row under the prompt stays, empty: Claude Code keeps it as long as a status line is set.
+Set it to `on when inline` instead to have it only while the drawer is not beside the transcript: while it sits above the prompt, waits for a wider terminal, or is closed. With the drawer beside the transcript, the row under the prompt stays, empty: Claude Code keeps it as long as a status line is set. With **Drawer** off on the inline page too, a narrow terminal shows the status line in place of the sidebar.
 
 ```
 Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h | Cost $1.20 | Git main  +12 -3

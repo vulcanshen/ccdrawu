@@ -8,7 +8,7 @@ import { C, ITEMS, type Item, type Seg, type View } from './items'
 export type Placement = 'dock' | 'inline'
 
 // ~/.config/ccdrawu/config.json: { "dock": [ids], "inline": [ids], "alias": name, "pet": { "species" },
-// "bar": style, "drawer": { "off" }, "statusline": { "on", ... } }. Undefined when it is not JSON, as when caught half written:
+// "bar": style, "drawer": { "sidebarOff", "inlineOff" }, "statusline": { "on", ... } }. Undefined when it is not JSON, as when caught half written:
 // read it again on the next tick
 export function parseConfig(text: string): Config | undefined {
   let raw: unknown
@@ -34,7 +34,10 @@ export function parseConfig(text: string): Config | undefined {
   }
   const drawer = (raw as Record<string, unknown>).drawer
   if (typeof drawer === 'object' && drawer !== null) {
-    config.drawer = { off: (drawer as Record<string, unknown>).off === true }
+    const d = drawer as Record<string, unknown>
+    // 0.1.1's off turned the whole drawer off
+    const off = d.off === true
+    config.drawer = { sidebarOff: off || d.sidebarOff === true, inlineOff: off || d.inlineOff === true }
   }
   const statusline = (raw as Record<string, unknown>).statusline
   if (typeof statusline === 'object' && statusline !== null) {
@@ -49,6 +52,11 @@ export function enabledItems(config: Config, placement: Placement): Item[] {
   const ids = config[placement]
   if (ids === undefined) return ITEMS.filter(item => item[placement])
   return [...new Set(ids)].flatMap(id => ITEMS.find(item => item.id === id) ?? [])
+}
+
+// Whether the config lets the drawer show beside the transcript (dock) or above the prompt (inline)
+export function drawerShows(config: Config, placement: Placement): boolean {
+  return placement === 'dock' ? config.drawer?.sidebarOff !== true : config.drawer?.inlineOff !== true
 }
 
 // Whether an item shows beside the transcript or above the prompt

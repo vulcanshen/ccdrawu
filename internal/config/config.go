@@ -80,8 +80,8 @@ const (
 // (hooks/layout.ts): the ids on in each placement. A placement left out takes
 // the catalog's defaults: it is written as null, while [] is every item off.
 // Alias is one more name for /ccdrawu (hooks/commands.ts), "" for none. Pet is
-// the drawer's pet, and Bar how it draws its bars. Drawer is whether the
-// drawer opens by itself. Theme is the Claude Code theme ccdrawu selected, if
+// the drawer's pet, and Bar how it draws its bars. Drawer is where the
+// drawer shows. Theme is the Claude Code theme ccdrawu selected, if
 // any; the mod never reads it. Statusline is `ccdrawu statusline`; the mod
 // reads only whether it is on.
 type Config struct {
@@ -95,10 +95,14 @@ type Config struct {
 	Statusline Statusline `json:"statusline,omitzero"`
 }
 
-// Drawer is the drawer itself, on unless Off: off, sessions start without it
-// and open ones close it, while /ccdrawu still opens and closes it.
+// Drawer is where the drawer shows: beside the transcript unless SidebarOff,
+// above the prompt unless InlineOff. The mod takes it out of a place it is off
+// in, while /ccdrawu still opens and closes it. Off, from ccdrawu 0.1.1,
+// turned the whole drawer off: ReadConfig reads it as both.
 type Drawer struct {
-	Off bool `json:"off,omitempty"`
+	SidebarOff bool `json:"sidebarOff,omitempty"`
+	InlineOff  bool `json:"inlineOff,omitempty"`
+	Off        bool `json:"off,omitempty"`
 }
 
 // Statusline is `ccdrawu statusline` as Claude Code's status line. On says
@@ -211,6 +215,9 @@ func ReadConfig(path string) (Config, error) {
 	// error says so.
 	if err := json.Unmarshal(data, &c); err != nil {
 		return c, err
+	}
+	if c.Drawer.Off {
+		c.Drawer = Drawer{SidebarOff: true, InlineOff: true}
 	}
 	return c, nil
 }

@@ -26,7 +26,7 @@ import {
 } from '../hooks/format'
 import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
-import { cellWidth, columnRows, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from '../hooks/layout'
+import { cellWidth, columnRows, drawerShows, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from '../hooks/layout'
 import { locations } from '../hooks/paths'
 import { statuslineFile, statuslineItems } from '../hooks/statusline'
 import {
@@ -541,10 +541,13 @@ test('the config picks items per placement, in the order it lists them', async (
   // The statusline's block is the TUI's and the command's; the mod reads only whether it is on
   expect(parseConfig('{"statusline": {"on": true, "items": ["model"]}}')).toEqual({ statusline: { on: true } })
   expect(parseConfig('{"statusline": {"on": "yes"}}')).toEqual({ statusline: { on: false } })
-  // The drawer is on unless the config turns it off
-  expect(parseConfig('{"drawer": {"off": true}}')).toEqual({ drawer: { off: true } })
-  expect(parseConfig('{"drawer": {"off": 1}}')).toEqual({ drawer: { off: false } })
-  expect(parseConfig('{}')!.drawer?.off).toBeUndefined()
+  // The drawer shows in each place unless the config turns it off there; 0.1.1's off is off in both
+  expect(parseConfig('{"drawer": {"inlineOff": true}}')).toEqual({ drawer: { sidebarOff: false, inlineOff: true } })
+  expect(parseConfig('{"drawer": {"sidebarOff": 1}}')).toEqual({ drawer: { sidebarOff: false, inlineOff: false } })
+  expect(parseConfig('{"drawer": {"off": true}}')).toEqual({ drawer: { sidebarOff: true, inlineOff: true } })
+  expect([drawerShows({}, 'dock'), drawerShows({}, 'inline')]).toEqual([true, true])
+  const narrowOff = parseConfig('{"drawer": {"inlineOff": true}}')!
+  expect([drawerShows(narrowOff, 'dock'), drawerShows(narrowOff, 'inline')]).toEqual([true, false])
   expect(parseConfig('{"statusline": 3}')).toEqual({})
   expect(enabledItems({ dock: ['git', 'model', 'gone', 'git'] }, 'dock').map(i => i.id)).toEqual(['git', 'model'])
   expect(enabledItems({ dock: [] }, 'dock')).toEqual([])

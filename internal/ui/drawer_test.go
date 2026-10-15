@@ -188,12 +188,14 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 	}
 }
 
-// The drawer's on and off heads both its pages, on until it is turned off:
-// off is written as drawer.off, and on leaves it out again
+// The drawer's on and off heads each of its pages, its own there, on until it
+// is turned off: off is written as drawer.sidebarOff or drawer.inlineOff, and
+// on leaves it out again; 0.1.1's drawer.off reads as off in both
 func TestDrawerTurnsOffAndOn(t *testing.T) {
 	d, loc := newTestDrawer(t)
-	if d.pages[rowSidebar].Fields[0] != d.drawerOn || d.pages[rowInline].Fields[0] != d.drawerOn || d.drawerOn.Selected != 1 {
-		t.Fatalf("the drawer is not on atop both pages: %+v", d.pages[rowSidebar].Fields[0])
+	sidebar, inline := d.drawerOn[rowSidebar], d.drawerOn[rowInline]
+	if d.pages[rowSidebar].Fields[0] != sidebar || d.pages[rowInline].Fields[0] != inline || sidebar == inline || sidebar.Selected != 1 || inline.Selected != 1 {
+		t.Fatalf("the drawer is not on atop each page: %+v", d.pages[rowSidebar].Fields[0])
 	}
 	if text := frameText(d); !strings.Contains(text, "SETTING") || !strings.Contains(text, "VALUE") {
 		t.Fatalf("[2] has no titles over its columns:\n%s", text)
@@ -206,10 +208,15 @@ func TestDrawerTurnsOffAndOn(t *testing.T) {
 		}
 		return string(data)
 	}
-	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // into sidebar, on off
+	// Off above the prompt alone: beside the transcript it stays on
+	press(d, key("j"))
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // into inline, on off
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // off
-	if c, _ := config.ReadConfig(loc.ConfigFile); !c.Drawer.Off || !strings.Contains(raw(), `"off": true`) {
-		t.Fatalf("not written off:\n%s", raw())
+	if c, _ := config.ReadConfig(loc.ConfigFile); !c.Drawer.InlineOff || c.Drawer.SidebarOff || !strings.Contains(raw(), `"inlineOff": true`) {
+		t.Fatalf("not written off above the prompt alone:\n%s", raw())
+	}
+	if sidebar.Selected != 1 {
+		t.Fatal("the sidebar's turned off with inline")
 	}
 	press(d, key("j"))                       // on
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // on again
@@ -217,16 +224,15 @@ func TestDrawerTurnsOffAndOn(t *testing.T) {
 		t.Fatalf("on is still written:\n%s", raw())
 	}
 
-	d.cfg.Drawer.Off = true
-	if err := config.WriteConfig(loc.ConfigFile, d.cfg); err != nil {
+	if err := os.WriteFile(loc.ConfigFile, []byte(`{"drawer": {"off": true}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	again, err := newDrawer(loc, (&claudeFake{}).run)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if again.drawerOn.Selected != 0 {
-		t.Fatal("a drawer turned off reads on")
+	if again.drawerOn[rowSidebar].Selected != 0 || again.drawerOn[rowInline].Selected != 0 {
+		t.Fatal("0.1.1's drawer off reads on")
 	}
 }
 

@@ -28,14 +28,14 @@ type drawer struct {
 	pages  map[string]*terminu.Values // [2]'s body for each row of [1]
 	fail   *terminu.Failure           // what an empty page of items says
 
-	theme      *terminu.Field // the theme's radio, set back to off by an uninstall
-	background *terminu.Field // the drawer background, which x resets
-	drawerOn   *terminu.Field // the drawer's on and off, atop both its pages
-	statusOn   *terminu.Field // the statusline's on and off, set back to off by an uninstall
-	run        claude.Run     // what runs `claude plugin ...`
-	plugin     string         // the plugin row's value; "" while it is being found
-	pluginID   string         // the plugin's id in Claude Code, "" when not there
-	busy       bool           // an install or uninstall under way
+	theme      *terminu.Field            // the theme's radio, set back to off by an uninstall
+	background *terminu.Field            // the drawer background, which x resets
+	drawerOn   map[string]*terminu.Field // the drawer's on and off atop sidebar and inline, each its own
+	statusOn   *terminu.Field            // the statusline's on and off, set back to off by an uninstall
+	run        claude.Run                // what runs `claude plugin ...`
+	plugin     string                    // the plugin row's value; "" while it is being found
+	pluginID   string                    // the plugin's id in Claude Code, "" when not there
+	busy       bool                      // an install or uninstall under way
 }
 
 // The rows of [1]: the drawer beside the transcript and above the prompt, the
@@ -99,7 +99,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	a.Start = func() tea.Cmd { return tea.Batch(d.reload(), d.checkPlugin()) }
 	d.app = a
 	d.theme, d.background, d.statusOn = d.themeField(), d.backgroundField(), d.statusOnField()
-	d.drawerOn = d.drawerOnField()
+	d.drawerOn = map[string]*terminu.Field{rowSidebar: d.drawerOnField(&d.cfg.Drawer.SidebarOff), rowInline: d.drawerOnField(&d.cfg.Drawer.InlineOff)}
 	d.pages[rowPreferences] = &terminu.Values{Header: [2]string{"Key", "Value"}, Fields: []*terminu.Field{
 		d.aliasField(), d.theme, d.background, d.barField(), d.petField(), d.pluginField(),
 	}}
@@ -167,21 +167,22 @@ func (d *drawer) load() {
 	}
 	d.cat, d.stamp = cat, info.ModTime()
 	for _, id := range []string{rowSidebar, rowInline} {
-		d.pages[id].Fields = append([]*terminu.Field{d.drawerOn}, d.summary(id)...)
+		d.pages[id].Fields = append([]*terminu.Field{d.drawerOn[id]}, d.summary(id)...)
 	}
 	d.pages[rowStatusline].Fields = d.statuslineFields()
 }
 
-// drawerOnField turns the drawer on or off, drawn in place, the same field on
-// both its pages: off, sessions start without it and open ones close it within
-// a second; /ccdrawu still opens and closes it.
-func (d *drawer) drawerOnField() *terminu.Field {
+// drawerOnField turns the drawer on or off in one place, beside the transcript
+// or above the prompt, as off says (config.Drawer), drawn in place. Off there,
+// open sessions take it out of that place within a second; off in both,
+// sessions start without it. /ccdrawu still opens and closes it.
+func (d *drawer) drawerOnField(off *bool) *terminu.Field {
 	f := &terminu.Field{Label: "Drawer", Options: []string{"off", "on"}}
-	if !d.cfg.Drawer.Off {
+	if !*off {
 		f.Selected = 1
 	}
 	f.OnChange = func() tea.Cmd {
-		d.cfg.Drawer.Off = f.Selected == 0
+		*off = f.Selected == 0
 		return d.save()
 	}
 	return f

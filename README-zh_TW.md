@@ -87,8 +87,9 @@ ccdrawu install claude
 
 ## 使用方式
 
-- session 開始時會自動打開。不想讓它自動打開，就執行 `ccdrawu`，在 sidebar 或 inline 頁把 **Drawer** 設成 `off`，開著的 session 會在一秒內關掉它。
-- `/ccdrawu` 開關側邊欄，Claude 回覆到一半也能用；**Drawer** 設成 `off` 時也一樣。
+- session 開始時會自動打開。
+- `ccdrawu` 裡 sidebar 頁和 inline 頁最上面的 **Drawer**，各自只關掉那個位置。inline 頁設成 `off` 的話，終端機縮到放不下側邊欄時，側邊欄會收起來，不會跑到輸入框上方；拉寬之後再回到對話旁邊。兩頁都設成 `off`，session 開始時就不會打開。開著的 session 會在一秒內跟著換。
+- `/ccdrawu` 開關側邊欄，Claude 回覆到一半也能用；**Drawer** 設成 `off` 的位置也一樣：打開之後就留在那裡，直到它被移到別的位置。
 - 點右上角的 `×` 關閉，或按 `Ctrl+X Tab` 移過去再按 `Ctrl+X X`。
 - 焦點在側邊欄上時，`Ctrl+X ←`、`Ctrl+X →` 可以調寬或調窄。
 
@@ -104,7 +105,7 @@ ccdrawu 也可以當 Claude Code 的狀態列，也就是輸入框下方那一�
 
 執行 `ccdrawu`，在 Statusline 底下選 **statusline** 按 `Enter`，再把 **Statusline** 設成 `on`。ccdrawu 會在 `~/.claude/settings.json` 把 Claude Code 的狀態列設成 `ccdrawu statusline`。如果你原本就有狀態列（例如 ccstatusline），會先問過你才換掉，並且把原本的記下來：把 **Statusline** 設回 `off`，或執行 `ccdrawu uninstall claude`，就會換回你原本的。開著的 session 會馬上換。
 
-改設成 `on when inline` 的話，只有側邊欄不在對話旁邊時才顯示：在輸入框上方、終端機太窄還沒放出來，或被關掉的時候。側邊欄在對話旁邊時，輸入框下方那一列會留著、但是空的：只要設了狀態列，Claude Code 就會保留那一列。
+改設成 `on when inline` 的話，只有側邊欄不在對話旁邊時才顯示：在輸入框上方、終端機太窄還沒放出來，或被關掉的時候。側邊欄在對話旁邊時，輸入框下方那一列會留著、但是空的：只要設了狀態列，Claude Code 就會保留那一列。inline 頁的 **Drawer** 也設成 `off` 的話，終端機一窄，就改由狀態列顯示，取代側邊欄。
 
 ```
 Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h | Cost $1.20 | Git main  +12 -3

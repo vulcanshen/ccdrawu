@@ -5,7 +5,10 @@
 ## [0.1.2] - 2026-10-15
 ### Added
 - **Statusline** `on when inline`: the status line only while the drawer is not beside the transcript, while it sits above the prompt, waits for a wider terminal, or is closed. With the drawer beside the transcript, the row stays, empty.
+### Changed
+- **Drawer** atop the sidebar page and atop the inline page are a setting each, where they were one. Off on the inline page alone, a terminal narrowed below the sidebar's width hides the drawer, instead of moving it above the prompt, until it widens again. 0.1.1's off reads as off on both.
 ### Fixed
+- `/ccdrawu` shows a drawer that waits for a wider terminal at once; it took two.
 - `ccdrawu uninstall claude` puts back your theme and status line even when the ccdrawu plugin is already gone from Claude Code; it used to stop at "The ccdrawu plugin is not in Claude Code.", leaving Claude Code's status line on a ccdrawu about to be removed.
 - The status line you had before ccdrawu's comes back exactly as it was written when you turn ccdrawu's off after `ccdrawu` was closed and opened again, or with `ccdrawu uninstall claude`; its spacing used to change.
 

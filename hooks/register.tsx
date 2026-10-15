@@ -46,7 +46,7 @@ import {
   usageColor,
 } from './format'
 import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
-import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from './layout'
+import { chunk, COLUMN_GAP, columnRows, drawerShows, enabledItems, inlineValue, parseConfig, type Placement, segWidth, showsAnywhere } from './layout'
 import { locations } from './paths'
 import { statuslineFile } from './statusline'
 
@@ -143,7 +143,8 @@ async function installCatalog($: Engine) {
 // a change at once. A file not there means the catalog's defaults
 let configStamp: number | undefined
 let statusWasShown = false // whether the config read last had the Status row on
-let drawerWasOn: boolean | undefined // whether the config read last had the drawer on, before the first read
+// Where the config read last let the drawer show, before the first read
+let drawerWas: { dock: boolean; inline: boolean } | undefined
 // The command names this session has registered: /ccdrawu, and each alias the config has named
 const commands = new Set<string>()
 
@@ -165,14 +166,42 @@ async function refreshConfig($: Engine) {
   const shown = showsAnywhere(parsed, 'status')
   if (shown && !statusWasShown) quietly(refreshStatus($))
   statusWasShown = shown
-  // The drawer just turned on or off: open sessions open or close it. The first read leaves it as
-  // session.start has it, so a reload keeps a drawer /ccdrawu opened with it off
-  const drawerOn = parsed.drawer?.off !== true
-  if (drawerWasOn !== undefined && drawerOn !== drawerWasOn) {
-    if (drawerOn) void $.ui.open(PANE_OPEN)
-    else await $.ui.close({ id: PANE })
+  // The drawer just turned on or off in a place: open sessions open it, close it, or take it out of a
+  // place it is off in. The first read leaves it as session.start has it, so a reload keeps a drawer
+  // /ccdrawu opened
+  const shows = { dock: drawerShows(parsed, 'dock'), inline: drawerShows(parsed, 'inline') }
+  if (drawerWas !== undefined && (shows.dock !== drawerWas.dock || shows.inline !== drawerWas.inline)) {
+    asked = undefined
+    if (!shows.dock && !shows.inline) await closePane($)
+    else if (!(await $.ui.panes()).some(p => p.id === PANE)) void $.ui.open(PANE_OPEN)
+    else await keepPlace($)
   }
-  drawerWasOn = drawerOn
+  drawerWas = shows
+}
+
+// Where /ccdrawu opened the drawer: it stays there, the place off or not, until it moves. pending until
+// the drawer is drawn
+let asked: 'pending' | Placement | undefined
+// Whether the terminal docks panes beside the transcript, as the pane's last drawing says
+let fullscreen = false
+
+async function closePane($: Engine) {
+  placedAs = undefined
+  await $.ui.close({ id: PANE })
+}
+
+// The drawer out of a place the config has it off in. Above the prompt, in a terminal that docks panes,
+// it opens again unasked: the engine holds it undrawn until the terminal is wide enough to dock it
+async function keepPlace($: Engine) {
+  const place = placedAs
+  if (place !== 'dock' && place !== 'inline') return
+  if (asked === place) return
+  asked = undefined
+  const pane = (await $.ui.panes()).find(p => p.id === PANE)
+  const conf = await read($, config)
+  if (pane?.isPlaced !== true || drawerShows(conf, place)) return
+  await closePane($)
+  if (place === 'inline' && fullscreen && drawerShows(conf, 'dock')) void $.ui.open(PANE_OPEN)
 }
 
 // The pet on either side of the prompt: it has no need of a tick, or of events, when it shows nowhere
@@ -327,8 +356,9 @@ async function readSnapshot($: Engine): Promise<Snapshot> {
 // `ccdrawu statusline` to lay out, written only when it changed. The id is asked each time: after /clear
 // the session goes on under a new one, and Claude Code hands the command that one
 let statuslineWritten: { file: string; text: string } | undefined
-// Where the pane was drawn last: dock, beside the transcript, or inline, above the prompt
-let placedAs: string | undefined
+// Where the pane was drawn last: dock, beside the transcript, or inline, above the prompt; undefined
+// once ccdrawu closes it
+let placedAs: Placement | undefined
 
 async function writeStatusline($: Engine) {
   if (dataDir === undefined || !(await read($, config)).statusline?.on) return
@@ -392,8 +422,10 @@ export const register: Register = on => {
     $.clock.every(PET_TICK, () => quietly(stepPet($)))
 
     // In a terminal too narrow for a sidebar the engine holds the pane until it widens. With the drawer
-    // off in ccdrawu the session starts without it, and /ccdrawu opens it
-    if ((await read($, config)).drawer?.off !== true) void $.ui.open(PANE_OPEN)
+    // off in both places the session starts without it, and /ccdrawu opens it; off in one, the pane
+    // drawn there is taken out of it (keepPlace)
+    const conf = await read($, config)
+    if (drawerShows(conf, 'dock') || drawerShows(conf, 'inline')) void $.ui.open(PANE_OPEN)
 
     return next(e)
   })
@@ -407,9 +439,15 @@ export const register: Register = on => {
       await petHears($, word)
       return {}
     }
-    const isOpen = (await $.ui.panes()).some(p => p.id === PANE)
-    if (isOpen) await $.ui.close({ id: PANE })
-    else await $.ui.open(PANE_OPEN)
+    // A pane waiting undrawn for a wider terminal reads as closed: opened again, asked, it is drawn
+    const isShown = (await $.ui.panes()).some(p => p.id === PANE && p.isPlaced)
+    if (isShown) {
+      asked = undefined
+      await closePane($)
+    } else {
+      asked = 'pending'
+      await $.ui.open(PANE_OPEN)
+    }
     return {}
   }).catch(($, e, next) => (commands.has(e.command) ? {} : next(e)))
 
@@ -530,7 +568,13 @@ export const register: Register = on => {
     // Leave out the paddingX on either side, or a row runs past the width and wraps
     const inner = Math.max(22, e.props.bodyColumns - 2)
     const placement = e.props.placement
-    placedAs = placement
+    fullscreen = e.viewport?.isFullscreen === true
+    if (asked === 'pending') asked = placement
+    // Drawn somewhere new: out of it if the config has the drawer off there
+    if (placement !== placedAs) {
+      placedAs = placement
+      quietly(keepPlace($))
+    }
 
     const s = await readSnapshot($)
     const conf = await read($, config)
