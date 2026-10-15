@@ -186,27 +186,27 @@ func toPageField(t *testing.T, d *drawer, id, label string) {
 	t.Fatalf("no %s field:\n%s", label, frameText(d))
 }
 
-// On when inline is on too, kept as the config's when; between it and on
+// On when narrow is on too, kept as the config's when; between it and on
 // there is nothing to ask or set in Claude Code again
-func TestStatuslineOnWhenInline(t *testing.T) {
+func TestStatuslineOnWhenNarrow(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	toStatusline(t, d)
 	press(d, key("j"))
-	press(d, key("j")) // on when inline
+	press(d, key("j")) // on when narrow
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
-	if c, _ := config.ReadConfig(loc.ConfigFile); !c.Statusline.On || c.Statusline.When != config.WhenInline {
-		t.Fatalf("statusline kept as %+v, want on when inline", c.Statusline)
+	if c, _ := config.ReadConfig(loc.ConfigFile); !c.Statusline.On || c.Statusline.When != config.WhenNarrow {
+		t.Fatalf("statusline kept as %+v, want on when narrow", c.Statusline)
 	}
 	if _, ours, _ := claude.CurrentStatusline(loc.Claude); !ours {
 		t.Fatalf("not set in Claude Code:\n%s", claudeSettings(t, loc))
 	}
-	// Read again, it is on when inline
+	// Read again, it is on when narrow
 	again, err := newDrawer(loc, (&claudeFake{}).run)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if again.statusOn.Selected != 2 {
-		t.Fatalf("reads as option %d, want on when inline", again.statusOn.Selected)
+		t.Fatalf("reads as option %d, want on when narrow", again.statusOn.Selected)
 	}
 
 	press(d, key("k"))                       // on

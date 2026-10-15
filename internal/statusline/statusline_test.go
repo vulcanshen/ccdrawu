@@ -196,19 +196,25 @@ func TestRunRemovesFilesOfSessionsLongQuiet(t *testing.T) {
 	}
 }
 
-// On when inline, the line is empty while the drawer is beside the
-// transcript, and the items otherwise; on, it shows either way
-func TestRunOnWhenInline(t *testing.T) {
+// On when narrow, the line is empty while the drawer is beside the transcript
+// or the terminal is wide enough for it, and the items otherwise; on, it shows
+// either way
+func TestRunOnWhenNarrow(t *testing.T) {
 	loc, sessions := setup(t)
 	input := `{"session_id": "abc"}`
+	const all = "Model Opus 5.5 | Context 42% | Cost $1.20\n"
 	for _, c := range []struct {
-		when   string
-		docked bool
-		want   string
+		when    string
+		docked  bool
+		columns int
+		want    string
 	}{
-		{config.WhenInline, true, "\n"},
-		{config.WhenInline, false, "Model Opus 5.5 | Context 42% | Cost $1.20\n"},
-		{"", true, "Model Opus 5.5 | Context 42% | Cost $1.20\n"},
+		{config.WhenNarrow, true, 120, "\n"},
+		{config.WhenNarrow, false, 120, all},
+		{config.WhenNarrow, false, 143, all},
+		{config.WhenNarrow, false, 144, "\n"}, // wide: the drawer closed, or not drawn yet
+		{config.WhenNarrow, false, 0, all},    // no width known
+		{"", true, 170, all},
 	} {
 		if err := config.WriteConfig(loc.ConfigFile, config.Config{Statusline: config.Statusline{On: true, When: c.when}}); err != nil {
 			t.Fatal(err)
@@ -217,8 +223,8 @@ func TestRunOnWhenInline(t *testing.T) {
 		if err := os.WriteFile(filepath.Join(sessions, "abc.json"), data, 0o644); err != nil {
 			t.Fatal(err)
 		}
-		if got := run(t, loc, input, 0, time.Now()); got != c.want {
-			t.Errorf("when %q, docked %v: %q, want %q", c.when, c.docked, got, c.want)
+		if got := run(t, loc, input, c.columns, time.Now()); got != c.want {
+			t.Errorf("when %q, docked %v, %d columns: %q, want %q", c.when, c.docked, c.columns, got, c.want)
 		}
 	}
 }

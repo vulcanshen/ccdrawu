@@ -58,6 +58,11 @@ const (
 // item).
 const edge = 4
 
+// dockColumns is the terminal's width from which Claude Code docks a pane the
+// plugin opens by itself beside the transcript ($.ui.open). One the person
+// opened docks from 110; the session's file says when it is docked.
+const dockColumns = 144
+
 // keep is how long a session's file stays after its last write: the mod
 // cannot delete one, so a session's file outlives it until then.
 const keep = 7 * 24 * time.Hour
@@ -66,9 +71,10 @@ const keep = 7 * 24 * time.Hour
 // the items on in the statusline, from the session's file, or the few the
 // input has while there is none (the plugin not loaded, or not yet). columns
 // is the terminal's width, 0 when unknown; the line is cut to fit it. On only
-// when inline, it is an empty line while the drawer is beside the transcript:
-// Claude Code keeps the row while a status line is set, so it stays, empty.
-// Files of sessions gone quiet for a week are removed.
+// when narrow, it is an empty line while the drawer is beside the transcript,
+// or the terminal is wide enough for it: Claude Code keeps the row while a
+// status line is set, so it stays, empty. Files of sessions gone quiet for a
+// week are removed.
 func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now time.Time) error {
 	var input Input
 	if err := json.NewDecoder(in).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
@@ -87,11 +93,12 @@ func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now tim
 	if items == nil {
 		items = fromInput(input)
 	}
+	wide := columns >= dockColumns
 	if columns > 0 {
 		columns = max(1, columns-edge)
 	}
 	line := Line(cfg, cat, items, columns)
-	if docked && cfg.Statusline.When == config.WhenInline {
+	if cfg.Statusline.When == config.WhenNarrow && (docked || wide) {
 		line = ""
 	}
 	_, err = fmt.Fprintln(out, line)

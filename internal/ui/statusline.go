@@ -27,21 +27,20 @@ func (d *drawer) statuslineFields() []*terminu.Field {
 	return append(fields, d.formatField(), d.colorField(), d.separatorField(), d.refreshField())
 }
 
-// statusOnField turns the statusline off, on, or on when inline: only while
-// the drawer is not beside the transcript (above the prompt, waiting for a
-// wider terminal, or closed). It is drawn in place. Turned on over a status
+// statusOnField turns the statusline off, on, or on when narrow: only while
+// the terminal is too narrow for the sidebar. It is drawn in place. Turned on over a status
 // line of the user's own, it asks first and keeps that one to put back.
 func (d *drawer) statusOnField() *terminu.Field {
-	f := &terminu.Field{Label: "Statusline", Options: []string{"off", "on", "on when inline"}, Selected: d.statusSelected()}
+	f := &terminu.Field{Label: "Statusline", Options: []string{"off", "on", "on when narrow"}, Selected: d.statusSelected()}
 	f.OnChange = func() tea.Cmd {
 		if f.Selected == 0 {
 			return d.statuslineOff()
 		}
 		picked, when := f.Selected, ""
 		if picked == 2 {
-			when = config.WhenInline
+			when = config.WhenNarrow
 		}
-		// From on to on when inline, or back: ccdrawu's is the status line already
+		// From on to on when narrow, or back: ccdrawu's is the status line already
 		if d.cfg.Statusline.On {
 			d.cfg.Statusline.When = when
 			return d.save()
@@ -73,12 +72,12 @@ func (d *drawer) statusOnField() *terminu.Field {
 }
 
 // statusSelected is the statusline's option as the config has it: off, on, or
-// on when inline.
+// on when narrow.
 func (d *drawer) statusSelected() int {
 	switch s := d.cfg.Statusline; {
 	case !s.On:
 		return 0
-	case s.When == config.WhenInline:
+	case s.When == config.WhenNarrow:
 		return 2
 	}
 	return 1
