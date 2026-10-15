@@ -60,6 +60,7 @@ export type Config = {
   inline?: string[]
   alias?: string
   pet?: { species?: string }
+  bar?: string
 }
 
 // The pet (hooks/pets.ts): what it is doing, where along its walk, and what it says, a session's

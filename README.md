@@ -10,10 +10,10 @@
 Model    claude-opus-5-5
 Effort   xhigh
 Mode     auto
-Context  ▰▰▰▰▰▰▰▰▱▱▱▱▱▱  65%
-Session  ▰▱▱▱▱▱▱▱▱▱▱▱▱▱   6%
+Context  ■■■■■■■■■□□□□□  65%
+Session  ■□□□□□□□□□□□□□   6%
          resets 2h12m
-Weekly   ▰▰▰▱▱▱▱▱▱▱▱▱▱▱  23%
+Weekly   ■■■□□□□□□□□□□□  23%
          resets 3d17h
 Cost     $35.46
 Uptime   11h39m · 43 turns
@@ -60,7 +60,8 @@ These start off; turn them on in `ccdrawu`:
 - Claude Code 2.1.287 or later
 - Fullscreen rendering: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript
 - A terminal wide enough for a sidebar: a pane opened on its own waits until the terminal is about 110–144 columns wide
-- The `ccdrawu` command, to pick what the drawer shows; it needs a [Nerd Font](https://www.nerdfonts.com) in your terminal
+- A [Nerd Font](https://www.nerdfonts.com) in your terminal: the drawer draws its bars with it, and so does the `ccdrawu` command. Without one, set **Bar** to `line` in **preferences** under Settings: each choice there shows its own bar, so you can see which one your terminal draws
+- The `ccdrawu` command, to pick what the drawer shows
 - macOS, Linux or Windows
 
 ## Install
@@ -134,7 +135,7 @@ Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` 
 
 ## Where it keeps things
 
-- `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`: the items, the alias and the pet. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
+- `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`: the items, the alias, the bar and the pet. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
 - `~/.ccdrawu/`: what the plugin writes, the list of items `ccdrawu` offers (`catalog.json`). `CCDRAWU__DATA` names another folder for it.
 
 On Windows, `~` is your user folder (`%USERPROFILE%`).

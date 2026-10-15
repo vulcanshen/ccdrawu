@@ -10,10 +10,10 @@
 Model    claude-opus-5-5
 Effort   xhigh
 Mode     auto
-Context  ▰▰▰▰▰▰▰▰▱▱▱▱▱▱  65%
-Session  ▰▱▱▱▱▱▱▱▱▱▱▱▱▱   6%
+Context  ■■■■■■■■■□□□□□  65%
+Session  ■□□□□□□□□□□□□□   6%
          resets 2h12m
-Weekly   ▰▰▰▱▱▱▱▱▱▱▱▱▱▱  23%
+Weekly   ■■■□□□□□□□□□□□  23%
          resets 3d17h
 Cost     $35.46
 Uptime   11h39m · 43 turns
@@ -60,7 +60,8 @@ ccdrawu  0.1.0
 - Claude Code 2.1.287 以上
 - fullscreen 渲染模式：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊
 - 終端機要夠寬：自動開啟的面板會等終端機寬到大約 110～144 欄才出現
-- `ccdrawu` 指令，用來挑側邊欄顯示的項目；它需要終端機用 [Nerd Font](https://www.nerdfonts.com)
+- 終端機要用 [Nerd Font](https://www.nerdfonts.com)：側邊欄的 bar 和 `ccdrawu` 指令都用到它的圖示。沒有的話，在 Settings 底下的 **preferences** 把 **Bar** 設成 `line`：每個選項旁邊都畫著它的 bar，你的終端機畫得出哪一種，一看就知道
+- `ccdrawu` 指令，用來挑側邊欄顯示的項目
 - macOS、Linux 或 Windows
 
 ## 安裝
@@ -134,7 +135,7 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 
 ## 資料存放位置
 
-- `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目、別名和寵物。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
+- `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目、別名、bar 和寵物。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
 - `~/.ccdrawu/`：外掛寫的東西，`ccdrawu` 列出的項目清單（`catalog.json`）。`CCDRAWU__DATA` 可以改放別的資料夾。
 
 在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。

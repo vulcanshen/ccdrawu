@@ -55,10 +55,11 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **球**從寵物遠的那一側滾進來（1.2 秒減速、彈 2,1,0,1,0 px），停在中段；寵物跑到球的近側 5 格（`BALL_REACH`，畫面上剛好碰到球），等球停了揮爪 1.6 秒，球消失、說一句；20 秒沒拿到就自己消失。球是 `position="absolute"` 的 Box，疊在走道上不佔位置，位置跟寵物一樣依寬度比例換算（`along()`）。
   - **框固定寬高、每列 `height={1}`**：只有空白 Box 的列會被排版壓成 0 高，睡覺（頭頂空 2 px）或跳的時候框會變高變矮，下面的清單就跟著跳。
   - **舊 state 要補齊**：`/reload-plugins` 後 `$.state` 保留舊值，session.start 用 `{ ...PET_START, ...old }` 補上新加的欄位，否則讀到 undefined 會算出 NaN。
-  - **物種在 TUI 設**：preferences 的 Pet（radio，畫在原地），放在 Drawer background 與 Plugin 之間，寫進 config.json 的 `pet.species`。Go 的 `config.PetSpecies` 要跟 `SPECIES` 同順序；mod 不認得的物種畫成貓。
+  - **物種在 TUI 設**：preferences 的 Pet（radio，畫在原地），放在 Bar 與 Plugin 之間，寫進 config.json 的 `pet.species`。Go 的 `config.PetSpecies` 要跟 `SPECIES` 同順序；mod 不認得的物種畫成貓。
   - **不給取名（2026-10-15）**：做過 Pet name（最多 16 字），user 拿掉：花色每個 session 隨機，每次開都不是同一隻，給名字很怪；留給之後的版本再看。台詞那一列只有台詞。
 - **不用 Fragment。** 這個 surface 把 `<>…</>` 當直排容器排版，放在 row 裡的「·」和 effort 會被疊成上下兩行。同一列的元素都直接放進 `flexDirection="row"` 的 Box。
 - **bar 寬度要扣 paddingX。** 外層 Box 左右各 1 格 padding，`bodyColumns` 沒扣掉的話，bar 會超出寬度、折到下一行，看起來像兩條 bar。
+- **bar 用 Nerd Font 的方塊（2026-10-15）。** 填滿的是 `nf-oct-square_fill`（U+F445），空的是 `nf-oct-square`（U+F51D），user 挑的。原本用 `▰▱`：很多程式字型沒有這兩個字（Maple Mono、JetBrains Mono、Fira Code 都沒有），終端機只能跟別的字型借，借到哪一套看那個終端機開啟後先出現過哪些缺的字（Ghostty 先找已經借過的字型）。2026-10-15 user 的 Ghostty 開機後第一個缺的字就是 bar，借到 Apple Symbols，字比一格寬，整串黏成一塊；前一天先出現過 Claude Code 的轉圈符號 `✻`，借到的是 Menlo，畫出來是正常的小平行四邊形。程式、字型、終端機都沒變，只差在出現順序。Nerd Font 的字在字型自己裡面，不用借；Maple Mono NF CN 與 JetBrains、Hack 的 Mono 版，方塊寬 10、一格 12，左右分開，高度只佔一列的中段，上下兩列也分開。代價是 drawer 也要 Nerd Font（README 的需求寫了）。終端機不會告訴程式它用什麼字型，mod API 也沒有字型或終端機能力的資訊（2.1.300 的型別檔查過），查電腦裝了哪些字型也不準（裝了不一定在用；沒用 Nerd Font 也可能從 Symbols Nerd Font 借到），所以不自動偵測：preferences 的 **Bar** 讓使用者選 squares（預設，user 定的）或 line（`━`，框線字元，等寬字型都有），每個選項旁邊畫著自己的 bar，畫不出來的那個一看就知道；寫進 config.json 的 `bar`，mod 不認得的值畫方塊。另外，非 Mono 版的 Nerd Font（例如 MesloLGS NF）方塊比一格寬（-0.8～13.65），有的終端機上可能又黏在一起。README 的範例用 `■□` 示意，因為 GitHub 網頁沒有 Nerd Font。否決：`█░`（整格高，上下兩列的 bar 會黏在一起）；請使用者把 `▰▱` 指定給 Menlo（只有 macOS 有，ccdrawu 也支援 Windows、Linux）。
 - **key 欄寬 9。** key 最多 8 個字（測試守著），加一格空白。
 - **會擋住引擎動作的 hook 都有 `.catch`。** `agent.spawn`、`session.compact`、`classic.*` 事件都是 gating hook；側邊欄出錯時 `.catch(($, e, next) => next(e))` 讓引擎照常進行（`next` 已呼叫過就沿用那次結果，不會重跑）。
 

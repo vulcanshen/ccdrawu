@@ -10,11 +10,14 @@ import {
   effortColor,
   filesText,
   isNewer,
+  LINE,
   modeLabel,
   parseShortstat,
   parseStatusV2,
   repoFromRemote,
   shortPath,
+  SQUARE,
+  SQUARE_FILL,
   syncText,
   tasksText,
   truncateStart,
@@ -120,9 +123,12 @@ test('reset countdowns read as days, hours or minutes', async () => {
 })
 
 test('the bar fills in proportion and keeps its width', async () => {
-  expect(bar(50, 10)).toEqual({ filled: '▰▰▰▰▰', empty: '▱▱▱▱▱' })
-  expect(bar(130, 4)).toEqual({ filled: '▰▰▰▰', empty: '' })
-  expect(bar(-5, 4)).toEqual({ filled: '', empty: '▱▱▱▱' })
+  expect(bar(50, 10)).toEqual({ filled: SQUARE_FILL.repeat(5), empty: SQUARE.repeat(5) })
+  expect(bar(130, 4)).toEqual({ filled: SQUARE_FILL.repeat(4), empty: '' })
+  expect(bar(-5, 4)).toEqual({ filled: '', empty: SQUARE.repeat(4) })
+  // A terminal with no Nerd Font picks the line; a style it does not know is the squares
+  expect(bar(50, 4, 'line')).toEqual({ filled: LINE.repeat(2), empty: LINE.repeat(2) })
+  expect(bar(50, 4, 'dots')).toEqual({ filled: SQUARE_FILL.repeat(2), empty: SQUARE.repeat(2) })
 })
 
 test('usage turns green, yellow, peach, then red', async () => {
@@ -521,6 +527,8 @@ test('the config picks items per placement, in the catalog order', async () => {
   expect(parseConfig('null')).toEqual({})
   expect(parseConfig('{"dock": null, "alias": "ccd"}')).toEqual({ alias: 'ccd' })
   expect(parseConfig('{"alias": 3}')).toEqual({})
+  expect(parseConfig('{"bar": "line"}')).toEqual({ bar: 'line' })
+  expect(parseConfig('{"bar": 1}')).toEqual({})
   expect(enabledItems({ dock: ['git', 'model', 'gone'] }, 'dock').map(i => i.id)).toEqual(['model', 'git'])
   expect(enabledItems({ dock: [] }, 'dock')).toEqual([])
   expect(enabledItems({}, 'inline').map(i => i.id)).toEqual(ITEMS.filter(i => i.inline).map(i => i.id))
@@ -545,7 +553,7 @@ test('the pane draws on the terminal before any figures arrive, a key on every r
   for (const key of ['Model', 'Context', 'Uptime', 'Git', 'Path']) {
     expect(await ui.find({ type: 'Text', text: new RegExp('^' + key + ' ') })).toBeDefined()
   }
-  expect(await ui.find({ type: 'Text', text: /▰|▱/ })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /\u{F445}|\u{F51D}/u })).toBeDefined()
   // The pet, on by default, in pixels in a box of 12 x 4 that keeps its height
   expect(await ui.find({ type: 'Text', text: /▀|▄/ })).toBeDefined()
   expect((await ui.find({ type: 'Box', key: 'pet' }))?.props).toMatchObject({ width: 12, height: 5 })
@@ -558,7 +566,7 @@ test('the pane draws on the terminal before any figures arrive, a key on every r
 test('above the prompt the pane draws columns of text with no bars', async $ => {
   const ui = await $.ui.mount({ ...MOUNT, props: { ...PANE, placement: 'inline', bodyColumns: 100 } })
   expect(await ui.find({ type: 'Text', text: /│/ })).toBeDefined()
-  expect(await ui.find({ type: 'Text', text: /▰|▱/ })).toBeUndefined()
+  expect(await ui.find({ type: 'Text', text: /\u{F445}|\u{F51D}/u })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: /^Context / })).toBeDefined()
   // and the pet left of the columns
   expect((await ui.find({ type: 'Box', key: 'pet' }))?.props).toMatchObject({ width: 12, height: 4 })

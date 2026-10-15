@@ -75,15 +75,21 @@ const (
 // (hooks/layout.ts): the ids on in each placement. A placement left out takes
 // the catalog's defaults: it is written as null, while [] is every item off.
 // Alias is one more name for /ccdrawu (hooks/commands.ts), "" for none. Pet is
-// the drawer's pet. Theme is the Claude Code theme ccdrawu selected, if any;
-// the mod never reads it.
+// the drawer's pet, and Bar how it draws its bars. Theme is the Claude Code
+// theme ccdrawu selected, if any; the mod never reads it.
 type Config struct {
 	Dock   []string `json:"dock"`
 	Inline []string `json:"inline"`
 	Alias  string   `json:"alias,omitempty"`
 	Pet    Pet      `json:"pet,omitzero"`
+	Bar    string   `json:"bar,omitempty"`
 	Theme  Theme    `json:"theme,omitzero"`
 }
+
+// BarStyles are the ways the mod draws a bar (bar in hooks/format.ts): Nerd
+// Font squares, the first and the one for "", or a line for a terminal with no
+// Nerd Font.
+var BarStyles = []string{"squares", "line"}
 
 // Pet is the pet as the mod draws it (hooks/pets.ts): Species one of
 // PetSpecies ("" for the first, the cat). Its coat is the mod's to pick, a new

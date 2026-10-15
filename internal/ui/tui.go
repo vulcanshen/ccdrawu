@@ -85,7 +85,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	d.app = a
 	d.theme, d.background = d.themeField(), d.backgroundField()
 	d.pages[rowPreferences] = &terminu.Values{Fields: []*terminu.Field{
-		d.aliasField(), d.theme, d.background, d.petField(), d.pluginField(),
+		d.aliasField(), d.theme, d.background, d.barField(), d.petField(), d.pluginField(),
 	}}
 
 	list := &terminu.List{}

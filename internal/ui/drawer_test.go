@@ -338,6 +338,22 @@ func toField(t *testing.T, d *drawer, label string) {
 	t.Fatalf("no %s field:\n%s", label, frameText(d))
 }
 
+func TestBarIsSquaresUntilTheLineIsPicked(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	toField(t, d, "Bar")
+	if d.pages[rowPreferences].Current().Selected != 0 {
+		t.Fatal("the bar starts on the squares")
+	}
+	if text := frameText(d); !strings.Contains(text, "\uF445\uF445\uF445\uF445\uF51D") || !strings.Contains(text, "━━━━━━━━") {
+		t.Fatalf("the options do not show their bars:\n%s", text)
+	}
+	press(d, key("j"))
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Bar != "line" {
+		t.Fatalf("bar = %q, want line", c.Bar)
+	}
+}
+
 func TestPetIsPicked(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	toField(t, d, "Pet") // on the cat

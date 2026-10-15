@@ -4,6 +4,7 @@ import (
 	"os"
 	"regexp"
 	"slices"
+	"strings"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/ccdrawu/internal/claude"
@@ -12,8 +13,8 @@ import (
 )
 
 // The preferences past the alias: Claude Code's theme with the drawer's
-// background (internal/claude, theme), the pet, and whether the plugin is in
-// Claude Code.
+// background (internal/claude, theme), how the drawer draws its bars, the pet,
+// and whether the plugin is in Claude Code.
 
 const glyphPalette = "\U000F03D8" // nf-md-palette, the background picker's title
 
@@ -99,6 +100,23 @@ func (d *drawer) applyTheme() tea.Cmd {
 		}
 	}
 	return tea.Batch(d.save(), d.app.Toast(terminu.Info, note))
+}
+
+// barField picks how the drawer draws its bars, drawn in place: Nerd Font
+// squares, or a line for a terminal with no Nerd Font. No terminal says which
+// fonts it has, so each option shows its own bar, and one this terminal can't
+// draw shows as boxes.
+func (d *drawer) barField() *terminu.Field {
+	options := []string{
+		"squares  " + strings.Repeat("\uF445", 4) + strings.Repeat("\uF51D", 4),
+		"line     " + strings.Repeat("━", 8),
+	}
+	f := &terminu.Field{Label: "Bar", Options: options, Selected: max(0, slices.Index(config.BarStyles, d.cfg.Bar))}
+	f.OnChange = func() tea.Cmd {
+		d.cfg.Bar = config.BarStyles[f.Selected]
+		return d.save()
+	}
+	return f
 }
 
 // petField picks the animal the drawer's pet is, drawn in place; open sessions

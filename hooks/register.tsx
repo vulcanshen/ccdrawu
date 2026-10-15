@@ -589,7 +589,7 @@ export const register: Register = on => {
     )
     const dockRow = (key: string, v: View) => {
       if (v.meter !== undefined) {
-        const b = bar(v.meter, barWidth)
+        const b = bar(v.meter, barWidth, conf.bar)
         return (
           <Box flexDirection="row">
             {label(key)}

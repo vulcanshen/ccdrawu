@@ -20,10 +20,18 @@ export function duration(ms: number): string {
   return ms < MINUTE ? '0m' : countdown(ms)
 }
 
-// A bar's filled and empty parts, `width` cells in all
-export function bar(percent: number, width: number): { filled: string; empty: string } {
+// A bar's filled and empty parts, `width` cells in all, in the style picked in ccdrawu (the config's
+// "bar"): Nerd Font squares (nf-oct-square_fill, nf-oct-square), from the font itself rather than one
+// the terminal borrows, apart from each other and from the rows above and below; or "line", for a
+// terminal with no Nerd Font, a box-drawing line every monospace font has, its parts told apart by
+// color
+export const SQUARE_FILL = '\u{F445}'
+export const SQUARE = '\u{F51D}'
+export const LINE = '━'
+export function bar(percent: number, width: number, style?: string): { filled: string; empty: string } {
+  const [full, none] = style === 'line' ? [LINE, LINE] : [SQUARE_FILL, SQUARE]
   const n = Math.round((Math.min(100, Math.max(0, percent)) / 100) * width)
-  return { filled: '▰'.repeat(n), empty: '▱'.repeat(width - n) }
+  return { filled: full.repeat(n), empty: none.repeat(width - n) }
 }
 
 export function percentText(percent: number): string {

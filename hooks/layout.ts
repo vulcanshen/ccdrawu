@@ -7,8 +7,9 @@ import { C, ITEMS, type Item, type Seg, type View } from './items'
 
 export type Placement = 'dock' | 'inline'
 
-// ~/.config/ccdrawu/config.json: { "dock": [ids], "inline": [ids], "alias": name, "pet": { "species" } }.
-// Undefined when it is not JSON, as when caught half written: read it again on the next tick
+// ~/.config/ccdrawu/config.json: { "dock": [ids], "inline": [ids], "alias": name, "pet": { "species" },
+// "bar": style }. Undefined when it is not JSON, as when caught half written: read it again
+// on the next tick
 export function parseConfig(text: string): Config | undefined {
   let raw: unknown
   try {
@@ -24,6 +25,8 @@ export function parseConfig(text: string): Config | undefined {
   }
   const alias = (raw as Record<string, unknown>).alias
   if (typeof alias === 'string') config.alias = alias
+  const style = (raw as Record<string, unknown>).bar
+  if (typeof style === 'string') config.bar = style
   const pet = (raw as Record<string, unknown>).pet
   if (typeof pet === 'object' && pet !== null) {
     const { species } = pet as Record<string, unknown>
