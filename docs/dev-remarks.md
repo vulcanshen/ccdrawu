@@ -69,6 +69,9 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - **權限模式有延遲。** 沒有「權限模式改變」的事件。Claude 工作中按 `shift+tab`，等目前這一步的工具跑完才更新；閒置時要等下一個 prompt。mod API 沒有讀目前模式的方法；`statusLine` 指令收到的 JSON 也沒有：2026-10-14 在 Claude Code 2.1.299 把它錄下來看過，按 `shift+tab` 時狀態列馬上重跑，但前後只差 `cost.total_duration_ms`，沒切換時它也會這樣重跑，連「重跑了」都不能當成模式變了的訊號。
 - **tmux 256 色。** Claude Code 偵測到 `$TMUX` 就把顏色限制在 256 色，hex 色會被換成最接近的 256 色（`#11111b` 會變成第 17 號深藍）。要全彩得設 `CLAUDE_CODE_TMUX_TRUECOLOR=1`。
 - **組織管理的環境。** `session.compact`、`skill.prompt` 與 `classic.*` 事件在組織管理的 Claude Code 裡會略過使用者安裝的外掛，Mode、Compact 和 Skills 會是空的，compact 後的 Context 也要等下一輪結束才更新，寵物不會在工具失敗時跳、compact 後說話。
+- **面板放哪裡由 Claude Code 決定。** `Pane` 的 `placement`（`dock`／`inline`）是唯讀的，hook 改了會被拒絕；`$.ui.open` 只能要大小（inline 的 `rows`、dock 的 `columns`），沒有位置。fullscreen（alternate screen）而且終端機夠寬（自動開的 144 欄、使用者開過的 110 欄）才 dock，其他都 inline。所以 TUI 不提供「位置」設定，`[2]` 的 sidebar／inline 是「放在那裡時顯示哪些」；能控制的只有開不開、開多大。2026-10-15 user 的 session 曾被重開成 default 模式（process 環境有 `CLAUDE_CODE_TUI_JUST_SWITCHED=default`、沒有 `CLAUDE_CODE_NO_FLICKER=1`，settings.json 有 `"tui": "default"`），`/tui fullscreen` 卻回「Already using the fullscreen renderer.」，drawer 一直在 inline；結束 Claude Code 再重開就回到 sidebar。怎麼切到 default 的沒查到（那段對話沒有 `/tui default`，壓縮過的程式也看不出 `/tui` 的判斷）。README 的疑難排解寫了「重開」。
+- **Windows 的終端機（2026-10-15 user 的同事試裝）。** Windows Terminal：TUI、inline、sidebar 排版都對；沒有 Nerd Font 時缺的字畫成 `�`，仍佔一格；powerline 與框線字元由 Windows Terminal 自己畫，不靠字型。Termius 的本機終端：bar 的方塊在終端機佔兩格（從截圖量的：13 個方塊加右邊一段深色剛好 26 格碰到右邊界，剩下 6 個方塊和百分比折到下一行最左邊），sidebar 整個錯位；TUI 也留殘影，radio 標記（U+F0000 以上的 Material Design 圖示）畫成 `�`；sidebar 的淺色底只塗在有字的格子上。terminu-go 量圖示寬度（CPR）只在 unix 上做，Windows 預設一格，可以用 `CCDRAWU__ICON_WIDTH`／`TERMINU__ICON_WIDTH` 指定，沒在 Termius 試過。不另外處理，README 寫改用 Windows Terminal。同事後來在 Windows Terminal 換成 Maple Mono NF CN，只剩沒選中的 radio 是 `�`：Maple 7.0 缺 U+F043D（nf-md-radiobox_blank），是 ccdrawu 與 terminu-go v0.1.7 用到的 39 個圖示裡唯一缺的（`fc-list ":family=…:charset=…"` 逐一查；zsh 裡變數要寫 `${f}`，`$f:charset` 的 `:c` 會被當成修飾符）。JetBrains Mono、Hack、FiraCode 的 Nerd Font 都不缺，同事換 JetBrains Mono Nerd Font 後就正常。user 定：字型問題，不是規範問題，不請 tdp 換圖示（Maple 用的人少）。
+- **淺色主題。** sidebar 的底色是 Claude Code 主題的 `composerSidebarBackground`（內建淺色主題是 `rgb(235, 235, 235)` 或 `rgb(245, 245, 245)`，`light-ansi` 是 `ansi:white`），配色寫死 Catppuccin Mocha，在淺色底上看不清（同事的 Claude Code 是淺色主題）。mod 的顏色可以用主題鍵（`text`、`subtle`、`success`…，跟著使用者的主題變），之後要支援淺色主題可以從這裡改。
 
 ## 未做
 
@@ -76,7 +79,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - README 的截圖或 demo
 - 寵物取名（做過又拿掉，見設計決定的寵物 pet；之後的版本再看）
 - CHANGELOG：release workflow 從它取 release notes，第一次發布前要有
-- 沒在真的 Windows 上跑過：mod 的 `$.fs` 收不收 `C:\Users\me/.ccdrawu/...` 這種混用分隔的路徑、Windows 上 rename 蓋過 mod 正在讀的檔會不會失敗（TUI 存設定靠 rename）、`.ps1` 的語法（這台 Mac 沒有 PowerShell）
+- Windows 還沒驗到的：rename 蓋過 mod 正在讀的檔會不會失敗（TUI 存設定靠 rename；同事試裝時 TUI 存檔成功，但沒刻意在 mod 讀檔時存）、`.ps1` 的語法（不知道同事用哪種方式裝的，這台 Mac 沒有 PowerShell）。mod 的 `$.fs` 寫 Windows 路徑已驗到：TUI 列得出 mod 寫的 catalog
 
 ## 開發
 

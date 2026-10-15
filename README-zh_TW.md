@@ -45,11 +45,11 @@
 ## 需求
 
 - Claude Code 2.1.287 以上
-- fullscreen 渲染模式：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊
+- fullscreen 渲染模式：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊（見[疑難排解](#疑難排解)）
 - 終端機要夠寬：自動開啟的面板會等終端機寬到大約 110～144 欄才出現
-- 終端機要用 [Nerd Font](https://www.nerdfonts.com)：側邊欄的 bar 和 `ccdrawu` 指令都用到它的圖示。沒有的話，在 Settings 底下的 **preferences** 把 **Bar** 設成 `line`：每個選項旁邊都畫著它的 bar，你的終端機畫得出哪一種，一看就知道
+- 終端機的字型要設成 [Nerd Font](https://www.nerdfonts.com)：側邊欄的 bar，以及 `ccdrawu` 指令裡的標記（選了哪個、勾了哪些），都是它的圖示。沒有的話，見[疑難排解](#疑難排解)
 - `ccdrawu` 指令，用來挑側邊欄顯示的項目
-- macOS、Linux 或 Windows（Windows 還沒在真的機器上測過，見[限制](#限制)）
+- macOS、Linux 或 Windows（Windows 上在 Windows Terminal 試過，見[限制](#限制)）
 
 ## 安裝
 
@@ -133,13 +133,43 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 
 側邊欄每 6 小時會向 npm registry 查一次 Claude Code 的最新版本。打開 **Status** 的話，還會每 5 分鐘向 status.claude.com 查一次；除此之外不會連網。
 
+## 疑難排解
+
+### 面板在輸入框上方
+
+面板放哪裡是 Claude Code 決定的，不是 ccdrawu：只有在 fullscreen 渲染模式、而且終端機寬到大約 110～144 欄以上時，才會放在對話旁邊，其他時候都放在輸入框上方。
+
+- 執行 `/tui fullscreen`。Claude Code 會重開並接回你的對話，之後的 session 也會沿用。要換回來就執行 `/tui default`。
+- 如果 `/tui fullscreen` 說已經在用了，面板卻還在輸入框上方，就關掉 Claude Code 再重新啟動：`claude -c` 可以接著原本的對話。
+- 把終端機拉寬一點。
+
+### bar 或標記變成方框或 `�`
+
+或是 bar 黏成一片。終端機的字型不是 Nerd Font，只好向別的字型借這些圖示，或乾脆畫不出來。到 [nerdfonts.com](https://www.nerdfonts.com) 裝一套，設成終端機的字型；Windows Terminal 在「設定 → 你的設定檔 → 外觀 → 字型」。
+
+Nerd Font 也可能少了其中幾個圖示。Maple Mono NF CN 沒有「沒選中」的標記，所以在 `ccdrawu` 指令裡，沒選中的選項會顯示成 `�`，選中的正常。JetBrains Mono Nerd Font 試過，全部都畫得出來。
+
+不想換字型的話，在 Settings 底下的 **preferences** 把 **Bar** 設成 `line`：每個選項旁邊都畫著它的 bar，你的終端機畫得出哪一種，一看就知道。`ccdrawu` 指令裡的標記沒有這種設定，選了哪個只能看顏色。
+
+### 列折行，螢幕最左邊出現碎片
+
+側邊欄有 bar 的列會折行、把其他列擠亂，`ccdrawu` 指令的畫面也會殘留前面畫面的片段。在 Windows 上 Termius 的本機終端會這樣，請改用 Windows Terminal。
+
+### 側邊欄是淺灰色
+
+字也看不清楚。側邊欄的底色由 Claude Code 的主題決定，淺色主題會讓它變成淺灰色，而 ccdrawu 的配色是給深色底用的。用 `/theme` 換成深色主題，或在 Settings 底下的 **preferences** 設定 **Claude theme**，順便也能讓側邊欄的底色跟終端機一樣，見[讓底色跟終端機一樣](#讓底色跟終端機一樣)。
+
+### 側邊欄的底色跟終端機不一樣
+
+見[讓底色跟終端機一樣](#讓底色跟終端機一樣)。
+
 ## 限制
 
 - 用 `shift+tab` 切換權限模式後，**Mode** 要等 Claude 跑完目前這一步的工具才會更新；Claude 閒著的時候，要等你送出下一則訊息。
-- 配色是 Catppuccin Mocha，目前不能更改。
+- 配色是 Catppuccin Mocha，給深色底用的，目前不能更改：終端機是淺色底時，字會很難看清楚。Claude Code 用淺色主題時，見[疑難排解](#疑難排解)。
 - 由組織管理的 Claude Code 環境裡，**Mode**、**Compact** 和 **Skills** 可能會是空的，壓縮對話後 **Context** 也要等下一次回覆才會更新，寵物也不會在工具失敗時跳、壓縮後說話：那些事件會略過使用者自己安裝的外掛。
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。
-- Windows 版有建置、也能安裝，但還沒在真的 Windows 上測過，歡迎回報問題。
+- Windows 上在 Windows Terminal 試過。Termius 的本機終端會把畫面畫亂（見[疑難排解](#疑難排解)），其他 Windows 終端機還沒試過，歡迎回報。
 
 ## 移除
 

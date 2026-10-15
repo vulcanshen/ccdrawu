@@ -45,11 +45,11 @@ These start off; turn them on in `ccdrawu`:
 ## Requirements
 
 - Claude Code 2.1.287 or later
-- Fullscreen rendering: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript
+- Fullscreen rendering: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript (see [Troubleshooting](#troubleshooting))
 - A terminal wide enough for a sidebar: a pane opened on its own waits until the terminal is about 110–144 columns wide
-- A [Nerd Font](https://www.nerdfonts.com) in your terminal: the drawer draws its bars with it, and so does the `ccdrawu` command. Without one, set **Bar** to `line` in **preferences** under Settings: each choice there shows its own bar, so you can see which one your terminal draws
+- A [Nerd Font](https://www.nerdfonts.com) as your terminal's font: the drawer's bars and the marks in the `ccdrawu` command (which choice is picked, which items are ticked) are its icons. Without one, see [Troubleshooting](#troubleshooting)
 - The `ccdrawu` command, to pick what the drawer shows
-- macOS, Linux or Windows (Windows not yet tried on a real machine: see [Limitations](#limitations))
+- macOS, Linux or Windows (on Windows, tried in Windows Terminal: see [Limitations](#limitations))
 
 ## Install
 
@@ -133,13 +133,43 @@ On Windows, `~` is your user folder (`%USERPROFILE%`).
 
 Every 6 hours the drawer asks the npm registry for Claude Code's newest version. With **Status** on, it also asks status.claude.com every 5 minutes; it makes no other requests.
 
+## Troubleshooting
+
+### The drawer sits above the prompt
+
+Claude Code decides where the drawer goes, not ccdrawu: beside the transcript only in fullscreen rendering and in a terminal about 110–144 columns wide or more, above the prompt otherwise.
+
+- Run `/tui fullscreen`. Claude Code restarts, picks your conversation up where it was, and keeps the choice for later sessions. `/tui default` goes back.
+- If `/tui fullscreen` says Claude Code already uses it but the drawer still sits above the prompt, quit Claude Code and start it again: `claude -c` continues the conversation.
+- Widen the terminal.
+
+### Bars or marks show as boxes or `�`
+
+Or the bars run into each other. The terminal's font is not a Nerd Font, so the terminal borrows those icons from another font, or can't draw them at all. Install one from [nerdfonts.com](https://www.nerdfonts.com) and pick it as your terminal's font; in Windows Terminal that is Settings → your profile → Appearance → Font face.
+
+A Nerd Font can also lack a few of these icons. Maple Mono NF CN has no mark for a choice that is not picked, so in the `ccdrawu` command those show as `�` while the picked one shows. JetBrains Mono Nerd Font has been tried and draws them all.
+
+Without a Nerd Font, set **Bar** to `line` in **preferences** under Settings: each choice there shows its own bar, so you can see which one your terminal draws. The marks in the `ccdrawu` command have no such setting; there, only the color tells which choice is picked.
+
+### Rows wrap, with pieces at the left edge of the screen
+
+The sidebar's rows with bars wrap and push the rest out of place, and the `ccdrawu` command leaves parts of earlier screens behind. Seen in Termius's local terminal on Windows: use Windows Terminal there.
+
+### The sidebar is light gray
+
+And its text is hard to read. Claude Code paints the sidebar from its theme, a light theme paints it light gray, and ccdrawu's colors are made for a dark background. Pick a dark theme with `/theme`, or set **Claude theme** in **preferences** under Settings, which can also give the sidebar your terminal's background: see [Match the background](#match-the-background).
+
+### The sidebar's background is not the terminal's
+
+See [Match the background](#match-the-background).
+
 ## Limitations
 
 - After you switch the permission mode with `shift+tab`, **Mode** changes once Claude finishes the tools of the step it is on; while Claude is idle, it changes when you send the next prompt.
-- The colors are Catppuccin Mocha and cannot be changed yet.
+- The colors are Catppuccin Mocha, made for a dark background, and cannot be changed yet: on a light terminal the text is hard to read. Under a light Claude Code theme, see [Troubleshooting](#troubleshooting).
 - Where an organization manages Claude Code, **Mode**, **Compact** and **Skills** may stay empty, **Context** catches up with a compaction only after the next reply, and the pet does not jump when a tool fails or speak after a compaction: those events skip plugins the user installed.
 - Claude Code's mod interface is in early access and may change between releases.
-- The Windows builds are made and can be installed, but ccdrawu has not been tried on a Windows machine yet. Reports are welcome.
+- On Windows, ccdrawu has been tried in Windows Terminal. Termius's local terminal draws it out of place (see [Troubleshooting](#troubleshooting)), and other Windows terminals have not been tried yet; reports are welcome.
 
 ## Uninstall
 
