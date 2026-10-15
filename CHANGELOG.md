@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [0.1.2] - 2026-10-15
+### Fixed
+- `ccdrawu uninstall claude` puts back your theme and status line even when the ccdrawu plugin is already gone from Claude Code; it used to stop at "The ccdrawu plugin is not in Claude Code.", leaving Claude Code's status line on a ccdrawu about to be removed.
+- The status line you had before ccdrawu's comes back exactly as it was written when you turn ccdrawu's off after `ccdrawu` was closed and opened again, or with `ccdrawu uninstall claude`; its spacing used to change.
+
 ## [0.1.1] - 2026-10-15
 ### Added
 - The status line: ccdrawu can be Claude Code's status line, the row under the prompt, with the drawer or on its own. Turned on under Statusline in `ccdrawu`, it sets `ccdrawu statusline` as Claude Code's status line; one you had is replaced only after asking, and comes back when the status line is turned off or with `ccdrawu uninstall claude`. Its page has Items and Order, as the drawer's (Model, Context, Session, Weekly, Cost and Git to start with); Format, `label` (`Context 42%`), `short` (`ctx 42%`) or `value` (`42%`); Color, `highlighted` or `dimmed`; Separator, `|` unless you set another; and Refresh, 10 seconds unless you set another. While it is on, the plugin keeps each session's values in `~/.ccdrawu/sessions/`, each file removed after a week without use; where the plugin is not running, it shows the model, context and cost Claude Code hands it.
