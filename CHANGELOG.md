@@ -6,7 +6,7 @@
 ### Added
 - **Statusline** `on when narrow`: the status line only while the terminal is too narrow for the sidebar, under about 144 columns, and the drawer is not beside the transcript. Otherwise the row goes away.
 ### Changed
-- **Drawer** atop the sidebar page and atop the inline page are a setting each, where they were one. Off on the inline page alone, a terminal narrowed below the sidebar's width hides the drawer, instead of moving it above the prompt, until it widens again. 0.1.1's off reads as off on both.
+- **Drawer** atop the sidebar page and atop the inline page are a setting each, where they were one. Off on the inline page alone, a terminal narrowed below the sidebar's width hides the drawer, instead of moving it above the prompt, until it widens again. Turned back on in a terminal that narrow, the drawer stays out of sight until `/ccdrawu`, as Claude Code places it, and open sessions say so in a toast. 0.1.1's off reads as off on both.
 ### Fixed
 - `/ccdrawu` shows a drawer that waits for a wider terminal at once; it took two.
 - `ccdrawu uninstall claude` puts back your theme and status line even when the ccdrawu plugin is already gone from Claude Code; it used to stop at "The ccdrawu plugin is not in Claude Code.", leaving Claude Code's status line on a ccdrawu about to be removed.

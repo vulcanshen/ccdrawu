@@ -88,7 +88,7 @@ ccdrawu install claude
 ## 使用方式
 
 - session 開始時會自動打開。
-- `ccdrawu` 裡 sidebar 頁和 inline 頁最上面的 **Drawer**，各自只關掉那個位置。inline 頁設成 `off` 的話，終端機縮到放不下側邊欄時，側邊欄會收起來，不會跑到輸入框上方；拉寬之後再回到對話旁邊。兩頁都設成 `off`，session 開始時就不會打開。開著的 session 會在一秒內跟著換。
+- `ccdrawu` 裡 sidebar 頁和 inline 頁最上面的 **Drawer**，各自只關掉那個位置。inline 頁設成 `off` 的話，終端機縮到放不下側邊欄時，側邊欄會收起來，不會跑到輸入框上方；拉寬之後再回到對話旁邊。終端機窄的時候把 inline 設回 `on`，側邊欄不會自己回到輸入框上方，見[限制](#限制)。兩頁都設成 `off`，session 開始時就不會打開。開著的 session 會在一秒內跟著換。
 - `/ccdrawu` 開關側邊欄，Claude 回覆到一半也能用；**Drawer** 設成 `off` 的位置也一樣：打開之後就留在那裡，直到它被移到別的位置。
 - 點右上角的 `×` 關閉，或按 `Ctrl+X Tab` 移過去再按 `Ctrl+X X`。
 - 焦點在側邊欄上時，`Ctrl+X ←`、`Ctrl+X →` 可以調寬或調窄。
@@ -197,6 +197,7 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 
 ## 限制
 
+- 在 fullscreen 渲染模式下，Claude Code 只會在兩種情況把側邊欄放到輸入框上方：你用 `/ccdrawu` 打開它，或它在對話旁邊時終端機被縮窄。所以終端機窄到放不下側邊欄時，把 inline 頁的 **Drawer** 設回 `on`，側邊欄不會出現：用 `/ccdrawu` 打開，或把終端機拉寬再縮窄。這種時候開著的 session 會跳一則提示。
 - 用 `shift+tab` 切換權限模式後，**Mode** 要等 Claude 跑完目前這一步的工具才會更新；Claude 閒著的時候，要等你送出下一則訊息。
 - 狀態列可能比側邊欄慢幾秒：Claude Code 要等對話有進展，或隔 **Refresh** 秒，才會重跑它。
 - 配色是 Catppuccin Mocha，給深色底用的，目前不能更改：終端機是淺色底時，字會很難看清楚。Claude Code 用淺色主題時，見[疑難排解](#疑難排解)。

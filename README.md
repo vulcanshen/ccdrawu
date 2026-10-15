@@ -88,7 +88,7 @@ You can also add only the plugin, from inside Claude Code: `/plugin install ccdr
 ## Usage
 
 - The drawer opens by itself when a session starts.
-- **Drawer**, atop the sidebar page and the inline page in `ccdrawu`, turns it off in that place alone. Off on the inline page, a terminal narrowed below the sidebar's width hides the drawer instead of moving it above the prompt, and widening it again brings the drawer back beside the transcript. Off on both, sessions start without it. Open sessions follow within a second.
+- **Drawer**, atop the sidebar page and the inline page in `ccdrawu`, turns it off in that place alone. Off on the inline page, a terminal narrowed below the sidebar's width hides the drawer instead of moving it above the prompt, and widening it again brings the drawer back beside the transcript. Turned back on while the terminal is narrow, the drawer does not come back above the prompt by itself: see [Limitations](#limitations). Off on both, sessions start without it. Open sessions follow within a second.
 - `/ccdrawu` opens or closes it, even while Claude is working, and even where **Drawer** is off: it stays where it opens until it moves.
 - Click the `×` at its top right to close it, or press `Ctrl+X Tab` to focus it and then `Ctrl+X X`.
 - `Ctrl+X ←` and `Ctrl+X →` make it wider or narrower while it has focus.
@@ -197,6 +197,7 @@ The ccdrawu plugin is not running in that session, so the status line shows what
 
 ## Limitations
 
+- With fullscreen rendering, Claude Code puts the drawer above the prompt only when you open it with `/ccdrawu`, or when the terminal narrows while it sits beside the transcript. So if you turn **Drawer** on the inline page back on while the terminal is too narrow for the sidebar, the drawer stays out of sight: open it with `/ccdrawu`, or widen the terminal and narrow it again. Open sessions say so in a toast when it happens.
 - After you switch the permission mode with `shift+tab`, **Mode** changes once Claude finishes the tools of the step it is on; while Claude is idle, it changes when you send the next prompt.
 - The status line can be a few seconds behind the drawer: Claude Code runs it again as the conversation moves on, or after **Refresh** seconds.
 - The colors are Catppuccin Mocha, made for a dark background, and cannot be changed yet: on a light terminal the text is hard to read. Under a light Claude Code theme, see [Troubleshooting](#troubleshooting).

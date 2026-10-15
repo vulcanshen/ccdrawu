@@ -175,8 +175,20 @@ async function refreshConfig($: Engine) {
     if (!shows.dock && !shows.inline) await closePane($)
     else if (!(await $.ui.panes()).some(p => p.id === PANE)) void $.ui.open(PANE_OPEN)
     else await keepPlace($)
+    if (shows.inline && !drawerWas.inline) quietly(hintInline($))
   }
   drawerWas = shows
+}
+
+// Turned on above the prompt in a terminal too narrow for the sidebar, the drawer stays out of sight:
+// the engine holds a pane opened unasked until the terminal is wide enough to dock it, and draws one
+// above the prompt only when the person opens it. Once the open has settled, say how
+const INLINE_HINT = 'The drawer goes above the prompt with /ccdrawu, or when the terminal narrows from beside the transcript'
+
+async function hintInline($: Engine) {
+  await $.clock.sleep(1_000)
+  const pane = (await $.ui.panes()).find(p => p.id === PANE)
+  if (pane !== undefined && !pane.isPlaced) $.ui.toast(INLINE_HINT, { timeoutMs: 8_000 })
 }
 
 // Where /ccdrawu opened the drawer: it stays there, the place off or not, until it moves. pending until
