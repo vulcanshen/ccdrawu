@@ -103,7 +103,8 @@ type Drawer struct {
 
 // Statusline is `ccdrawu statusline` as Claude Code's status line. On says
 // whether it is: the mod keeps each session's values for it while it is.
-// Items are the ids it shows, in order; nil takes the catalog's defaults, as
+// When is when it shows while on: always (""), or only while the drawer is not
+// beside the transcript (WhenInline). Items are the ids it shows, in order; nil takes the catalog's defaults, as
 // the drawer's placements do. Format is how each item reads (one of Formats,
 // "" for the first); Color how it is colored (one of Colors, "" for the
 // first); Separator what stands between items ("" for "|"); Refresh how many
@@ -112,6 +113,7 @@ type Drawer struct {
 // to put back as it was written: JSON null when it had none.
 type Statusline struct {
 	On        bool     `json:"on"`
+	When      string   `json:"when,omitempty"`
 	Items     []string `json:"items"`
 	Format    string   `json:"format,omitempty"`
 	Color     string   `json:"color,omitempty"`
@@ -143,6 +145,10 @@ func (k *Kept) UnmarshalJSON(data []byte) error {
 	*k = Kept(b.Bytes())
 	return nil
 }
+
+// WhenInline is a statusline on only while the drawer is not beside the
+// transcript: above the prompt, waiting for a wider terminal, or closed.
+const WhenInline = "inline"
 
 // Formats are how an item reads in the statusline: its label and value
 // ("Context 42%"), its short label and value ("ctx 42%"), or the value alone.

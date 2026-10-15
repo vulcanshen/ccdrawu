@@ -65,8 +65,10 @@ const keep = 7 * 24 * time.Hour
 // Run reads Claude Code's input from in and writes the status line to out:
 // the items on in the statusline, from the session's file, or the few the
 // input has while there is none (the plugin not loaded, or not yet). columns
-// is the terminal's width, 0 when unknown; the line is cut to fit it. Files of
-// sessions gone quiet for a week are removed.
+// is the terminal's width, 0 when unknown; the line is cut to fit it. On only
+// when inline, it is an empty line while the drawer is beside the transcript:
+// Claude Code keeps the row while a status line is set, so it stays, empty.
+// Files of sessions gone quiet for a week are removed.
 func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now time.Time) error {
 	var input Input
 	if err := json.NewDecoder(in).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
@@ -81,14 +83,18 @@ func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now tim
 		cat = fallback
 	}
 	sessions := filepath.Join(loc.Data, "sessions")
-	items := sessionItems(sessions, input.SessionID)
+	items, docked := sessionItems(sessions, input.SessionID)
 	if items == nil {
 		items = fromInput(input)
 	}
 	if columns > 0 {
 		columns = max(1, columns-edge)
 	}
-	_, err = fmt.Fprintln(out, Line(cfg, cat, items, columns))
+	line := Line(cfg, cat, items, columns)
+	if docked && cfg.Statusline.When == config.WhenInline {
+		line = ""
+	}
+	_, err = fmt.Fprintln(out, line)
 	prune(sessions, now)
 	return err
 }
@@ -165,23 +171,25 @@ func rgb(color string) (r, g, b uint64, ok bool) {
 	return v >> 16, v >> 8 & 0xff, v & 0xff, true
 }
 
-// sessionItems is the session's file as the mod wrote it, nil while there is
-// none or it cannot be read (caught half written: the next run reads it).
-func sessionItems(dir, id string) map[string][]Seg {
+// sessionItems is the session's file as the mod wrote it: its items, nil
+// while there is none or it cannot be read (caught half written: the next run
+// reads it), and whether the drawer is beside the transcript.
+func sessionItems(dir, id string) (map[string][]Seg, bool) {
 	if id == "" || strings.ContainsAny(id, `/\`) || strings.Contains(id, "..") {
-		return nil
+		return nil, false
 	}
 	data, err := os.ReadFile(filepath.Join(dir, id+".json"))
 	if err != nil {
-		return nil
+		return nil, false
 	}
 	var f struct {
-		Items map[string][]Seg `json:"items"`
+		Docked bool             `json:"docked"`
+		Items  map[string][]Seg `json:"items"`
 	}
 	if json.Unmarshal(data, &f) != nil || f.Items == nil {
-		return nil
+		return nil, false
 	}
-	return f.Items
+	return f.Items, f.Docked
 }
 
 // fallback is the catalog while the mod has written none: the items the

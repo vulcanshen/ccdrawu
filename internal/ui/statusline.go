@@ -27,17 +27,24 @@ func (d *drawer) statuslineFields() []*terminu.Field {
 	return append(fields, d.formatField(), d.colorField(), d.separatorField(), d.refreshField())
 }
 
-// statusOnField turns the statusline on or off, drawn in place. Turned on over
-// a status line of the user's own, it asks first and keeps that one to put
-// back.
+// statusOnField turns the statusline off, on, or on when inline: only while
+// the drawer is not beside the transcript (above the prompt, waiting for a
+// wider terminal, or closed). It is drawn in place. Turned on over a status
+// line of the user's own, it asks first and keeps that one to put back.
 func (d *drawer) statusOnField() *terminu.Field {
-	f := &terminu.Field{Label: "Statusline", Options: []string{"off", "on"}}
-	if d.cfg.Statusline.On {
-		f.Selected = 1
-	}
+	f := &terminu.Field{Label: "Statusline", Options: []string{"off", "on", "on when inline"}, Selected: d.statusSelected()}
 	f.OnChange = func() tea.Cmd {
 		if f.Selected == 0 {
 			return d.statuslineOff()
+		}
+		picked, when := f.Selected, ""
+		if picked == 2 {
+			when = config.WhenInline
+		}
+		// From on to on when inline, or back: ccdrawu's is the status line already
+		if d.cfg.Statusline.On {
+			d.cfg.Statusline.When = when
+			return d.save()
 		}
 		command, ours, err := claude.CurrentStatusline(d.loc.Claude)
 		if err != nil {
@@ -45,7 +52,7 @@ func (d *drawer) statusOnField() *terminu.Field {
 			return d.app.Error("Can't read Claude Code's settings", err.Error())
 		}
 		if command == "" || ours {
-			return d.statuslineOn()
+			return d.statuslineOn(when)
 		}
 		// On only once the user says so: a no leaves it off
 		f.Selected = 0
@@ -58,16 +65,29 @@ func (d *drawer) statusOnField() *terminu.Field {
 			},
 			Warn: []int{1},
 		}, func() tea.Cmd {
-			f.Selected = 1
-			return d.statuslineOn()
+			f.Selected = picked
+			return d.statuslineOn(when)
 		})
 	}
 	return f
 }
 
+// statusSelected is the statusline's option as the config has it: off, on, or
+// on when inline.
+func (d *drawer) statusSelected() int {
+	switch s := d.cfg.Statusline; {
+	case !s.On:
+		return 0
+	case s.When == config.WhenInline:
+		return 2
+	}
+	return 1
+}
+
 // statuslineOn sets ccdrawu's status line in Claude Code, keeping the one it
-// replaces; the mod starts keeping each session's values for it.
-func (d *drawer) statuslineOn() tea.Cmd {
+// replaces; the mod starts keeping each session's values for it. when is when
+// it shows (config.Statusline).
+func (d *drawer) statuslineOn(when string) tea.Cmd {
 	s := &d.cfg.Statusline
 	before, switched, err := claude.ApplyStatusline(d.loc.Claude, refresh(*s))
 	if err != nil {
@@ -77,7 +97,7 @@ func (d *drawer) statuslineOn() tea.Cmd {
 	if switched {
 		s.Before = config.Kept(before)
 	}
-	s.On = true
+	s.On, s.When = true, when
 	return tea.Batch(d.save(), d.app.Toast(terminu.Info, "Claude Code's status line is now ccdrawu's"))
 }
 
@@ -85,10 +105,10 @@ func (d *drawer) statuslineOn() tea.Cmd {
 func (d *drawer) statuslineOff() tea.Cmd {
 	s := &d.cfg.Statusline
 	if err := claude.RestoreStatusline(d.loc.Claude, json.RawMessage(s.Before)); err != nil {
-		d.statusOn.Selected = 1
+		d.statusOn.Selected = d.statusSelected()
 		return d.app.Error("Can't put the status line back", err.Error())
 	}
-	s.On, s.Before = false, nil
+	s.On, s.When, s.Before = false, "", nil
 	return tea.Batch(d.save(), d.app.Toast(terminu.Info, "Claude Code has its own status line back"))
 }
 

@@ -327,12 +327,18 @@ async function readSnapshot($: Engine): Promise<Snapshot> {
 // `ccdrawu statusline` to lay out, written only when it changed. The id is asked each time: after /clear
 // the session goes on under a new one, and Claude Code hands the command that one
 let statuslineWritten: { file: string; text: string } | undefined
+// Where the pane was drawn last: dock, beside the transcript, or inline, above the prompt
+let placedAs: string | undefined
 
 async function writeStatusline($: Engine) {
   if (dataDir === undefined || !(await read($, config)).statusline?.on) return
   const id = (await $.session.id()).replace(/\.jsonl$/, '')
   const file = `${dataDir}/sessions/${id}.json`
-  const text = statuslineFile(await readSnapshot($))
+  // Beside the transcript only while the pane is open and drawn there: not closed, nor waiting for a
+  // wider terminal, nor above the prompt
+  const pane = (await $.ui.panes()).find(p => p.id === PANE)
+  const docked = pane?.isPlaced === true && placedAs === 'dock'
+  const text = statuslineFile(await readSnapshot($), docked)
   if (statuslineWritten?.file === file && statuslineWritten.text === text) return
   await $.fs.write(file, text)
   statuslineWritten = { file, text }
@@ -524,6 +530,7 @@ export const register: Register = on => {
     // Leave out the paddingX on either side, or a row runs past the width and wraps
     const inner = Math.max(22, e.props.bodyColumns - 2)
     const placement = e.props.placement
+    placedAs = placement
 
     const s = await readSnapshot($)
     const conf = await read($, config)

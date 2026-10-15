@@ -104,6 +104,8 @@ ccdrawu can also be Claude Code's status line, the row under the prompt: with th
 
 Run `ccdrawu`, pick **statusline** under Statusline and press `Enter`, then set **Statusline** to `on`. ccdrawu sets `ccdrawu statusline` as Claude Code's status line in `~/.claude/settings.json`. If you already have one, such as ccstatusline, it asks before replacing it and keeps it: setting **Statusline** back to `off`, or `ccdrawu uninstall claude`, puts yours back. Open sessions change at once.
 
+Set it to `on when inline` instead to have it only while the drawer is not beside the transcript: while it sits above the prompt, waits for a wider terminal, or is closed. With the drawer beside the transcript, the row under the prompt stays, empty: Claude Code keeps it as long as a status line is set.
+
 ```
 Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h | Cost $1.20 | Git main  +12 -3
 ```

@@ -159,7 +159,7 @@ func TestRunWithoutTheFileShowsWhatTheInputHas(t *testing.T) {
 		t.Errorf("%q", got)
 	}
 	// An id that would reach out of the folder is not read
-	if sessionItems(filepath.Join(loc.Data, "sessions"), "../catalog") != nil {
+	if items, _ := sessionItems(filepath.Join(loc.Data, "sessions"), "../catalog"); items != nil {
 		t.Error("read a file outside sessions")
 	}
 	if got := fromInput(Input{})["context"]; got != nil {
@@ -192,6 +192,33 @@ func TestRunRemovesFilesOfSessionsLongQuiet(t *testing.T) {
 	for name, kept := range map[string]bool{"old.json": false, "new.json": true, "keep.txt": true} {
 		if _, err := os.Stat(filepath.Join(sessions, name)); (err == nil) != kept {
 			t.Errorf("%s kept: %v, want %v", name, err == nil, kept)
+		}
+	}
+}
+
+// On when inline, the line is empty while the drawer is beside the
+// transcript, and the items otherwise; on, it shows either way
+func TestRunOnWhenInline(t *testing.T) {
+	loc, sessions := setup(t)
+	input := `{"session_id": "abc"}`
+	for _, c := range []struct {
+		when   string
+		docked bool
+		want   string
+	}{
+		{config.WhenInline, true, "\n"},
+		{config.WhenInline, false, "Model Opus 5.5 | Context 42% | Cost $1.20\n"},
+		{"", true, "Model Opus 5.5 | Context 42% | Cost $1.20\n"},
+	} {
+		if err := config.WriteConfig(loc.ConfigFile, config.Config{Statusline: config.Statusline{On: true, When: c.when}}); err != nil {
+			t.Fatal(err)
+		}
+		data, _ := json.Marshal(map[string]any{"version": 1, "docked": c.docked, "items": items})
+		if err := os.WriteFile(filepath.Join(sessions, "abc.json"), data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if got := run(t, loc, input, 0, time.Now()); got != c.want {
+			t.Errorf("when %q, docked %v: %q, want %q", c.when, c.docked, got, c.want)
 		}
 	}
 }

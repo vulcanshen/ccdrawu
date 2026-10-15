@@ -19,7 +19,8 @@ export function statuslineItems(s: Snapshot): Record<string, Seg[]> {
   return items
 }
 
-// The file's text, with no time in it, so a session whose figures stand still leaves the file alone
-export function statuslineFile(s: Snapshot): string {
-  return JSON.stringify({ version: 1, items: statuslineItems(s) }) + '\n'
+// The file's text, with no time in it, so a session whose figures stand still leaves the file alone.
+// docked: whether the drawer shows beside the transcript now, for a statusline on only when it does not
+export function statuslineFile(s: Snapshot, docked: boolean): string {
+  return JSON.stringify({ version: 1, docked, items: statuslineItems(s) }) + '\n'
 }

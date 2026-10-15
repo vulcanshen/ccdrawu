@@ -582,9 +582,11 @@ test('the statusline file holds each item as it reads above the prompt, the pet 
   expect(bare.id).toBeUndefined()
   expect(bare.ccdrawu).toBeUndefined()
 
-  const text = statuslineFile(FULL)
-  expect(JSON.parse(text)).toEqual({ version: 1, items })
-  expect(statuslineFile({ ...FULL })).toBe(text)
+  const text = statuslineFile(FULL, true)
+  expect(JSON.parse(text)).toEqual({ version: 1, docked: true, items })
+  expect(statuslineFile({ ...FULL }, true)).toBe(text)
+  // The drawer moving from beside the transcript is a change the file takes
+  expect(JSON.parse(statuslineFile(FULL, false)).docked).toBe(false)
 })
 
 test('the pane draws on the terminal before any figures arrive, a key on every row', async $ => {
