@@ -156,16 +156,7 @@ func (c Config) On(p Placement, it Item) bool {
 // mod): an item turned on goes after the nearest one before it in the catalog
 // that is on, so a list never reordered stays in the catalog's order.
 func (c *Config) Set(p Placement, cat Catalog, id string, on bool) {
-	list := c.ids(p)
-	if *list == nil {
-		next := []string{}
-		for _, it := range cat.Items {
-			if c.On(p, it) {
-				next = append(next, it.ID)
-			}
-		}
-		*list = next
-	}
+	list := c.written(p, cat)
 	*list = slices.DeleteFunc(*list, func(s string) bool { return s == id })
 	if !on {
 		return
@@ -179,6 +170,37 @@ func (c *Config) Set(p Placement, cat Catalog, id string, on bool) {
 		}
 	}
 	*list = slices.Insert(*list, at, id)
+}
+
+// Reorder puts ids, items on in p, in that order, in the places they had in
+// the list; the other ids (the pet, ones the catalog does not know) keep
+// theirs.
+func (c *Config) Reorder(p Placement, cat Catalog, ids []string) {
+	list := c.written(p, cat)
+	next := slices.Clone(*list)
+	k := 0
+	for i, id := range next {
+		if k < len(ids) && slices.Contains(ids, id) {
+			next[i] = ids[k]
+			k++
+		}
+	}
+	*list = next
+}
+
+// written is p's list, the catalog's defaults written out when it has none.
+func (c *Config) written(p Placement, cat Catalog) *[]string {
+	list := c.ids(p)
+	if *list == nil {
+		next := []string{}
+		for _, it := range cat.Items {
+			if c.On(p, it) {
+				next = append(next, it.ID)
+			}
+		}
+		*list = next
+	}
+	return list
 }
 
 // Shown is the items on in p in the order the drawer draws them: the config's

@@ -101,6 +101,21 @@ func TestConfigKeepsTheOrder(t *testing.T) {
 	}
 }
 
+// The reorder popup's order goes into the places those items had; the rest
+// stay where they were
+func TestConfigReordersInPlace(t *testing.T) {
+	c := Config{Dock: []string{"model", "from-newer-mod", "context"}}
+	c.Reorder(Dock, testCatalog, []string{"context", "model"})
+	if want := []string{"context", "from-newer-mod", "model"}; !slices.Equal(c.Dock, want) {
+		t.Fatalf("dock = %v, want %v", c.Dock, want)
+	}
+	var unset Config
+	unset.Reorder(Inline, testCatalog, []string{"git", "model", "context"})
+	if want := []string{"git", "model", "context"}; !slices.Equal(unset.Inline, want) {
+		t.Fatalf("inline = %v, want the defaults written out in the new order %v", unset.Inline, want)
+	}
+}
+
 // The same names as hooks/format.ts commandNames takes
 func TestCleanAliasTakesWhatTheModTakes(t *testing.T) {
 	for in, want := range map[string]string{"": "", "  ": "", "ccd": "ccd", " /ccd ": "ccd", "dr-2": "dr-2"} {

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 
@@ -176,14 +177,15 @@ func (d *drawer) onMsg(msg tea.Msg) tea.Cmd {
 // summary is the page id in [2], its values shown as tdp components/input
 // shows a checkbox popup's and a reorder's, joined with ", ": Items, the
 // drawer's keys of the items on there, all set in one popup that Enter (or e,
-// editItems) opens; and Order, the same in the order the drawer draws them.
-// The order is set in a reorder popup once terminu-go has one (CD9, tdp
-// v0.6.6 components/input/reorder); until then the row only shows it.
+// editItems) opens; and Order, the same in the order the drawer draws them,
+// set in a reorder popup (tdp v0.6.6 components/input/reorder) once there are
+// two to order.
 func (d *drawer) summary(id string) []*terminu.Field {
 	p := placements[id]
 	return []*terminu.Field{
 		{Label: "Items", Empty: "none", Value: func() string { return d.chosen(p) }, Edit: func() tea.Cmd { return d.pick(id) }},
-		{Label: "Order", Empty: "none", Value: func() string { return d.order(p) }, Disabled: func() bool { return true }},
+		{Label: "Order", Empty: "none", Value: func() string { return d.order(p) }, Edit: func() tea.Cmd { return d.reorder(id) },
+			Disabled: func() bool { return len(d.ordered(p)) < 2 }},
 	}
 }
 
@@ -198,16 +200,38 @@ func (d *drawer) chosen(p config.Placement) string {
 	return strings.Join(keys, ", ")
 }
 
-// order leaves out the pet: the drawer draws it on its own, over the rows or
-// left of the columns, wherever it is in the list.
 func (d *drawer) order(p config.Placement) string {
 	var keys []string
-	for _, it := range d.cfg.Shown(p, d.cat) {
-		if it.ID != petID {
-			keys = append(keys, it.Label)
-		}
+	for _, it := range d.ordered(p) {
+		keys = append(keys, it.Label)
 	}
 	return strings.Join(keys, ", ")
+}
+
+// ordered is the items on in p in the drawer's order, but the pet: the drawer
+// draws it on its own, over the rows or left of the columns, wherever it is in
+// the list.
+func (d *drawer) ordered(p config.Placement) []config.Item {
+	return slices.DeleteFunc(d.cfg.Shown(p, d.cat), func(it config.Item) bool { return it.ID == petID })
+}
+
+// reorder opens the reorder popup for the page id: the items on there in the
+// drawer's order, each as the checkbox popup writes it. D picks one up, j|k
+// move it, Enter drops it, and Enter with nothing held writes the order back.
+func (d *drawer) reorder(id string) tea.Cmd {
+	p, cat := placements[id], d.cat
+	items := d.ordered(p)
+	return d.app.Reorder(terminu.Reorder{
+		Title: "Order", Glyph: glyphPencil, Subject: id, Options: d.rows(items),
+		Done: func(order []int) tea.Cmd {
+			ids := make([]string, len(order))
+			for k, i := range order {
+				ids[k] = items[i].ID
+			}
+			d.cfg.Reorder(p, cat, ids)
+			return d.save()
+		},
+	})
 }
 
 // editItems is [2]'s panel operation on the sidebar and inline pages: one
@@ -231,22 +255,12 @@ func (d *drawer) editItems() terminu.Action {
 // its name.
 func (d *drawer) pick(id string) tea.Cmd {
 	p, cat := placements[id], d.cat
-	gw, lw := 0, 0
-	for _, it := range cat.Items {
-		gw, lw = max(gw, terminu.Width(it.Group)), max(lw, terminu.Width(it.Label))
-	}
-	options := make([]string, len(cat.Items))
 	checked := make([]bool, len(cat.Items))
 	for i, it := range cat.Items {
-		row := terminu.Pad(it.Group, gw) + "  " + terminu.Pad(it.Label, lw)
-		if it.Name != it.Label {
-			row += "  " + it.Name
-		}
-		options[i] = strings.TrimRight(row, " ")
 		checked[i] = d.cfg.On(p, it)
 	}
 	return d.app.Checks(terminu.Checks{
-		Title: "Edit", Glyph: glyphPencil, Subject: id, Options: options, Checked: checked,
+		Title: "Edit", Glyph: glyphPencil, Subject: id, Options: d.rows(cat.Items), Checked: checked,
 		Done: func(on []bool) tea.Cmd {
 			for i, it := range cat.Items {
 				if on[i] != d.cfg.On(p, it) {
@@ -275,6 +289,24 @@ func (d *drawer) aliasField() *terminu.Field {
 			},
 		})
 	}}
+}
+
+// rows writes each item as its group, its key in the drawer and, where that
+// says more, its name, in columns.
+func (d *drawer) rows(items []config.Item) []string {
+	gw, lw := 0, 0
+	for _, it := range items {
+		gw, lw = max(gw, terminu.Width(it.Group)), max(lw, terminu.Width(it.Label))
+	}
+	rows := make([]string, len(items))
+	for i, it := range items {
+		row := terminu.Pad(it.Group, gw) + "  " + terminu.Pad(it.Label, lw)
+		if it.Name != it.Label {
+			row += "  " + it.Name
+		}
+		rows[i] = strings.TrimRight(row, " ")
+	}
+	return rows
 }
 
 func (d *drawer) save() tea.Cmd {

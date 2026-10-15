@@ -187,10 +187,11 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 	}
 }
 
-// Order is the drawer's order, the config's list as it is; until there is a
-// reorder popup (CD9) it is off, and the cursor passes it by
-func TestOrderShowsTheDrawersOrder(t *testing.T) {
-	d, _ := newTestDrawer(t)
+// Order is the drawer's order, the config's list as it is; Enter opens it in
+// a reorder popup, where D picks an item up, j|k move it, Enter drops it and
+// Enter again writes the order back. With one item there is nothing to order.
+func TestOrderIsReordered(t *testing.T) {
+	d, loc := newTestDrawer(t)
 	d.cfg.Dock = []string{"context", "model"}
 	fields := d.pages[rowSidebar].Fields
 	if f := fields[0]; f.Label != "Items" || f.Value() != "Model, Context" {
@@ -201,8 +202,24 @@ func TestOrderShowsTheDrawersOrder(t *testing.T) {
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	press(d, key("j"))
-	if f := d.pages[rowSidebar].Current(); f.Label != "Items" {
-		t.Fatalf("the cursor went to %q, which opens nothing yet", f.Label)
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if text := frameText(d); !strings.Contains(text, "ORDER: sidebar") || !strings.Contains(text, "Context") {
+		t.Fatalf("Enter on Order did not open the reorder popup:\n%s", text)
+	}
+	press(d, key("D"))                       // Context
+	press(d, key("j"))                       // below Model
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // dropped
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // written back
+	if c, _ := config.ReadConfig(loc.ConfigFile); !slices.Equal(c.Dock, []string{"model", "context"}) {
+		t.Fatalf("dock = %v, want model, context", c.Dock)
+	}
+	if f := fields[1]; f.Value() != "Model, Context" {
+		t.Fatalf("Order shows %q, want Model, Context", f.Value())
+	}
+
+	d.cfg.Dock = []string{"model"}
+	if !fields[1].Disabled() {
+		t.Fatal("Order is on with one item to order")
 	}
 }
 
