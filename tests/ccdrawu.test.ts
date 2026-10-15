@@ -9,6 +9,7 @@ import {
   duration,
   effortColor,
   filesText,
+  directoryName,
   isNewer,
   LINE,
   modeLabel,
@@ -27,6 +28,7 @@ import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
 import { cellWidth, columnRows, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from '../hooks/layout'
 import { locations } from '../hooks/paths'
+import { statuslineFile, statuslineItems } from '../hooks/statusline'
 import {
   BALL_LINES,
   ballAt,
@@ -159,6 +161,10 @@ test('git shortstat, paths, modes and versions are read as shown', async () => {
   expect(shortPath('/Users/meow', '/Users/me')).toBe('/Users/meow')
   expect(shortPath('C:\\Users\\me\\proj', 'C:\\Users\\me')).toBe('~\\proj')
   expect(shortPath('C:\\Users\\meow', 'C:\\Users\\me')).toBe('C:\\Users\\meow')
+  expect(directoryName('~/sideproj/ccdrawu')).toBe('ccdrawu')
+  expect(directoryName('~\\proj\\')).toBe('proj')
+  expect(directoryName('~')).toBe('~')
+  expect(directoryName('/')).toBe('/')
   expect(truncateStart('~/sideproj/ccdrawu', 10)).toBe('…j/ccdrawu')
   expect(truncateStart('~/proj', 10)).toBe('~/proj')
   expect(modeLabel('auto')).toBe('auto')
@@ -194,12 +200,14 @@ test('an alias in the config registers one more command, and a name once registe
 test('every catalog item has a unique id, a short key and something to show', async () => {
   expect(new Set(ITEMS.map(i => i.id)).size).toBe(ITEMS.length)
   for (const item of ITEMS) {
-    expect(item.label.length).toBeLessThanOrEqual(8)
+    expect(item.label.length).toBeLessThanOrEqual(item.id === 'directory' ? 9 : 8)
+    expect(item.short.length).toBeGreaterThan(0)
+    expect(item.short.length).toBeLessThanOrEqual(4)
     // The pet is no row: the pane draws it itself, first of all and on by default
     if (item.id === 'pet') expect(view(item.id, FULL)).toBeUndefined()
     else expect(view(item.id, FULL)).toBeDefined()
   }
-  expect(ITEMS[0]).toMatchObject({ id: 'pet', dock: true, inline: true })
+  expect(ITEMS[0]).toMatchObject({ id: 'pet', dock: true, inline: true, statusline: false })
   expect(view('no-such-item', FULL)).toBeUndefined()
 })
 
@@ -216,6 +224,7 @@ test('tasks count subagents live and the rest of the background by type, parted 
   expect(tasksText(1, { workflow: 1, 'MCP task': 2, shell: 2, monitor: 1 })).toBe(
     '1 agent｜2 shells｜1 monitor｜1 workflow｜2 MCP tasks',
   )
+  expect(tasksText(2, { shell: 1 }, ', ')).toBe('2 agents, 1 shell')
   expect(tasksText(0, { shell: 0 })).toBe('none')
   expect(tasksText(0, {})).toBe('none')
   // ｜ and CJK take two cells, so columns above the prompt still line up
@@ -529,6 +538,14 @@ test('the config picks items per placement, in the order it lists them', async (
   expect(parseConfig('{"alias": 3}')).toEqual({})
   expect(parseConfig('{"bar": "line"}')).toEqual({ bar: 'line' })
   expect(parseConfig('{"bar": 1}')).toEqual({})
+  // The statusline's block is the TUI's and the command's; the mod reads only whether it is on
+  expect(parseConfig('{"statusline": {"on": true, "items": ["model"]}}')).toEqual({ statusline: { on: true } })
+  expect(parseConfig('{"statusline": {"on": "yes"}}')).toEqual({ statusline: { on: false } })
+  // The drawer is on unless the config turns it off
+  expect(parseConfig('{"drawer": {"off": true}}')).toEqual({ drawer: { off: true } })
+  expect(parseConfig('{"drawer": {"off": 1}}')).toEqual({ drawer: { off: false } })
+  expect(parseConfig('{}')!.drawer?.off).toBeUndefined()
+  expect(parseConfig('{"statusline": 3}')).toEqual({})
   expect(enabledItems({ dock: ['git', 'model', 'gone', 'git'] }, 'dock').map(i => i.id)).toEqual(['git', 'model'])
   expect(enabledItems({ dock: [] }, 'dock')).toEqual([])
   // Status, off by default, is asked of status.claude.com only once a placement shows it; the pet is on
@@ -550,6 +567,24 @@ test('above the prompt a limit reads as text with its countdown, and columns tak
   expect(columnRows(cells, 52)).toBe(2)
   expect(columnRows(cells, 10)).toBe(4)
   expect(columnRows([], 10)).toBe(1)
+})
+
+test('the statusline file holds each item as it reads above the prompt, the pet aside, with no time in it', async () => {
+  const items = statuslineItems(FULL)
+  expect(Object.keys(items)).toEqual(ITEMS.filter(i => i.id !== 'pet').map(i => i.id))
+  expect(items.session!.map(s => s.text)).toEqual(['18%', ' · ', '59m'])
+  expect(items.model).toEqual([{ text: 'Opus 5.5', color: '#b4befe', bold: true }])
+  // Tasks part their counts with a comma, as the statusline parts its items with |
+  expect(items.tasks!.map(s => s.text).join('')).toBe('2 agents, 1 shell')
+  // An item with nothing to show is left out, for the command to skip
+  const bare = statuslineItems({ ...FULL, model: null, session: {}, drawer: null })
+  expect(bare.effort).toBeUndefined()
+  expect(bare.id).toBeUndefined()
+  expect(bare.ccdrawu).toBeUndefined()
+
+  const text = statuslineFile(FULL)
+  expect(JSON.parse(text)).toEqual({ version: 1, items })
+  expect(statuslineFile({ ...FULL })).toBe(text)
 })
 
 test('the pane draws on the terminal before any figures arrive, a key on every row', async $ => {

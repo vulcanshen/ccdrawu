@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- The status line: ccdrawu can be Claude Code's status line, the row under the prompt, with the drawer or on its own. Turned on under Statusline in `ccdrawu`, it sets `ccdrawu statusline` as Claude Code's status line; one you had is replaced only after asking, and comes back when the status line is turned off or with `ccdrawu uninstall claude`. Its page has Items and Order, as the drawer's (Model, Context, Session, Weekly, Cost and Git to start with); Format, `label` (`Context 42%`), `short` (`ctx 42%`) or `value` (`42%`); Color, `highlighted` or `dimmed`; Separator, `|` unless you set another; and Refresh, 10 seconds unless you set another. While it is on, the plugin keeps each session's values in `~/.ccdrawu/sessions/`, each file removed after a week without use; where the plugin is not running, it shows the model, context and cost Claude Code hands it.
+- **Drawer**, atop the sidebar and inline pages: `off` starts sessions without the drawer and closes it in open ones; `/ccdrawu` still opens and closes it.
+- Directory, the working directory's own name without the path to it, off until picked.
+- Titles over the columns of every page in `ccdrawu`: SETTING and VALUE, or KEY and VALUE on preferences.
 
 ## [0.1.0] - 2026-10-15
 ### Added

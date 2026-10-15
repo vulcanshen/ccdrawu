@@ -34,11 +34,13 @@ func CleanAlias(s string) (string, error) {
 type Item struct {
 	ID          string `json:"id"`
 	Label       string `json:"label"`
+	Short       string `json:"short"`
 	Name        string `json:"name"`
 	Group       string `json:"group"`
 	Description string `json:"description"`
 	Dock        bool   `json:"dock"`
 	Inline      bool   `json:"inline"`
+	Statusline  bool   `json:"statusline"`
 }
 
 type Catalog struct {
@@ -62,29 +64,71 @@ func ReadCatalog(path string) (c Catalog, ok bool, err error) {
 	return c, true, nil
 }
 
-// Placement is where the drawer sits: beside the transcript, or above the
-// prompt on a narrow terminal.
+// Placement is where the items show: the drawer beside the transcript, or
+// above the prompt on a narrow terminal, or the statusline, Claude Code's
+// status line under the prompt.
 type Placement string
 
 const (
 	Dock   Placement = "dock"
 	Inline Placement = "inline"
+	Status Placement = "statusline"
 )
 
 // Config is what the TUI writes and every open session reads within a second
 // (hooks/layout.ts): the ids on in each placement. A placement left out takes
 // the catalog's defaults: it is written as null, while [] is every item off.
 // Alias is one more name for /ccdrawu (hooks/commands.ts), "" for none. Pet is
-// the drawer's pet, and Bar how it draws its bars. Theme is the Claude Code
-// theme ccdrawu selected, if any; the mod never reads it.
+// the drawer's pet, and Bar how it draws its bars. Drawer is whether the
+// drawer opens by itself. Theme is the Claude Code theme ccdrawu selected, if
+// any; the mod never reads it. Statusline is `ccdrawu statusline`; the mod
+// reads only whether it is on.
 type Config struct {
-	Dock   []string `json:"dock"`
-	Inline []string `json:"inline"`
-	Alias  string   `json:"alias,omitempty"`
-	Pet    Pet      `json:"pet,omitzero"`
-	Bar    string   `json:"bar,omitempty"`
-	Theme  Theme    `json:"theme,omitzero"`
+	Dock       []string   `json:"dock"`
+	Inline     []string   `json:"inline"`
+	Alias      string     `json:"alias,omitempty"`
+	Pet        Pet        `json:"pet,omitzero"`
+	Bar        string     `json:"bar,omitempty"`
+	Drawer     Drawer     `json:"drawer,omitzero"`
+	Theme      Theme      `json:"theme,omitzero"`
+	Statusline Statusline `json:"statusline,omitzero"`
 }
+
+// Drawer is the drawer itself, on unless Off: off, sessions start without it
+// and open ones close it, while /ccdrawu still opens and closes it.
+type Drawer struct {
+	Off bool `json:"off,omitempty"`
+}
+
+// Statusline is `ccdrawu statusline` as Claude Code's status line. On says
+// whether it is: the mod keeps each session's values for it while it is.
+// Items are the ids it shows, in order; nil takes the catalog's defaults, as
+// the drawer's placements do. Format is how each item reads (one of Formats,
+// "" for the first); Color how it is colored (one of Colors, "" for the
+// first); Separator what stands between items ("" for "|"); Refresh how many
+// seconds Claude Code waits to run it again while nothing happens (0 for
+// DefaultRefresh). Before is the statusLine Claude Code had until ccdrawu's,
+// to put back: JSON null when it had none.
+type Statusline struct {
+	On        bool            `json:"on"`
+	Items     []string        `json:"items"`
+	Format    string          `json:"format,omitempty"`
+	Color     string          `json:"color,omitempty"`
+	Separator string          `json:"separator,omitempty"`
+	Refresh   int             `json:"refresh,omitempty"`
+	Before    json.RawMessage `json:"before,omitempty"`
+}
+
+// Formats are how an item reads in the statusline: its label and value
+// ("Context 42%"), its short label and value ("ctx 42%"), or the value alone.
+var Formats = []string{"label", "short", "value"}
+
+// Colors are how the statusline is colored: each piece in the drawer's
+// colors, or none, which Claude Code draws all in its dim color.
+var Colors = []string{"highlighted", "dimmed"}
+
+// DefaultRefresh is the statusline's refresh in seconds when none is set.
+const DefaultRefresh = 10
 
 // BarStyles are the ways the mod draws a bar (bar in hooks/format.ts): Nerd
 // Font squares, the first and the one for "", or a line for a terminal with no
@@ -113,8 +157,11 @@ type Theme struct {
 }
 
 func (c *Config) ids(p Placement) *[]string {
-	if p == Dock {
+	switch p {
+	case Dock:
 		return &c.Dock
+	case Status:
+		return &c.Statusline.Items
 	}
 	return &c.Inline
 }
@@ -142,8 +189,11 @@ func ReadConfig(path string) (Config, error) {
 func (c Config) On(p Placement, it Item) bool {
 	list := *c.ids(p)
 	if list == nil {
-		if p == Dock {
+		switch p {
+		case Dock:
 			return it.Dock
+		case Status:
+			return it.Statusline
 		}
 		return it.Inline
 	}

@@ -8,7 +8,7 @@
 
 **語言**：[English](README.md) · 繁體中文
 
-**Claude Code 的側邊欄。** 用量上限、context、模型、花費、git 和 session 統計都放在對話旁邊的面板裡，不再擠在輸入框下方。
+**Claude Code 的側邊欄與狀態列。** 用量上限、context、模型、花費、git 和 session 統計都放在對話旁邊的面板裡，不再擠在輸入框下方。想放在輸入框下方的話，也可以當成 Claude Code 的狀態列，照你挑的方式排。
 
 ![demo](docs/demo.gif)
 
@@ -40,15 +40,18 @@
 | Tokens、Speed | 側邊欄載入後，對話累計的 input、output、cache token，以及上一次回覆每秒輸出幾個 token |
 | Skills | 這個 session 用過幾次 skill，以及最後一個 |
 | Sync、Files、Commit、Repo | 跟 upstream 差幾個 commit、staged／changed／new 的檔案數、HEAD 的短 hash，以及 origin 的 owner/repo（在 worktree 裡時加上 worktree 名稱）；沒有 upstream、commit 或 origin 時顯示 `no upstream`、`no commits`、`no origin`，不在 repo 裡時顯示 `not a repo` |
+| Directory | 工作目錄本身的名稱，不含前面的路徑：`ccdrawu` |
 | Status | [status.claude.com](https://status.claude.com) 的服務狀態：正常是綠色，有事故是橘色或紅色 |
+
+狀態列可以顯示上面除了寵物以外的任何一項，見[狀態列](#狀態列)。
 
 ## 需求
 
 - Claude Code 2.1.287 以上
-- fullscreen 渲染模式：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊（見[疑難排解](#疑難排解)）
+- fullscreen 渲染模式（側邊欄才需要）：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊（見[疑難排解](#疑難排解)）。狀態列不需要這一項，也不需要終端機夠寬
 - 終端機要夠寬：自動開啟的面板會等終端機寬到大約 110～144 欄才出現
 - 終端機的字型要設成 [Nerd Font](https://www.nerdfonts.com)：側邊欄的 bar，以及 `ccdrawu` 指令裡的標記（選了哪個、勾了哪些），都是它的圖示。沒有的話，見[疑難排解](#疑難排解)
-- `ccdrawu` 指令，用來挑側邊欄顯示的項目
+- `ccdrawu` 指令，用來挑側邊欄和狀態列顯示的項目。狀態列是 Claude Code 去執行它，所以它要在你的 `PATH` 上
 - macOS、Linux 或 Windows（Windows 上在 Windows Terminal 試過，見[限制](#限制)）
 
 ## 安裝
@@ -78,14 +81,14 @@ scoop install ccdrawu
 ccdrawu install claude
 ```
 
-它會幫你的使用者裝好 ccdrawu 外掛，之後每個 session 都有側邊欄；已經開著的 session 跑一次 `/reload-plugins`。接著執行 `ccdrawu` 挑要顯示的項目。
+它會幫你的使用者裝好 ccdrawu 外掛，之後每個 session 都有側邊欄；已經開著的 session 跑一次 `/reload-plugins`。接著執行 `ccdrawu` 挑要顯示的項目，或打開狀態列。
 
-也可以只在 Claude Code 裡裝外掛：`/plugin install ccdrawu --marketplace vulcanshen/ccdrawu`。不建議這樣裝：側邊欄只會顯示預設的項目，要挑項目、排順序、換寵物、bar 或主題，都得用 `ccdrawu` 指令，或自己改 `~/.config/ccdrawu/config.json`。
+也可以只在 Claude Code 裡裝外掛：`/plugin install ccdrawu --marketplace vulcanshen/ccdrawu`。不建議這樣裝：側邊欄只會顯示預設的項目，要挑項目、排順序、換寵物、bar 或主題，都得用 `ccdrawu` 指令，或自己改 `~/.config/ccdrawu/config.json`。狀態列也要有 `ccdrawu` 指令才能用。
 
 ## 使用方式
 
-- session 開始時會自動打開。
-- `/ccdrawu` 開關側邊欄，Claude 回覆到一半也能用。
+- session 開始時會自動打開。不想讓它自動打開，就執行 `ccdrawu`，在 sidebar 或 inline 頁把 **Drawer** 設成 `off`，開著的 session 會在一秒內關掉它。
+- `/ccdrawu` 開關側邊欄，Claude 回覆到一半也能用；**Drawer** 設成 `off` 時也一樣。
 - 點右上角的 `×` 關閉，或按 `Ctrl+X Tab` 移過去再按 `Ctrl+X X`。
 - 焦點在側邊欄上時，`Ctrl+X ←`、`Ctrl+X →` 可以調寬或調窄。
 
@@ -94,6 +97,24 @@ ccdrawu install claude
 執行 `ccdrawu`，在 Drawer 底下選 **sidebar**（對話旁邊）或 **inline**（輸入框上方）按 `Enter`。右邊有兩列：**Items** 是勾了的項目，**Order** 是同樣這些，照側邊欄顯示的順序列出。在 **Items** 上按 `Enter`，打開所有項目的清單：`Space` 勾或取消勾、`Enter` 套用、`Esc` 不改，`/` 可以打字篩選。新勾的項目會排在清單裡它前一項的後面。要調整順序，在 **Order** 上按 `Enter`：`D` 拿起一項，`j`、`k` 移動，`Enter` 放下，再按一次 `Enter` 存起來（`Esc` 放回原樣）。一秒內，開著的 session 就會跟著換。
 
 ![settings](docs/settings.gif)
+
+### 狀態列
+
+ccdrawu 也可以當 Claude Code 的狀態列，也就是輸入框下方那一列：可以跟側邊欄一起用，也可以把 **Drawer** 設成 `off`、只用狀態列。
+
+執行 `ccdrawu`，在 Statusline 底下選 **statusline** 按 `Enter`，再把 **Statusline** 設成 `on`。ccdrawu 會在 `~/.claude/settings.json` 把 Claude Code 的狀態列設成 `ccdrawu statusline`。如果你原本就有狀態列（例如 ccstatusline），會先問過你才換掉，並且把原本的記下來：把 **Statusline** 設回 `off`，或執行 `ccdrawu uninstall claude`，就會換回你原本的。開著的 session 會馬上換。
+
+```
+Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h | Cost $1.20 | Git main  +12 -3
+```
+
+- **Items**、**Order**：顯示哪些、照什麼順序，挑法跟側邊欄一樣。預設是 Model、Context、Session、Weekly、Cost 和 Git；寵物只在側邊欄。
+- **Format**：每一項怎麼寫：`label`（`Context 42%`）、`short`（`ctx 42%`）或 `value`（`42%`）。
+- **Color**：`highlighted` 每個值用側邊欄的顏色，`dimmed` 整列都用 Claude Code 的暗色。
+- **Separator**：項目之間放什麼，沒設就是 `|`。
+- **Refresh**：沒有動靜時，Claude Code 隔幾秒重跑一次，沒設就是 10 秒；對話有進展時它也會重跑。
+
+太長、終端機放不下的話，結尾會截掉並加上 `…`。
 
 ### 寵物
 
@@ -126,8 +147,8 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 
 ## 資料存放位置
 
-- `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目、別名、bar 和寵物。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
-- `~/.ccdrawu/`：外掛寫的東西，`ccdrawu` 列出的項目清單（`catalog.json`）。`CCDRAWU__DATA` 可以改放別的資料夾。
+- `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
+- `~/.ccdrawu/`：外掛寫的東西：`ccdrawu` 列出的項目清單（`catalog.json`），以及狀態列打開時、每個 session 給它的值（`sessions/`；一週沒用到的 session 檔會刪掉）。`CCDRAWU__DATA` 可以改放別的資料夾。
 
 在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
 
@@ -163,9 +184,18 @@ Nerd Font 也可能少了其中幾個圖示。Maple Mono NF CN 沒有「沒選�
 
 見[讓底色跟終端機一樣](#讓底色跟終端機一樣)。
 
+### 狀態列是空白的一列
+
+Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到的 `ccdrawu` 是還沒有狀態列的舊版。用 `ccdrawu --version` 看跑的是哪一版，照你當初安裝的方式更新，或移除舊的那一個。
+
+### 狀態列只有 Model、Context 和 Cost
+
+那個 session 裡沒有跑 ccdrawu 外掛，狀態列只能顯示 Claude Code 給它的資料。用 `ccdrawu install claude` 裝外掛；外掛裝好之前就開著的 session，跑一次 `/reload-plugins`。
+
 ## 限制
 
 - 用 `shift+tab` 切換權限模式後，**Mode** 要等 Claude 跑完目前這一步的工具才會更新；Claude 閒著的時候，要等你送出下一則訊息。
+- 狀態列可能比側邊欄慢幾秒：Claude Code 要等對話有進展，或隔 **Refresh** 秒，才會重跑它。
 - 配色是 Catppuccin Mocha，給深色底用的，目前不能更改：終端機是淺色底時，字會很難看清楚。Claude Code 用淺色主題時，見[疑難排解](#疑難排解)。
 - 由組織管理的 Claude Code 環境裡，**Mode**、**Compact** 和 **Skills** 可能會是空的，壓縮對話後 **Context** 也要等下一次回覆才會更新，寵物也不會在工具失敗時跳、壓縮後說話：那些事件會略過使用者自己安裝的外掛。
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。
@@ -178,6 +208,8 @@ Nerd Font 也可能少了其中幾個圖示。Maple Mono NF CN 沒有「沒選�
 ```sh
 ccdrawu uninstall claude
 ```
+
+這也會換回 ccdrawu 之前你用的主題和狀態列。
 
 再移除 `ccdrawu` 指令：
 

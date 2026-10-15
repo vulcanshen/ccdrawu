@@ -54,13 +54,17 @@ export type Modes = { permission?: string }
 export type Background = Record<string, number>
 
 // The items on in each placement, as the TUI wrote them; one left out takes the catalog's defaults.
-// alias: one more name for /ccdrawu; pet: which animal
+// alias: one more name for /ccdrawu; pet: which animal; drawer: off keeps it from opening by itself;
+// statusline: whether `ccdrawu statusline` is Claude Code's status line (the rest of its block is the
+// TUI's and the command's)
 export type Config = {
   dock?: string[]
   inline?: string[]
   alias?: string
   pet?: { species?: string }
   bar?: string
+  drawer?: { off: boolean }
+  statusline?: { on: boolean }
 }
 
 // The pet (hooks/pets.ts): what it is doing, where along its walk, and what it says, a session's

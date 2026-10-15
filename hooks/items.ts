@@ -2,7 +2,7 @@
 // and what each one shows. None touches `$`, so tests can call them.
 
 import type { Background, CacheInfo, GitInfo, Limit, ModelInfo, Modes, ServiceStatus, SessionInfo, SkillsInfo, TokenInfo, Usage, VersionInfo } from '../types'
-import { compact, countdown, duration, effortColor, filesText, isNewer, modeLabel, percentText, syncText, tasksText, usageColor } from './format'
+import { compact, countdown, directoryName, duration, effortColor, filesText, isNewer, modeLabel, percentText, syncText, tasksText, usageColor } from './format'
 
 // Catppuccin Mocha: keys in blue, values in text.
 // The pane's background is not drawn here: it is the theme's composerSidebarBackground.
@@ -19,47 +19,50 @@ export const C = {
 
 export type Item = {
   id: string
-  label: string // the key column in the pane: 8 characters at most
+  label: string // the key column in the pane: 9 characters at most, and 8 for all but Directory
+  short: string // the label in the statusline when its format is short: 4 characters at most
   name: string // what the TUI lists
   group: string // the TUI lists the items under these, in catalog order
   description: string
   dock: boolean // on by default beside the transcript
   inline: boolean // on by default above the prompt
+  statusline: boolean // on by default in `ccdrawu statusline`
 }
 
 // The order here is the order on screen
 export const ITEMS: readonly Item[] = [
   // Drawn by the pane itself (pets.ts), over the rows beside the transcript and left of the columns above the prompt
-  { id: 'pet', label: 'Pet', name: 'Pet', group: 'Pet', description: 'A pixel pet: it walks while Claude works, sits when Claude is done, sleeps when nothing goes on; /ccdrawu pat pats it', dock: true, inline: true },
-  { id: 'model', label: 'Model', name: 'Model', group: 'Model', description: 'The model answering in this session', dock: true, inline: true },
-  { id: 'effort', label: 'Effort', name: 'Effort level', group: 'Model', description: "The last request's effort level, green for low to red for max", dock: true, inline: true },
-  { id: 'mode', label: 'Mode', name: 'Permission mode', group: 'Model', description: 'auto, plan, accept edits, ...; after shift+tab it shows once Claude finishes the tools of a step, or with the next prompt', dock: true, inline: true },
-  { id: 'style', label: 'Style', name: 'Output style', group: 'Model', description: 'The output style set in /config', dock: false, inline: false },
-  { id: 'id', label: 'ID', name: 'Session ID', group: 'Session', description: "The start of this session's id", dock: false, inline: false },
-  { id: 'account', label: 'Account', name: 'Account', group: 'Session', description: 'The Claude account signed in', dock: false, inline: false },
-  { id: 'context', label: 'Context', name: 'Context', group: 'Usage', description: 'How full the context window is', dock: true, inline: true },
-  { id: 'window', label: 'Window', name: 'Context size', group: 'Usage', description: 'Tokens in the context window, out of its size', dock: false, inline: false },
-  { id: 'session', label: 'Session', name: 'Session limit', group: 'Usage', description: 'The 5-hour usage limit, and when it resets', dock: true, inline: true },
-  { id: 'weekly', label: 'Weekly', name: 'Weekly limit', group: 'Usage', description: 'The 7-day usage limit, and when it resets', dock: true, inline: true },
-  { id: 'spend', label: 'Spend', name: 'Spend limit', group: 'Usage', description: "A gateway's spend limit, where there is one", dock: true, inline: true },
-  { id: 'cost', label: 'Cost', name: 'Session cost', group: 'Usage', description: 'What this session has cost so far, as /cost totals it', dock: true, inline: true },
-  { id: 'rate', label: 'Rate', name: 'Cost rate', group: 'Usage', description: 'What the session costs an hour, so far', dock: false, inline: false },
-  { id: 'tokens', label: 'Tokens', name: 'Tokens', group: 'Usage', description: 'Input, output and cache tokens of the main conversation since the drawer loaded', dock: false, inline: false },
-  { id: 'speed', label: 'Speed', name: 'Token speed', group: 'Usage', description: 'Output tokens a second in the last reply', dock: false, inline: false },
-  { id: 'uptime', label: 'Uptime', name: 'Uptime and turns', group: 'Activity', description: 'How long the session has run, and how many turns', dock: true, inline: true },
-  { id: 'cache', label: 'Cache', name: 'Cache hit rate', group: 'Activity', description: 'How much of the last request the prompt cache served', dock: true, inline: true },
-  { id: 'compact', label: 'Compact', name: 'Compactions', group: 'Activity', description: 'How many times the context was compacted', dock: true, inline: true },
-  { id: 'tasks', label: 'Tasks', name: 'Background tasks', group: 'Activity', description: "Subagents running now, and shells, monitors and workflows in the background as of Claude's last reply", dock: true, inline: true },
-  { id: 'skills', label: 'Skills', name: 'Skills', group: 'Activity', description: 'Skills run in this session, and the last one', dock: false, inline: false },
-  { id: 'git', label: 'Git', name: 'Git branch and changes', group: 'Workspace', description: 'The branch, and lines added and removed since HEAD', dock: true, inline: true },
-  { id: 'sync', label: 'Sync', name: 'Ahead and behind', group: 'Workspace', description: 'Commits ahead of and behind the upstream', dock: false, inline: false },
-  { id: 'files', label: 'Files', name: 'Changed files', group: 'Workspace', description: 'Files staged, changed and new', dock: false, inline: false },
-  { id: 'commit', label: 'Commit', name: 'Commit', group: 'Workspace', description: 'The short hash of HEAD', dock: false, inline: false },
-  { id: 'repo', label: 'Repo', name: 'Repository', group: 'Workspace', description: "origin's owner/repo, and the worktree when the session is in one", dock: false, inline: false },
-  { id: 'path', label: 'Path', name: 'Working directory', group: 'Workspace', description: "The session's working directory", dock: true, inline: true },
-  { id: 'version', label: 'Claude', name: 'Claude Code version', group: 'About', description: 'This version, and the latest when a newer one is out', dock: true, inline: true },
-  { id: 'ccdrawu', label: 'ccdrawu', name: 'ccdrawu version', group: 'About', description: "This drawer's own version", dock: true, inline: true },
-  { id: 'status', label: 'Status', name: 'Claude status', group: 'About', description: 'status.claude.com: all clear in green, an incident in peach or red', dock: false, inline: false },
+  { id: 'pet', label: 'Pet', short: 'pet', name: 'Pet', group: 'Pet', description: 'A pixel pet: it walks while Claude works, sits when Claude is done, sleeps when nothing goes on; /ccdrawu pat pats it', dock: true, inline: true, statusline: false },
+  { id: 'model', label: 'Model', short: 'mdl', name: 'Model', group: 'Model', description: 'The model answering in this session', dock: true, inline: true, statusline: true },
+  { id: 'effort', label: 'Effort', short: 'eff', name: 'Effort level', group: 'Model', description: "The last request's effort level, green for low to red for max", dock: true, inline: true, statusline: false },
+  { id: 'mode', label: 'Mode', short: 'mode', name: 'Permission mode', group: 'Model', description: 'auto, plan, accept edits, ...; after shift+tab it shows once Claude finishes the tools of a step, or with the next prompt', dock: true, inline: true, statusline: false },
+  { id: 'style', label: 'Style', short: 'sty', name: 'Output style', group: 'Model', description: 'The output style set in /config', dock: false, inline: false, statusline: false },
+  { id: 'id', label: 'ID', short: 'id', name: 'Session ID', group: 'Session', description: "The start of this session's id", dock: false, inline: false, statusline: false },
+  { id: 'account', label: 'Account', short: 'acct', name: 'Account', group: 'Session', description: 'The Claude account signed in', dock: false, inline: false, statusline: false },
+  { id: 'context', label: 'Context', short: 'ctx', name: 'Context', group: 'Usage', description: 'How full the context window is', dock: true, inline: true, statusline: true },
+  { id: 'window', label: 'Window', short: 'win', name: 'Context size', group: 'Usage', description: 'Tokens in the context window, out of its size', dock: false, inline: false, statusline: false },
+  { id: 'session', label: 'Session', short: '5h', name: 'Session limit', group: 'Usage', description: 'The 5-hour usage limit, and when it resets', dock: true, inline: true, statusline: true },
+  { id: 'weekly', label: 'Weekly', short: '7d', name: 'Weekly limit', group: 'Usage', description: 'The 7-day usage limit, and when it resets', dock: true, inline: true, statusline: true },
+  { id: 'spend', label: 'Spend', short: 'spnd', name: 'Spend limit', group: 'Usage', description: "A gateway's spend limit, where there is one", dock: true, inline: true, statusline: false },
+  { id: 'cost', label: 'Cost', short: 'cost', name: 'Session cost', group: 'Usage', description: 'What this session has cost so far, as /cost totals it', dock: true, inline: true, statusline: true },
+  { id: 'rate', label: 'Rate', short: 'rate', name: 'Cost rate', group: 'Usage', description: 'What the session costs an hour, so far', dock: false, inline: false, statusline: false },
+  { id: 'tokens', label: 'Tokens', short: 'tok', name: 'Tokens', group: 'Usage', description: 'Input, output and cache tokens of the main conversation since the drawer loaded', dock: false, inline: false, statusline: false },
+  { id: 'speed', label: 'Speed', short: 'spd', name: 'Token speed', group: 'Usage', description: 'Output tokens a second in the last reply', dock: false, inline: false, statusline: false },
+  { id: 'uptime', label: 'Uptime', short: 'up', name: 'Uptime and turns', group: 'Activity', description: 'How long the session has run, and how many turns', dock: true, inline: true, statusline: false },
+  { id: 'cache', label: 'Cache', short: 'hit', name: 'Cache hit rate', group: 'Activity', description: 'How much of the last request the prompt cache served', dock: true, inline: true, statusline: false },
+  { id: 'compact', label: 'Compact', short: 'cmp', name: 'Compactions', group: 'Activity', description: 'How many times the context was compacted', dock: true, inline: true, statusline: false },
+  { id: 'tasks', label: 'Tasks', short: 'bg', name: 'Background tasks', group: 'Activity', description: "Subagents running now, and shells, monitors and workflows in the background as of Claude's last reply", dock: true, inline: true, statusline: false },
+  { id: 'skills', label: 'Skills', short: 'skl', name: 'Skills', group: 'Activity', description: 'Skills run in this session, and the last one', dock: false, inline: false, statusline: false },
+  { id: 'git', label: 'Git', short: 'git', name: 'Git branch and changes', group: 'Workspace', description: 'The branch, and lines added and removed since HEAD', dock: true, inline: true, statusline: true },
+  { id: 'sync', label: 'Sync', short: 'sync', name: 'Ahead and behind', group: 'Workspace', description: 'Commits ahead of and behind the upstream', dock: false, inline: false, statusline: false },
+  { id: 'files', label: 'Files', short: 'chg', name: 'Changed files', group: 'Workspace', description: 'Files staged, changed and new', dock: false, inline: false, statusline: false },
+  { id: 'commit', label: 'Commit', short: 'sha', name: 'Commit', group: 'Workspace', description: 'The short hash of HEAD', dock: false, inline: false, statusline: false },
+  { id: 'repo', label: 'Repo', short: 'repo', name: 'Repository', group: 'Workspace', description: "origin's owner/repo, and the worktree when the session is in one", dock: false, inline: false, statusline: false },
+  { id: 'path', label: 'Path', short: 'path', name: 'Working directory', group: 'Workspace', description: "The session's working directory", dock: true, inline: true, statusline: false },
+  { id: 'directory', label: 'Directory', short: 'dir', name: 'Directory name', group: 'Workspace', description: "The working directory's own name, without the path to it", dock: false, inline: false, statusline: false },
+  { id: 'version', label: 'Claude', short: 'cc', name: 'Claude Code version', group: 'About', description: 'This version, and the latest when a newer one is out', dock: true, inline: true, statusline: false },
+  { id: 'ccdrawu', label: 'ccdrawu', short: 'drw', name: 'ccdrawu version', group: 'About', description: "This drawer's own version", dock: true, inline: true, statusline: false },
+  { id: 'status', label: 'Status', short: 'stat', name: 'Claude status', group: 'About', description: 'status.claude.com: all clear in green, an incident in peach or red', dock: false, inline: false, statusline: false },
 ]
 
 // Everything an item may show, as the drawer holds it
@@ -141,6 +144,8 @@ export function view(id: string, s: Snapshot): View | undefined {
       }
     case 'path':
       return { ...text(s.path), cutStart: true }
+    case 'directory':
+      return text(directoryName(s.path))
     case 'version': {
       const v = s.version
       if (!v) return undefined

@@ -197,7 +197,7 @@ func (d *drawer) pluginAction() tea.Cmd {
 		Title: "Uninstall", Subject: "Claude Code", Question: "Take the drawer out of Claude Code?", Verb: "uninstall",
 		Details: []string{
 			"Removes the ccdrawu plugin and its marketplace, as ccdrawu uninstall claude does.",
-			"ccdrawu's theme goes too; your picks here stay.",
+			"ccdrawu's theme and status line go too; your picks here stay.",
 		},
 	}, func() tea.Cmd {
 		d.busy = true
@@ -209,7 +209,7 @@ func (d *drawer) pluginAction() tea.Cmd {
 }
 
 // pluginDone says how it went and looks again; an uninstall puts the user's
-// own theme back, as the command line's does.
+// own theme and status line back, as the command line's does.
 func (d *drawer) pluginDone(m pluginDone) tea.Cmd {
 	if m.err != nil {
 		d.busy = false
@@ -220,6 +220,10 @@ func (d *drawer) pluginDone(m pluginDone) tea.Cmd {
 		d.cfg.Theme.Base = ""
 		d.theme.Selected = 0
 		cmds = append(cmds, d.applyTheme())
+	}
+	if m.uninstall && d.cfg.Statusline.On {
+		d.statusOn.Selected = 0
+		cmds = append(cmds, d.statuslineOff())
 	}
 	return tea.Batch(cmds...)
 }

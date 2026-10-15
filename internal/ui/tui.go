@@ -30,22 +30,25 @@ type drawer struct {
 
 	theme      *terminu.Field // the theme's radio, set back to off by an uninstall
 	background *terminu.Field // the drawer background, which x resets
+	drawerOn   *terminu.Field // the drawer's on and off, atop both its pages
+	statusOn   *terminu.Field // the statusline's on and off, set back to off by an uninstall
 	run        claude.Run     // what runs `claude plugin ...`
 	plugin     string         // the plugin row's value; "" while it is being found
 	pluginID   string         // the plugin's id in Claude Code, "" when not there
 	busy       bool           // an install or uninstall under way
 }
 
-// The rows of [1]: the drawer beside the transcript and above the prompt, then
-// the preferences, every setting on one page (the alias here, the rest in
-// settings.go)
+// The rows of [1]: the drawer beside the transcript and above the prompt, the
+// statusline (statusline.go), then the preferences, every setting on one page
+// (the alias here, the rest in settings.go)
 const (
 	rowSidebar     = "sidebar"
 	rowInline      = "inline"
+	rowStatusline  = "statusline"
 	rowPreferences = "preferences"
 )
 
-var placements = map[string]config.Placement{rowSidebar: config.Dock, rowInline: config.Inline}
+var placements = map[string]config.Placement{rowSidebar: config.Dock, rowInline: config.Inline, rowStatusline: config.Status}
 
 const glyphPencil = "\U000F03EB" // nf-md-pencil, the title of the alias input and of the items popup
 
@@ -67,13 +70,22 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", loc.ConfigFile, err)
 	}
+	// A status line set in Claude Code since, in place of ccdrawu's, turns the
+	// statusline off: the mod need not keep values for it
+	if _, ours, err := claude.CurrentStatusline(loc.Claude); err == nil && cfg.Statusline.On && !ours {
+		cfg.Statusline.On, cfg.Statusline.Before = false, nil
+		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
+			return nil, err
+		}
+	}
 	d := &drawer{
 		loc: loc,
 		cfg: cfg,
 		run: run,
 		pages: map[string]*terminu.Values{
-			rowSidebar: {},
-			rowInline:  {},
+			rowSidebar:    {Header: [2]string{"Setting", "Value"}},
+			rowInline:     {Header: [2]string{"Setting", "Value"}},
+			rowStatusline: {Header: [2]string{"Setting", "Value"}},
 		},
 		fail: &terminu.Failure{
 			Fact: "Nothing to list until ccdrawu runs in Claude Code",
@@ -86,8 +98,9 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	a.OnMsg = d.onMsg
 	a.Start = func() tea.Cmd { return tea.Batch(d.reload(), d.checkPlugin()) }
 	d.app = a
-	d.theme, d.background = d.themeField(), d.backgroundField()
-	d.pages[rowPreferences] = &terminu.Values{Fields: []*terminu.Field{
+	d.theme, d.background, d.statusOn = d.themeField(), d.backgroundField(), d.statusOnField()
+	d.drawerOn = d.drawerOnField()
+	d.pages[rowPreferences] = &terminu.Values{Header: [2]string{"Key", "Value"}, Fields: []*terminu.Field{
 		d.aliasField(), d.theme, d.background, d.barField(), d.petField(), d.pluginField(),
 	}}
 
@@ -95,6 +108,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	list.SetRows([]terminu.Row{
 		{ID: rowSidebar, Cells: []string{rowSidebar}, Group: "Drawer"},
 		{ID: rowInline, Cells: []string{rowInline}, Group: "Drawer"},
+		{ID: rowStatusline, Cells: []string{rowStatusline}, Group: "Statusline"},
 		{ID: rowPreferences, Cells: []string{rowPreferences}, Group: "Settings"},
 	})
 	list.OnMove = func(r terminu.Row) tea.Cmd {
@@ -110,7 +124,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 			ToDetails: func() bool { return true }},
 	}}
 	a.AddScreen(&terminu.Screen{
-		Name: "Preferences", Key: "P", Desc: "what the drawer shows, and its command",
+		Name: "Preferences", Key: "P", Desc: "what the drawer and the statusline show, and the command",
 		Panels:      []*terminu.Panel{prefs, d.detail},
 		Layout:      sidebar,
 		NarrowBelow: 60,
@@ -152,9 +166,25 @@ func (d *drawer) load() {
 		return
 	}
 	d.cat, d.stamp = cat, info.ModTime()
-	for id := range placements {
-		d.pages[id].Fields = d.summary(id)
+	for _, id := range []string{rowSidebar, rowInline} {
+		d.pages[id].Fields = append([]*terminu.Field{d.drawerOn}, d.summary(id)...)
 	}
+	d.pages[rowStatusline].Fields = d.statuslineFields()
+}
+
+// drawerOnField turns the drawer on or off, drawn in place, the same field on
+// both its pages: off, sessions start without it and open ones close it within
+// a second; /ccdrawu still opens and closes it.
+func (d *drawer) drawerOnField() *terminu.Field {
+	f := &terminu.Field{Label: "Drawer", Options: []string{"off", "on"}}
+	if !d.cfg.Drawer.Off {
+		f.Selected = 1
+	}
+	f.OnChange = func() tea.Cmd {
+		d.cfg.Drawer.Off = f.Selected == 0
+		return d.save()
+	}
+	return f
 }
 
 func (d *drawer) reload() tea.Cmd {
@@ -192,7 +222,7 @@ func (d *drawer) summary(id string) []*terminu.Field {
 // chosen is the items on in p, in the catalog's order, as the popup lists them.
 func (d *drawer) chosen(p config.Placement) string {
 	var keys []string
-	for _, it := range d.cat.Items {
+	for _, it := range d.choices(p) {
 		if d.cfg.On(p, it) {
 			keys = append(keys, it.Label)
 		}
@@ -255,14 +285,15 @@ func (d *drawer) editItems() terminu.Action {
 // its name.
 func (d *drawer) pick(id string) tea.Cmd {
 	p, cat := placements[id], d.cat
-	checked := make([]bool, len(cat.Items))
-	for i, it := range cat.Items {
+	items := d.choices(p)
+	checked := make([]bool, len(items))
+	for i, it := range items {
 		checked[i] = d.cfg.On(p, it)
 	}
 	return d.app.Checks(terminu.Checks{
-		Title: "Edit", Glyph: glyphPencil, Subject: id, Options: d.rows(cat.Items), Checked: checked,
+		Title: "Edit", Glyph: glyphPencil, Subject: id, Options: d.rows(items), Checked: checked,
 		Done: func(on []bool) tea.Cmd {
-			for i, it := range cat.Items {
+			for i, it := range items {
 				if on[i] != d.cfg.On(p, it) {
 					d.cfg.Set(p, cat, it.ID, on[i])
 				}
@@ -270,6 +301,15 @@ func (d *drawer) pick(id string) tea.Cmd {
 			return d.save()
 		},
 	})
+}
+
+// choices is what the checkbox popup offers for p: every item, but the pet in
+// the statusline, a row of text it has no room in.
+func (d *drawer) choices(p config.Placement) []config.Item {
+	if p != config.Status {
+		return d.cat.Items
+	}
+	return slices.DeleteFunc(slices.Clone(d.cat.Items), func(it config.Item) bool { return it.ID == petID })
 }
 
 // aliasField is the alias row: one more name for /ccdrawu, set in an input
@@ -316,11 +356,15 @@ func (d *drawer) save() tea.Cmd {
 	return nil
 }
 
-// status says where the choice goes and that open sessions take it.
+// status says where the choice goes and that open sessions take it: the
+// drawer within a second, the statusline when Claude Code runs it next.
 func (d *drawer) status(w int) string {
 	grey := terminu.Fg(terminu.Overlay0)
-	text := grey.Render("Saved to ") + terminu.Fg(terminu.Lavender).Render(shortHome(d.loc.ConfigFile)) +
-		grey.Render(" · open Claude Code sessions follow within a second")
+	follow := " · open Claude Code sessions follow within a second"
+	if d.detail.Label == rowStatusline {
+		follow = fmt.Sprintf(" · the statusline follows within %d seconds", refresh(d.cfg.Statusline))
+	}
+	text := grey.Render("Saved to ") + terminu.Fg(terminu.Lavender).Render(shortHome(d.loc.ConfigFile)) + grey.Render(follow)
 	return terminu.Truncate(text, w)
 }
 

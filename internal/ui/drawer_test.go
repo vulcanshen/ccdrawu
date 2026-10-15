@@ -156,6 +156,7 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 		return c.Dock
 	}
 
+	toPageField(t, d, rowSidebar, "Items")
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // on Items: the popup of every item
 	if text := frameText(d); !strings.Contains(text, "EDIT: sidebar") || !strings.Contains(text, "Mode     Permission mode") {
 		t.Fatalf("Enter on Items did not open the popup of every item with their keys:\n%s", text)
@@ -187,6 +188,48 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 	}
 }
 
+// The drawer's on and off heads both its pages, on until it is turned off:
+// off is written as drawer.off, and on leaves it out again
+func TestDrawerTurnsOffAndOn(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	if d.pages[rowSidebar].Fields[0] != d.drawerOn || d.pages[rowInline].Fields[0] != d.drawerOn || d.drawerOn.Selected != 1 {
+		t.Fatalf("the drawer is not on atop both pages: %+v", d.pages[rowSidebar].Fields[0])
+	}
+	if text := frameText(d); !strings.Contains(text, "SETTING") || !strings.Contains(text, "VALUE") {
+		t.Fatalf("[2] has no titles over its columns:\n%s", text)
+	}
+	raw := func() string {
+		t.Helper()
+		data, err := os.ReadFile(loc.ConfigFile)
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(data)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // into sidebar, on off
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // off
+	if c, _ := config.ReadConfig(loc.ConfigFile); !c.Drawer.Off || !strings.Contains(raw(), `"off": true`) {
+		t.Fatalf("not written off:\n%s", raw())
+	}
+	press(d, key("j"))                       // on
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // on again
+	if strings.Contains(raw(), "drawer") {
+		t.Fatalf("on is still written:\n%s", raw())
+	}
+
+	d.cfg.Drawer.Off = true
+	if err := config.WriteConfig(loc.ConfigFile, d.cfg); err != nil {
+		t.Fatal(err)
+	}
+	again, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.drawerOn.Selected != 0 {
+		t.Fatal("a drawer turned off reads on")
+	}
+}
+
 // Order is the drawer's order, the config's list as it is; Enter opens it in
 // a reorder popup, where D picks an item up, j|k move it, Enter drops it and
 // Enter again writes the order back. With one item there is nothing to order.
@@ -194,14 +237,14 @@ func TestOrderIsReordered(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	d.cfg.Dock = []string{"context", "model"}
 	fields := d.pages[rowSidebar].Fields
-	if f := fields[0]; f.Label != "Items" || f.Value() != "Model, Context" {
+	if f := fields[1]; f.Label != "Items" || f.Value() != "Model, Context" {
 		t.Fatalf("%q shows %q, want Items showing Model, Context", f.Label, f.Value())
 	}
-	if f := fields[1]; f.Label != "Order" || f.Value() != "Context, Model" {
+	if f := fields[2]; f.Label != "Order" || f.Value() != "Context, Model" {
 		t.Fatalf("%q shows %q, want Order showing Context, Model", f.Label, f.Value())
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
-	press(d, key("j"))
+	toPageField(t, d, rowSidebar, "Order")
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	if text := frameText(d); !strings.Contains(text, "ORDER: sidebar") || !strings.Contains(text, "Context") {
 		t.Fatalf("Enter on Order did not open the reorder popup:\n%s", text)
@@ -213,12 +256,12 @@ func TestOrderIsReordered(t *testing.T) {
 	if c, _ := config.ReadConfig(loc.ConfigFile); !slices.Equal(c.Dock, []string{"model", "context"}) {
 		t.Fatalf("dock = %v, want model, context", c.Dock)
 	}
-	if f := fields[1]; f.Value() != "Model, Context" {
+	if f := fields[2]; f.Value() != "Model, Context" {
 		t.Fatalf("Order shows %q, want Model, Context", f.Value())
 	}
 
 	d.cfg.Dock = []string{"model"}
-	if !fields[1].Disabled() {
+	if !fields[2].Disabled() {
 		t.Fatal("Order is on with one item to order")
 	}
 }
@@ -240,7 +283,7 @@ func TestNoCatalogSaysWhatToDo(t *testing.T) {
 func TestDetailFollowsTheSidebar(t *testing.T) {
 	d, _ := newTestDrawer(t)
 	text := frameText(d)
-	for _, want := range []string{"[1] PREFERENCES", "DRAWER", "SETTINGS", "[2] SIDEBAR", "Model, Mode"} {
+	for _, want := range []string{"[1] PREFERENCES", "DRAWER", "STATUSLINE", "SETTINGS", "[2] SIDEBAR", "Model, Mode"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("no %q in\n%s", want, text)
 		}
@@ -249,10 +292,14 @@ func TestDetailFollowsTheSidebar(t *testing.T) {
 	if d.detail.Label != rowInline {
 		t.Fatalf("[2] is %q after j, want inline", d.detail.Label)
 	}
+	d.app.Update(key("j")) // over the STATUSLINE title
+	if d.detail.Label != rowStatusline {
+		t.Fatalf("[2] is %q after j j, want statusline", d.detail.Label)
+	}
 	d.app.Update(key("j")) // over the SETTINGS title
 	text = frameText(d)
 	if d.detail.Label != rowPreferences || !strings.Contains(text, "[2] PREFERENCES") {
-		t.Fatalf("[2] is %q after j j, want preferences:\n%s", d.detail.Label, text)
+		t.Fatalf("[2] is %q after j j j, want preferences:\n%s", d.detail.Label, text)
 	}
 	// Every setting on that one page
 	for _, want := range []string{"ALIAS", "none", "CLAUDE THEME", "DRAWER BACKGROUND", "PLUGIN"} {
@@ -265,7 +312,8 @@ func TestDetailFollowsTheSidebar(t *testing.T) {
 func TestAliasIsCheckedAndSaved(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	press(d, key("j"))
-	press(d, key("j")) // sidebar, inline, preferences; its first field is the alias
+	press(d, key("j"))
+	press(d, key("j")) // sidebar, inline, statusline, preferences; its first field is the alias
 	press(d, tea.KeyMsg{Type: tea.KeyTab})
 	edit := func(v string) {
 		press(d, tea.KeyMsg{Type: tea.KeyEnter})
@@ -298,7 +346,7 @@ func claudeTheme(t *testing.T, loc config.Locations) string {
 
 func TestThemeGoesIntoClaudeCodeAndBack(t *testing.T) {
 	d, loc := newTestDrawer(t)
-	for range 2 { // sidebar, inline, preferences
+	for range 3 { // sidebar, inline, statusline, preferences
 		press(d, key("j"))
 	}
 	if d.detail.Label != rowPreferences {
@@ -333,7 +381,7 @@ func TestXResetsTheBackground(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	d.cfg.Theme = config.Theme{Base: "dark-ansi", Background: "#ff0000"}
 	d.applyTheme()
-	for range 2 { // to preferences
+	for range 3 { // to preferences
 		press(d, key("j"))
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
@@ -358,7 +406,7 @@ func TestXResetsTheBackground(t *testing.T) {
 func toField(t *testing.T, d *drawer, label string) {
 	t.Helper()
 	if d.detail.Label != rowPreferences {
-		for range 2 {
+		for range 3 {
 			press(d, key("j"))
 		}
 		press(d, tea.KeyMsg{Type: tea.KeyEnter})
@@ -408,7 +456,7 @@ func TestPluginRowInstallsAfterAsking(t *testing.T) {
 	if d.plugin != "not installed" {
 		t.Fatalf("plugin row = %q, want not installed", d.plugin)
 	}
-	for range 2 { // to preferences
+	for range 3 { // to preferences
 		press(d, key("j"))
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // into [2]

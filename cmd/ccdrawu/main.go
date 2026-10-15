@@ -5,9 +5,12 @@ package main
 import (
 	"fmt"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/vulcanshen/ccdrawu/internal/claude"
 	"github.com/vulcanshen/ccdrawu/internal/config"
+	"github.com/vulcanshen/ccdrawu/internal/statusline"
 	"github.com/vulcanshen/ccdrawu/internal/ui"
 	"github.com/vulcanshen/ccdrawu/internal/version"
 )
@@ -27,6 +30,18 @@ func main() {
 				os.Exit(2)
 			}
 			if err := integrate(os.Args[1] == "install"); err != nil {
+				fmt.Fprintln(os.Stderr, "ccdrawu:", err)
+				os.Exit(1)
+			}
+			return
+		case "statusline":
+			// Claude Code runs it with the session on stdin and the terminal's width in COLUMNS
+			loc, err := config.UserLocations()
+			if err == nil {
+				columns, _ := strconv.Atoi(os.Getenv("COLUMNS"))
+				err = statusline.Run(os.Stdin, os.Stdout, loc, columns, time.Now())
+			}
+			if err != nil {
 				fmt.Fprintln(os.Stderr, "ccdrawu:", err)
 				os.Exit(1)
 			}
@@ -82,6 +97,17 @@ func integrate(install bool) error {
 		}
 		fmt.Println("Claude Code has its own theme back.")
 	}
+	// So does the statusline: Claude Code has the user's own status line back, or none
+	if cfg, err := config.ReadConfig(loc.ConfigFile); err == nil && cfg.Statusline.On {
+		if err := claude.RestoreStatusline(loc.Claude, cfg.Statusline.Before); err != nil {
+			return err
+		}
+		cfg.Statusline.On, cfg.Statusline.Before = false, nil
+		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
+			return err
+		}
+		fmt.Println("Claude Code has its own status line back.")
+	}
 	fmt.Printf("Your picks stay in %s, the plugin's data in %s.\n", loc.ConfigFile, loc.Data)
 	return nil
 }
@@ -92,6 +118,8 @@ Usage:
   ccdrawu                     pick the items the drawer shows
   ccdrawu install claude      add the drawer to Claude Code (its ccdrawu plugin)
   ccdrawu uninstall claude    take it out again
+  ccdrawu statusline          Claude Code's status line, as set in ccdrawu
+                              (Claude Code runs it; the session on stdin)
   ccdrawu version             print the version (also --version, -v)
   ccdrawu help                print this (also --help, -h)
 

@@ -8,7 +8,7 @@
 
 **Language**: English · [繁體中文](README-zh_TW.md)
 
-**A sidebar for Claude Code.** Usage limits, context, model, cost, git and session stats sit in a pane beside the transcript, so they no longer crowd the space under your prompt.
+**A sidebar and a status line for Claude Code.** Usage limits, context, model, cost, git and session stats sit in a pane beside the transcript, so they no longer crowd the space under your prompt. Or, if you would rather have them under the prompt, in Claude Code's status line, laid out the way you pick.
 
 ![demo](docs/demo.gif)
 
@@ -40,15 +40,18 @@ These start off; turn them on in `ccdrawu`:
 | Tokens, Speed | Input, output and cache tokens of the conversation since the drawer loaded, and the last reply's output tokens a second |
 | Skills | Skills run in this session, and the last one |
 | Sync, Files, Commit, Repo | Commits ahead of and behind the upstream, files staged, changed and new, the short hash of HEAD, and origin's owner/repo with the worktree when you are in one; `no upstream`, `no commits` or `no origin` when there is none, and `not a repo` outside one |
+| Directory | The working directory's own name, without the path to it: `ccdrawu` |
 | Status | [status.claude.com](https://status.claude.com): all clear in green, an incident in peach or red |
+
+The status line can show any of them but the pet: see [The status line](#the-status-line).
 
 ## Requirements
 
 - Claude Code 2.1.287 or later
-- Fullscreen rendering: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript (see [Troubleshooting](#troubleshooting))
+- Fullscreen rendering, for the drawer: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript (see [Troubleshooting](#troubleshooting)). The status line needs neither this nor a wide terminal
 - A terminal wide enough for a sidebar: a pane opened on its own waits until the terminal is about 110–144 columns wide
 - A [Nerd Font](https://www.nerdfonts.com) as your terminal's font: the drawer's bars and the marks in the `ccdrawu` command (which choice is picked, which items are ticked) are its icons. Without one, see [Troubleshooting](#troubleshooting)
-- The `ccdrawu` command, to pick what the drawer shows
+- The `ccdrawu` command, to pick what the drawer and the status line show. Claude Code runs it for the status line, so it has to be on your `PATH`
 - macOS, Linux or Windows (on Windows, tried in Windows Terminal: see [Limitations](#limitations))
 
 ## Install
@@ -78,14 +81,14 @@ Then add the drawer to Claude Code:
 ccdrawu install claude
 ```
 
-It installs the ccdrawu plugin for your user, so every session has the drawer. Sessions already open take it with `/reload-plugins`. Then run `ccdrawu` to pick what the drawer shows.
+It installs the ccdrawu plugin for your user, so every session has the drawer. Sessions already open take it with `/reload-plugins`. Then run `ccdrawu` to pick what the drawer shows, or to turn on the status line.
 
-You can also add only the plugin, from inside Claude Code: `/plugin install ccdrawu --marketplace vulcanshen/ccdrawu`. This is not recommended: the drawer then shows its default rows, and picking the rows, their order, the pet, the bar or the theme takes the `ccdrawu` command, or editing `~/.config/ccdrawu/config.json` by hand.
+You can also add only the plugin, from inside Claude Code: `/plugin install ccdrawu --marketplace vulcanshen/ccdrawu`. This is not recommended: the drawer then shows its default rows, and picking the rows, their order, the pet, the bar or the theme takes the `ccdrawu` command, or editing `~/.config/ccdrawu/config.json` by hand. The status line needs the `ccdrawu` command too.
 
 ## Usage
 
-- The drawer opens by itself when a session starts.
-- `/ccdrawu` opens or closes it, even while Claude is working.
+- The drawer opens by itself when a session starts. To start without it, run `ccdrawu` and set **Drawer** to `off` on the sidebar or inline page; open sessions close it within a second.
+- `/ccdrawu` opens or closes it, even while Claude is working, and even with **Drawer** off.
 - Click the `×` at its top right to close it, or press `Ctrl+X Tab` to focus it and then `Ctrl+X X`.
 - `Ctrl+X ←` and `Ctrl+X →` make it wider or narrower while it has focus.
 
@@ -94,6 +97,24 @@ You can also add only the plugin, from inside Claude Code: `/plugin install ccdr
 Run `ccdrawu`, pick **sidebar** (beside the transcript) or **inline** (above the prompt) under Drawer and press `Enter`. The right side shows **Items**, the ones on, and **Order**, the same in the order the drawer shows them. Press `Enter` on **Items** for the list of every item: `Space` checks or unchecks one, `Enter` applies, `Esc` leaves things as they were, and `/` filters as you type. An item you turn on goes after the one before it in that list. Press `Enter` on **Order** to change the order: `D` picks an item up, `j` and `k` move it, `Enter` puts it down, and `Enter` again saves the order (`Esc` puts things back). Open sessions follow within a second.
 
 ![settings](docs/settings.gif)
+
+### The status line
+
+ccdrawu can also be Claude Code's status line, the row under the prompt: with the drawer, or on its own with **Drawer** set to `off`.
+
+Run `ccdrawu`, pick **statusline** under Statusline and press `Enter`, then set **Statusline** to `on`. ccdrawu sets `ccdrawu statusline` as Claude Code's status line in `~/.claude/settings.json`. If you already have one, such as ccstatusline, it asks before replacing it and keeps it: setting **Statusline** back to `off`, or `ccdrawu uninstall claude`, puts yours back. Open sessions change at once.
+
+```
+Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h | Cost $1.20 | Git main  +12 -3
+```
+
+- **Items** and **Order**: what it shows, and in which order, picked as for the drawer. Model, Context, Session, Weekly, Cost and Git to start with; the pet stays in the drawer.
+- **Format**: how each item reads: `label` (`Context 42%`), `short` (`ctx 42%`) or `value` (`42%`).
+- **Color**: `highlighted`, each value in the drawer's colors, or `dimmed`, all of it in Claude Code's dim color.
+- **Separator**: what stands between the items, `|` unless you set another.
+- **Refresh**: how many seconds Claude Code waits before running it again while nothing happens, 10 unless you set another; it also runs it as the conversation moves on.
+
+A line too long for the terminal is cut at the end with `…`.
 
 ### The pet
 
@@ -126,8 +147,8 @@ Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` 
 
 ## Where it keeps things
 
-- `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`: the items, the alias, the bar and the pet. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
-- `~/.ccdrawu/`: what the plugin writes, the list of items `ccdrawu` offers (`catalog.json`). `CCDRAWU__DATA` names another folder for it.
+- `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`: the items, the alias, the bar, the pet, whether the drawer opens by itself, and the status line's settings. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
+- `~/.ccdrawu/`: what the plugin writes: the list of items `ccdrawu` offers (`catalog.json`) and, while the status line is on, each session's values for it (`sessions/`; a session's file is removed after a week without use). `CCDRAWU__DATA` names another folder for it.
 
 On Windows, `~` is your user folder (`%USERPROFILE%`).
 
@@ -163,9 +184,18 @@ And its text is hard to read. Claude Code paints the sidebar from its theme, a l
 
 See [Match the background](#match-the-background).
 
+### The status line is an empty row
+
+Claude Code runs `ccdrawu statusline`, and the `ccdrawu` it finds on your `PATH` is an older one, from before the status line. `ccdrawu --version` says which one runs; update it the way you installed it, or remove the older one.
+
+### The status line shows only Model, Context and Cost
+
+The ccdrawu plugin is not running in that session, so the status line shows what Claude Code hands it. Install the plugin with `ccdrawu install claude`; a session started before it takes it with `/reload-plugins`.
+
 ## Limitations
 
 - After you switch the permission mode with `shift+tab`, **Mode** changes once Claude finishes the tools of the step it is on; while Claude is idle, it changes when you send the next prompt.
+- The status line can be a few seconds behind the drawer: Claude Code runs it again as the conversation moves on, or after **Refresh** seconds.
 - The colors are Catppuccin Mocha, made for a dark background, and cannot be changed yet: on a light terminal the text is hard to read. Under a light Claude Code theme, see [Troubleshooting](#troubleshooting).
 - Where an organization manages Claude Code, **Mode**, **Compact** and **Skills** may stay empty, **Context** catches up with a compaction only after the next reply, and the pet does not jump when a tool fails or speak after a compaction: those events skip plugins the user installed.
 - Claude Code's mod interface is in early access and may change between releases.
@@ -178,6 +208,8 @@ First take the drawer out of Claude Code:
 ```sh
 ccdrawu uninstall claude
 ```
+
+This also puts back the theme and the status line you had before ccdrawu's.
 
 Then remove the `ccdrawu` command:
 

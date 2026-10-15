@@ -8,8 +8,8 @@ import { C, ITEMS, type Item, type Seg, type View } from './items'
 export type Placement = 'dock' | 'inline'
 
 // ~/.config/ccdrawu/config.json: { "dock": [ids], "inline": [ids], "alias": name, "pet": { "species" },
-// "bar": style }. Undefined when it is not JSON, as when caught half written: read it again
-// on the next tick
+// "bar": style, "drawer": { "off" }, "statusline": { "on", ... } }. Undefined when it is not JSON, as when caught half written:
+// read it again on the next tick
 export function parseConfig(text: string): Config | undefined {
   let raw: unknown
   try {
@@ -31,6 +31,14 @@ export function parseConfig(text: string): Config | undefined {
   if (typeof pet === 'object' && pet !== null) {
     const { species } = pet as Record<string, unknown>
     config.pet = typeof species === 'string' ? { species } : {}
+  }
+  const drawer = (raw as Record<string, unknown>).drawer
+  if (typeof drawer === 'object' && drawer !== null) {
+    config.drawer = { off: (drawer as Record<string, unknown>).off === true }
+  }
+  const statusline = (raw as Record<string, unknown>).statusline
+  if (typeof statusline === 'object' && statusline !== null) {
+    config.statusline = { on: (statusline as Record<string, unknown>).on === true }
   }
   return config
 }

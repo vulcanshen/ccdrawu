@@ -48,10 +48,11 @@ import {
 import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
 import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from './layout'
 import { locations } from './paths'
+import { statuslineFile } from './statusline'
 
 const PANE = 'ccdrawu'
 const PANE_OPEN = { id: PANE, title: 'Status', columns: 34 } as const
-const LABEL = 9 // key column width beside the transcript; keys are 8 characters at most, and a space
+const LABEL = 9 // key column width beside the transcript: keys of 8 characters, and a space; wider while a longer one shows
 
 const usage = atom({ plugin: 'ccdrawu', key: 'usage' } as const, null as Usage | null)
 const model = atom({ plugin: 'ccdrawu', key: 'model' } as const, null as ModelInfo | null)
@@ -142,6 +143,7 @@ async function installCatalog($: Engine) {
 // a change at once. A file not there means the catalog's defaults
 let configStamp: number | undefined
 let statusWasShown = false // whether the config read last had the Status row on
+let drawerWasOn: boolean | undefined // whether the config read last had the drawer on, before the first read
 // The command names this session has registered: /ccdrawu, and each alias the config has named
 const commands = new Set<string>()
 
@@ -163,6 +165,14 @@ async function refreshConfig($: Engine) {
   const shown = showsAnywhere(parsed, 'status')
   if (shown && !statusWasShown) quietly(refreshStatus($))
   statusWasShown = shown
+  // The drawer just turned on or off: open sessions open or close it. The first read leaves it as
+  // session.start has it, so a reload keeps a drawer /ccdrawu opened with it off
+  const drawerOn = parsed.drawer?.off !== true
+  if (drawerWasOn !== undefined && drawerOn !== drawerWasOn) {
+    if (drawerOn) void $.ui.open(PANE_OPEN)
+    else await $.ui.close({ id: PANE })
+  }
+  drawerWasOn = drawerOn
 }
 
 // The pet on either side of the prompt: it has no need of a tick, or of events, when it shows nowhere
@@ -290,6 +300,44 @@ async function refreshDrawer($: Engine) {
   await update($, drawer, () => manifest.version ?? null)
 }
 
+// Everything the items may show, as the drawer holds it now
+async function readSnapshot($: Engine): Promise<Snapshot> {
+  return {
+    usage: await read($, usage),
+    model: await read($, model),
+    git: await read($, git),
+    path: await read($, path),
+    turns: await read($, turns),
+    cache: await read($, cache),
+    tokens: await read($, tokens),
+    session: await read($, sessionInfo),
+    status: await read($, service),
+    skills: await read($, skills),
+    compacts: await read($, compacts),
+    agents: await read($, agents),
+    background: await read($, background),
+    version: await read($, version),
+    drawer: await read($, drawer),
+    modes: await read($, modes),
+    now: await read($, now),
+  }
+}
+
+// While the config has the statusline on, keep what it shows in <data>/sessions/<session id>.json for
+// `ccdrawu statusline` to lay out, written only when it changed. The id is asked each time: after /clear
+// the session goes on under a new one, and Claude Code hands the command that one
+let statuslineWritten: { file: string; text: string } | undefined
+
+async function writeStatusline($: Engine) {
+  if (dataDir === undefined || !(await read($, config)).statusline?.on) return
+  const id = (await $.session.id()).replace(/\.jsonl$/, '')
+  const file = `${dataDir}/sessions/${id}.json`
+  const text = statuslineFile(await readSnapshot($))
+  if (statuslineWritten?.file === file && statuslineWritten.text === text) return
+  await $.fs.write(file, text)
+  statuslineWritten = { file, text }
+}
+
 // A failed background refresh (git timing out, offline for the version check) affects its row alone
 function quietly(work: Promise<unknown>) {
   void work.catch(() => undefined)
@@ -312,7 +360,8 @@ export const register: Register = on => {
     }))
     await locateFiles($).catch(() => undefined)
     quietly(installCatalog($))
-    quietly(refreshConfig($))
+    // Read before the drawer opens, which it does only while the config has it on
+    await refreshConfig($).catch(() => undefined)
     quietly(refreshUsage($))
     quietly(refreshModelName($))
     quietly(refreshGit($))
@@ -323,7 +372,8 @@ export const register: Register = on => {
     quietly(refreshSession($))
 
     // Countdowns and uptime every 30 seconds; git, path and subagents every 5; Claude's status every 5
-    // minutes while its row shows (first when the config turns it on); the latest version every 6 hours
+    // minutes while its row shows (first when the config turns it on); the latest version every 6 hours;
+    // the config, and the statusline's file while it is on, every second
     $.clock.every(30_000, () => quietly(tick($)))
     $.clock.every(5_000, () => {
       quietly(refreshGit($))
@@ -332,10 +382,12 @@ export const register: Register = on => {
     $.clock.every(5 * 60_000, () => quietly(refreshStatus($)))
     $.clock.every(6 * 60 * 60_000, () => quietly(refreshVersion($)))
     $.clock.every(1_000, () => quietly(refreshConfig($)))
+    $.clock.every(1_000, () => quietly(writeStatusline($)))
     $.clock.every(PET_TICK, () => quietly(stepPet($)))
 
-    // In a terminal too narrow for a sidebar the engine holds the pane until it widens
-    void $.ui.open(PANE_OPEN)
+    // In a terminal too narrow for a sidebar the engine holds the pane until it widens. With the drawer
+    // off in ccdrawu the session starts without it, and /ccdrawu opens it
+    if ((await read($, config)).drawer?.off !== true) void $.ui.open(PANE_OPEN)
 
     return next(e)
   })
@@ -473,25 +525,7 @@ export const register: Register = on => {
     const inner = Math.max(22, e.props.bodyColumns - 2)
     const placement = e.props.placement
 
-    const s: Snapshot = {
-      usage: await read($, usage),
-      model: await read($, model),
-      git: await read($, git),
-      path: await read($, path),
-      turns: await read($, turns),
-      cache: await read($, cache),
-      tokens: await read($, tokens),
-      session: await read($, sessionInfo),
-      status: await read($, service),
-      skills: await read($, skills),
-      compacts: await read($, compacts),
-      agents: await read($, agents),
-      background: await read($, background),
-      version: await read($, version),
-      drawer: await read($, drawer),
-      modes: await read($, modes),
-      now: await read($, now),
-    }
+    const s = await readSnapshot($)
     const conf = await read($, config)
     const enabled = enabledItems(conf, placement)
     // The pet is not a row: it is drawn on its own, over the rows or left of the columns
@@ -585,12 +619,13 @@ export const register: Register = on => {
     }
 
     // Beside the transcript: a key column and bars for meters, one row after another
-    const barWidth = Math.max(4, inner - LABEL - 5)
+    const keyWidth = Math.max(LABEL, ...shown.map(({ item }) => item.label.length + 1))
+    const barWidth = Math.max(4, inner - keyWidth - 5)
     // The key keeps its width: a value too long for the row (a path) would squeeze it, and its padding
     // would wrap to an empty second row
     const label = (text: string) => (
       <Box flexShrink={0}>
-        <Text color={C.blue}>{text.padEnd(LABEL)}</Text>
+        <Text color={C.blue}>{text.padEnd(keyWidth)}</Text>
       </Box>
     )
     const dockRow = (key: string, v: View) => {

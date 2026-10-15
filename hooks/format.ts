@@ -118,14 +118,15 @@ export function countBackground(tasks: readonly { type: string }[]): Record<stri
 
 const TASK_ORDER = ['shell', 'monitor', 'workflow']
 
-// What runs in the background, a count per type: "2 agents｜1 shell"; "none" when nothing does
-export function tasksText(agents: number, background: Readonly<Record<string, number>>): string {
+// What runs in the background, a count per type: "2 agents｜1 shell"; "none" when nothing does.
+// The statusline parts its items with |, so it parts the counts with `sep` ", "
+export function tasksText(agents: number, background: Readonly<Record<string, number>>, sep = '｜'): string {
   const rank = (type: string) => (TASK_ORDER.includes(type) ? TASK_ORDER.indexOf(type) : TASK_ORDER.length)
   const types = Object.keys(background).sort((a, b) => rank(a) - rank(b) || a.localeCompare(b))
   const parts = [['agent', agents] as const, ...types.map(t => [t, background[t] ?? 0] as const)]
     .filter(([, n]) => n > 0)
     .map(([type, n]) => `${n} ${type}${n === 1 ? '' : 's'}`)
-  return parts.length > 0 ? parts.join('｜') : 'none'
+  return parts.length > 0 ? parts.join(sep) : 'none'
 }
 
 // Effort color (Catppuccin Mocha), low to max: green, yellow, peach, maroon, red; anything else (an
@@ -166,6 +167,11 @@ export function shortPath(path: string, home: string | undefined): string {
     return '~' + path.slice(home.length)
   }
   return path
+}
+
+// A path's last directory: ~/sideproj/ccdrawu is ccdrawu; a root, with none, is itself
+export function directoryName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path
 }
 
 // A text cut to `max` characters keeping its end: …roj/ccdrawu

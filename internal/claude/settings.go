@@ -56,11 +56,16 @@ func fields(data []byte) ([]field, error) {
 // setString sets the top-level key to a string value, leaving every other byte
 // as it was; a key not there goes first, indented as the next key is.
 func setString(data []byte, key, value string) ([]byte, error) {
+	quoted, _ := json.Marshal(value)
+	return setValue(data, key, quoted)
+}
+
+// setValue is setString for any JSON value, written as given.
+func setValue(data []byte, key string, quoted []byte) ([]byte, error) {
 	fs, err := fields(data)
 	if err != nil {
 		return nil, err
 	}
-	quoted, _ := json.Marshal(value)
 	for _, f := range fs {
 		if f.key == key {
 			return join(data[:f.valueStart], quoted, data[f.valueEnd:]), nil
