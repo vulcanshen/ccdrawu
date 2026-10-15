@@ -6,24 +6,32 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
-// Plugin is the plugin's name; Source is the marketplace it comes from,
-// unless CCDRAWU__MARKETPLACE names another (a folder, while developing).
+// Plugin is the plugin's name; Repo is the marketplace it comes from, cloned
+// over HTTPS (owner/repo clones over SSH, which needs a key on GitHub).
 const (
 	Plugin = "ccdrawu"
-	Source = "vulcanshen/ccdrawu"
+	Repo   = "https://github.com/vulcanshen/ccdrawu.git"
 )
 
-// SourceFrom is where install takes the plugin from: CCDRAWU__MARKETPLACE,
-// else Source.
-func SourceFrom(getenv func(string) string) string {
+// SourceFrom is where install takes the plugin from: CCDRAWU__MARKETPLACE
+// (a folder, while developing), else Repo at the release tag of this ccdrawu,
+// version as internal/version has it, so the plugin and the command go
+// together; a dev build takes the default branch. Unpinned, the plugin would
+// be whatever the default branch holds, released or not.
+func SourceFrom(getenv func(string) string, version string) string {
 	if s := getenv("CCDRAWU__MARKETPLACE"); s != "" {
 		return s
 	}
-	return Source
+	if version == "" || version == "dev" {
+		return Repo
+	}
+	return Repo + "#v" + version
 }
 
 // Run runs a command and returns what it printed on stdout.
@@ -44,24 +52,84 @@ func Exec(name string, args ...string) ([]byte, error) {
 
 // Install installs the plugin for the user from source, adding its
 // marketplace first when Claude Code does not have it. Where Claude Code has
-// the plugin already it updates it instead, from the marketplace it came
-// from: Claude Code refreshes a marketplace like ours only when asked, and
-// installing again is no change. It returns Claude Code's own word on what it
-// did.
+// the plugin from that same source already it updates it instead: Claude Code
+// refreshes a marketplace like ours only when asked, and installing again is
+// no change. From another source (an older ccdrawu's tag, the default branch)
+// it moves it: Claude Code adds no marketplace of a name it has from another
+// source, so the marketplace goes, and the plugin with it, and the plugin is
+// installed from source. It returns Claude Code's own word on what it did.
 func Install(run Run, source string) (string, error) {
 	id, _, err := Installed(run)
 	if err != nil {
 		return "", err
 	}
-	if id == "" {
+	install := func() (string, error) {
 		return result(run("claude", "plugin", "install", Plugin, "--marketplace", source, "--json"))
 	}
-	if _, market, found := strings.Cut(id, "@"); found {
-		if _, err := result(run("claude", "plugin", "marketplace", "update", market, "--json")); err != nil {
+	if id == "" {
+		return install()
+	}
+	_, market, _ := strings.Cut(id, "@")
+	from, err := recorded(run, market)
+	if err != nil {
+		return "", err
+	}
+	if from != sourceKey(source) {
+		if _, err := result(run("claude", "plugin", "marketplace", "remove", market, "--json")); err != nil {
 			return "", err
 		}
+		return install()
+	}
+	if _, err := result(run("claude", "plugin", "marketplace", "update", market, "--json")); err != nil {
+		return "", err
 	}
 	return result(run("claude", "plugin", "update", id, "--json"))
+}
+
+// recorded is where Claude Code has the marketplace market from, written as
+// sourceKey writes a source: a git URL and its #ref, or a folder; "" when it
+// does not have it.
+func recorded(run Run, market string) (string, error) {
+	out, err := run("claude", "plugin", "marketplace", "list", "--json")
+	if err != nil {
+		return "", err
+	}
+	var markets []struct {
+		Name, Source, URL, Repo, Ref, Path string
+	}
+	if err := json.Unmarshal(out, &markets); err != nil {
+		return "", fmt.Errorf("claude plugin marketplace list: %w", err)
+	}
+	for _, m := range markets {
+		if m.Name != market {
+			continue
+		}
+		at := ""
+		if m.Ref != "" {
+			at = "#" + m.Ref
+		}
+		switch m.Source {
+		case "git":
+			return m.URL + at, nil
+		case "github":
+			return m.Repo + at, nil
+		case "directory":
+			return filepath.Clean(m.Path), nil
+		}
+		return m.Source, nil
+	}
+	return "", nil
+}
+
+// sourceKey is a source as recorded reads one: a folder by its absolute path,
+// anything else as it is written.
+func sourceKey(source string) string {
+	if info, err := os.Stat(source); err == nil && info.IsDir() {
+		if abs, err := filepath.Abs(source); err == nil {
+			return abs
+		}
+	}
+	return source
 }
 
 // Uninstall removes the plugin and then its marketplace. ok is false when

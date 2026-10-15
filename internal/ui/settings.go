@@ -9,6 +9,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/ccdrawu/internal/claude"
 	"github.com/vulcanshen/ccdrawu/internal/config"
+	"github.com/vulcanshen/ccdrawu/internal/version"
 	terminu "github.com/vulcanshen/terminu-go"
 )
 
@@ -177,7 +178,7 @@ func (d *drawer) pluginChecked(m pluginChecked) {
 }
 
 func (d *drawer) pluginAction() tea.Cmd {
-	run, source := d.run, claude.SourceFrom(os.Getenv)
+	run, source := d.run, claude.SourceFrom(os.Getenv, version.Version)
 	if d.pluginID == "" {
 		return d.app.Confirm(terminu.Ask{
 			Title: "Install", Subject: "Claude Code", Question: "Add the drawer to Claude Code?", Verb: "install",

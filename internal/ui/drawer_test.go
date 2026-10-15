@@ -468,11 +468,11 @@ func TestPluginRowInstallsAfterAsking(t *testing.T) {
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // into [2]
 	press(d, key("G"))                       // the last field: the plugin
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // the confirm
-	if !f.installed && slices.Contains(f.ran, "plugin install ccdrawu --marketplace vulcanshen/ccdrawu --json") {
+	if !f.installed && slices.Contains(f.ran, "plugin install ccdrawu --marketplace https://github.com/vulcanshen/ccdrawu.git --json") {
 		t.Fatal("installed before the confirm was answered")
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // install
-	if !slices.Contains(f.ran, "plugin install ccdrawu --marketplace vulcanshen/ccdrawu --json") {
+	if !slices.Contains(f.ran, "plugin install ccdrawu --marketplace https://github.com/vulcanshen/ccdrawu.git --json") {
 		t.Fatalf("ran %q, want the install:\n%s", f.ran, frameText(d))
 	}
 	if d.plugin != "installed" {

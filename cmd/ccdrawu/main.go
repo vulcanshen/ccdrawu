@@ -66,7 +66,7 @@ func main() {
 // integrate puts the plugin into Claude Code, or takes it out.
 func integrate(install bool) error {
 	if install {
-		msg, err := claude.Install(claude.Exec, claude.SourceFrom(os.Getenv))
+		msg, err := claude.Install(claude.Exec, claude.SourceFrom(os.Getenv, version.Version))
 		if err != nil {
 			return err
 		}

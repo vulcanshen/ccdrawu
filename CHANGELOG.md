@@ -6,7 +6,7 @@
 ### Added
 - **Statusline** `on when narrow`: the status line only while the terminal is too narrow for the sidebar, under about 144 columns, and the drawer is not beside the transcript. Otherwise the row goes away.
 ### Changed
-- `ccdrawu install claude` updates the plugin where Claude Code has it already: it refreshes the plugin's marketplace, which Claude Code does not do by itself, and brings the plugin to its latest version. It did nothing there before. The README says how to update.
+- `ccdrawu install claude` installs the plugin released with it, from that release's tag, where it took whatever the main branch held; a plugin installed before, from the main branch or an older release, moves to it. Run again, it updates the plugin, which Claude Code does not do by itself; it did nothing there before. The README says how to update, and to install the plugin with `ccdrawu install claude` only.
 - **Drawer** atop the sidebar page and atop the inline page are a setting each, where they were one. Off on the inline page alone, a terminal narrowed below the sidebar's width hides the drawer, instead of moving it above the prompt, until it widens again. Turned back on in a terminal that narrow, the drawer stays out of sight until `/ccdrawu`, as Claude Code places it, and open sessions say so in a toast. 0.1.1's off reads as off on both.
 ### Fixed
 - `/ccdrawu` shows a drawer that waits for a wider terminal at once; it took two.

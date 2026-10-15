@@ -81,9 +81,9 @@ Then add the drawer to Claude Code:
 ccdrawu install claude
 ```
 
-It installs the ccdrawu plugin for your user, so every session has the drawer. Sessions already open take it with `/reload-plugins`. Then run `ccdrawu` to pick what the drawer shows, or to turn on the status line.
+It installs the ccdrawu plugin released with this `ccdrawu`, for your user, so every session has the drawer. Sessions already open take it with `/reload-plugins`. Then run `ccdrawu` to pick what the drawer shows, or to turn on the status line.
 
-You can also add only the plugin, from inside Claude Code: `/plugin install ccdrawu --marketplace vulcanshen/ccdrawu`. This is not recommended: the drawer then shows its default rows, and picking the rows, their order, the pet, the bar or the theme takes the `ccdrawu` command, or editing `~/.config/ccdrawu/config.json` by hand. The status line needs the `ccdrawu` command too.
+Install and update the plugin with `ccdrawu install claude` only, not with `/plugin` in Claude Code or `claude plugin marketplace`. Added from the marketplace by hand, the plugin is whatever the repository's main branch holds, which can be ahead of your `ccdrawu` and read its settings differently; `ccdrawu install claude` takes the plugin of the same version as the command.
 
 ## Usage
 
@@ -216,7 +216,7 @@ The `ccdrawu` command and the plugin in Claude Code update apart, and go togethe
    ccdrawu install claude
    ```
 
-   With the plugin there already, this updates it. Claude Code does not update it by itself.
+   With the plugin there already, this updates it to the version of the command. Claude Code does not update it by itself.
 3. In sessions already open, run `/reload-plugins`. New sessions have the new plugin from the start.
 
 ## Uninstall

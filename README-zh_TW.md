@@ -81,9 +81,9 @@ scoop install ccdrawu
 ccdrawu install claude
 ```
 
-它會幫你的使用者裝好 ccdrawu 外掛，之後每個 session 都有側邊欄；已經開著的 session 跑一次 `/reload-plugins`。接著執行 `ccdrawu` 挑要顯示的項目，或打開狀態列。
+它會幫你的使用者裝好跟這個 `ccdrawu` 同一版發布的 ccdrawu 外掛，之後每個 session 都有側邊欄；已經開著的 session 跑一次 `/reload-plugins`。接著執行 `ccdrawu` 挑要顯示的項目，或打開狀態列。
 
-也可以只在 Claude Code 裡裝外掛：`/plugin install ccdrawu --marketplace vulcanshen/ccdrawu`。不建議這樣裝：側邊欄只會顯示預設的項目，要挑項目、排順序、換寵物、bar 或主題，都得用 `ccdrawu` 指令，或自己改 `~/.config/ccdrawu/config.json`。狀態列也要有 `ccdrawu` 指令才能用。
+外掛請只用 `ccdrawu install claude` 安裝和更新，不要在 Claude Code 裡用 `/plugin`，也不要用 `claude plugin marketplace`。自己從 marketplace 裝的外掛，是 repo main 分支上當下的版本，可能比你的 `ccdrawu` 新，讀設定的方式也可能不一樣；`ccdrawu install claude` 會裝跟指令同一版的外掛。
 
 ## 使用方式
 
@@ -216,7 +216,7 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
    ccdrawu install claude
    ```
 
-   外掛已經裝了的話，這個指令會更新它。Claude Code 不會自己更新這個外掛。
+   外掛已經裝了的話，這個指令會把它更新成跟指令同一版。Claude Code 不會自己更新這個外掛。
 3. 已經開著的 session 跑一次 `/reload-plugins`。新開的 session 直接就是新版。
 
 ## 移除
