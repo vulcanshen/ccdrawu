@@ -58,6 +58,11 @@ const (
 // item).
 const edge = 4
 
+// hidden is a status line of no row at all: Claude Code keeps the row while a
+// status line is set, blank for an empty line, but draws a line of nothing
+// but a reset none (measured in Claude Code 2.1.300).
+const hidden = "\x1b[0m"
+
 // dockColumns is the terminal's width from which Claude Code docks a pane the
 // plugin opens by itself beside the transcript ($.ui.open). One the person
 // opened docks from 110; the session's file says when it is docked.
@@ -71,10 +76,10 @@ const keep = 7 * 24 * time.Hour
 // the items on in the statusline, from the session's file, or the few the
 // input has while there is none (the plugin not loaded, or not yet). columns
 // is the terminal's width, 0 when unknown; the line is cut to fit it. On only
-// when narrow, it is an empty line while the drawer is beside the transcript,
-// or the terminal is wide enough for it: Claude Code keeps the row while a
-// status line is set, so it stays, empty. Files of sessions gone quiet for a
-// week are removed.
+// when narrow, there is none while the drawer is beside the transcript, or the
+// terminal is wide enough for it; with nothing to show there is none either,
+// and the row goes (hidden). Files of sessions gone quiet for a week are
+// removed.
 func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now time.Time) error {
 	var input Input
 	if err := json.NewDecoder(in).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
@@ -98,8 +103,8 @@ func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now tim
 		columns = max(1, columns-edge)
 	}
 	line := Line(cfg, cat, items, columns)
-	if cfg.Statusline.When == config.WhenNarrow && (docked || wide) {
-		line = ""
+	if line == "" || cfg.Statusline.When == config.WhenNarrow && (docked || wide) {
+		line = hidden
 	}
 	_, err = fmt.Fprintln(out, line)
 	prune(sessions, now)

@@ -228,3 +228,28 @@ func TestRunOnWhenNarrow(t *testing.T) {
 		}
 	}
 }
+
+// A line hidden, or with nothing to show, is a reset alone, which Claude Code
+// draws as no row at all, where an empty line would leave a blank one
+func TestRunHidesTheRow(t *testing.T) {
+	loc, sessions := setup(t)
+	data, _ := json.Marshal(map[string]any{"version": 1, "docked": true, "items": items})
+	if err := os.WriteFile(filepath.Join(sessions, "abc.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for _, s := range []config.Statusline{
+		{On: true, When: config.WhenNarrow}, // docked
+		{On: true, Items: []string{}},       // nothing picked
+	} {
+		if err := config.WriteConfig(loc.ConfigFile, config.Config{Statusline: s}); err != nil {
+			t.Fatal(err)
+		}
+		var out bytes.Buffer
+		if err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, loc, 100, time.Now()); err != nil {
+			t.Fatal(err)
+		}
+		if got := out.String(); got != hidden+"\n" {
+			t.Errorf("%+v: %q, want the reset alone", s, got)
+		}
+	}
+}

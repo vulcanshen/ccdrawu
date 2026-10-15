@@ -4,7 +4,7 @@
 
 ## [0.1.2] - 2026-10-15
 ### Added
-- **Statusline** `on when narrow`: the status line only while the terminal is too narrow for the sidebar, under about 144 columns, and the drawer is not beside the transcript. Otherwise the row stays, empty.
+- **Statusline** `on when narrow`: the status line only while the terminal is too narrow for the sidebar, under about 144 columns, and the drawer is not beside the transcript. Otherwise the row goes away.
 ### Changed
 - **Drawer** atop the sidebar page and atop the inline page are a setting each, where they were one. Off on the inline page alone, a terminal narrowed below the sidebar's width hides the drawer, instead of moving it above the prompt, until it widens again. 0.1.1's off reads as off on both.
 ### Fixed

@@ -105,7 +105,7 @@ ccdrawu 也可以當 Claude Code 的狀態列，也就是輸入框下方那一�
 
 執行 `ccdrawu`，在 Statusline 底下選 **statusline** 按 `Enter`，再把 **Statusline** 設成 `on`。ccdrawu 會在 `~/.claude/settings.json` 把 Claude Code 的狀態列設成 `ccdrawu statusline`。如果你原本就有狀態列（例如 ccstatusline），會先問過你才換掉，並且把原本的記下來：把 **Statusline** 設回 `off`，或執行 `ccdrawu uninstall claude`，就會換回你原本的。開著的 session 會馬上換。
 
-改設成 `on when narrow` 的話，只有終端機窄到放不下側邊欄（大約 144 欄以下），而且側邊欄不在對話旁邊時才顯示。其他時候，輸入框下方那一列會留著、但是空的：只要設了狀態列，Claude Code 就會保留那一列。inline 頁的 **Drawer** 也設成 `off` 的話，終端機一窄，就改由狀態列顯示，取代側邊欄。
+改設成 `on when narrow` 的話，只有終端機窄到放不下側邊欄（大約 144 欄以下），而且側邊欄不在對話旁邊時才顯示。其他時候，輸入框下方那一列會整個收起來。inline 頁的 **Drawer** 也設成 `off` 的話，終端機一窄，就改由狀態列顯示，取代側邊欄。
 
 ```
 Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h | Cost $1.20 | Git main  +12 -3
