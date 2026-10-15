@@ -34,7 +34,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 | Skills | `skill.prompt` 的次數與最後的 `skill` | 每次跑 skill |
 | Sync、Files、Commit | 一個 `git status --porcelain=v2 --branch`：`branch.ab`、XY 碼、`?`、`branch.oid` | 每 5 秒 |
 | Repo | `git remote get-url origin` 解析成 owner/repo（`$.session.repo().name` 只有內部 repo 才有）；`--git-dir` 跟 `--git-common-dir` 不同就是 linked worktree，取 toplevel 的資料夾名；工作目錄沒變就不重查 | 工作目錄改變時 |
-| Status | `https://status.claude.com/api/v2/status.json` 的 `status.indicator`／`description` | session 開始、每 5 分鐘 |
+| Status | `https://status.claude.com/api/v2/status.json` 的 `status.indicator`／`description`；只在勾了 Status 時查（預設關，沒勾的人不該有這個連線；2026-10-15 user 定的） | 讀到設定時剛打開就查一次，之後每 5 分鐘 |
 
 ## 設計決定
 

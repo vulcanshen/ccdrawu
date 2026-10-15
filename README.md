@@ -131,7 +131,7 @@ Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` 
 
 On Windows, `~` is your user folder (`%USERPROFILE%`).
 
-Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
+Every 6 hours the drawer asks the npm registry for Claude Code's newest version. With **Status** on, it also asks status.claude.com every 5 minutes; it makes no other requests.
 
 ## Limitations
 

@@ -25,7 +25,7 @@ import {
 } from '../hooks/format'
 import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
-import { cellWidth, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from '../hooks/layout'
+import { cellWidth, columnRows, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from '../hooks/layout'
 import { locations } from '../hooks/paths'
 import {
   BALL_LINES,
@@ -531,6 +531,11 @@ test('the config picks items per placement, in the order it lists them', async (
   expect(parseConfig('{"bar": 1}')).toEqual({})
   expect(enabledItems({ dock: ['git', 'model', 'gone', 'git'] }, 'dock').map(i => i.id)).toEqual(['git', 'model'])
   expect(enabledItems({ dock: [] }, 'dock')).toEqual([])
+  // Status, off by default, is asked of status.claude.com only once a placement shows it; the pet is on
+  expect(showsAnywhere({}, 'status')).toBe(false)
+  expect(showsAnywhere({ inline: ['status'] }, 'status')).toBe(true)
+  expect(showsAnywhere({ dock: [], inline: [] }, 'pet')).toBe(false)
+  expect(showsAnywhere({}, 'pet')).toBe(true)
   expect(enabledItems({}, 'inline').map(i => i.id)).toEqual(ITEMS.filter(i => i.inline).map(i => i.id))
 })
 

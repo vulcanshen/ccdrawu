@@ -43,6 +43,11 @@ export function enabledItems(config: Config, placement: Placement): Item[] {
   return [...new Set(ids)].flatMap(id => ITEMS.find(item => item.id === id) ?? [])
 }
 
+// Whether an item shows beside the transcript or above the prompt
+export function showsAnywhere(config: Config, id: string): boolean {
+  return (['dock', 'inline'] as const).some(p => enabledItems(config, p).some(item => item.id === id))
+}
+
 const INLINE_PATH = 32 // above the prompt a path keeps its last 32 characters
 export const COLUMN_GAP = ' │ '
 

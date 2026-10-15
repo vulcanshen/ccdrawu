@@ -131,7 +131,7 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 
 在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
 
-側邊欄每 6 小時會向 npm registry 查一次 Claude Code 的最新版本。
+側邊欄每 6 小時會向 npm registry 查一次 Claude Code 的最新版本。打開 **Status** 的話，還會每 5 分鐘向 status.claude.com 查一次；除此之外不會連網。
 
 ## 限制
 

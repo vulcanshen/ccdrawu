@@ -46,7 +46,7 @@ import {
   usageColor,
 } from './format'
 import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
-import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from './layout'
+import { chunk, COLUMN_GAP, columnRows, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from './layout'
 import { locations } from './paths'
 
 const PANE = 'ccdrawu'
@@ -141,6 +141,7 @@ async function installCatalog($: Engine) {
 // The TUI writes ~/.config/ccdrawu/config.json; every open session looks at it each second and takes
 // a change at once. A file not there means the catalog's defaults
 let configStamp: number | undefined
+let statusWasShown = false // whether the config read last had the Status row on
 // The command names this session has registered: /ccdrawu, and each alias the config has named
 const commands = new Set<string>()
 
@@ -158,12 +159,15 @@ async function refreshConfig($: Engine) {
   configStamp = stamp
   await update($, config, () => parsed)
   await registerCommands(spec => $.command.register(spec), commands, parsed.alias)
+  // The Status row just turned on, or on from the start: its reading now, not at the next 5 minutes
+  const shown = showsAnywhere(parsed, 'status')
+  if (shown && !statusWasShown) quietly(refreshStatus($))
+  statusWasShown = shown
 }
 
 // The pet on either side of the prompt: it has no need of a tick, or of events, when it shows nowhere
 async function petShown($: Engine) {
-  const c = await read($, config)
-  return (['dock', 'inline'] as const).some(p => enabledItems(c, p).some(i => i.id === 'pet'))
+  return showsAnywhere(await read($, config), 'pet')
 }
 
 // A tick of the pet: written only when what it shows changed, worked out again on the value it has
@@ -251,7 +255,10 @@ async function refreshSession($: Engine) {
 }
 
 // status.claude.com's overall status, from its public status page API
+// Claude's status, asked of status.claude.com only while the Status row shows somewhere: a request out
+// that the many who leave the row off never make
 async function refreshStatus($: Engine) {
+  if (!showsAnywhere(await read($, config), 'status')) return
   const res = await $.http.fetch('https://status.claude.com/api/v2/status.json')
   if (!res.ok) return
   const s = (JSON.parse(res.text) as { status?: { indicator?: string; description?: string } }).status
@@ -314,10 +321,9 @@ export const register: Register = on => {
     quietly(refreshDrawer($))
     quietly(refreshTurns($))
     quietly(refreshSession($))
-    quietly(refreshStatus($))
 
     // Countdowns and uptime every 30 seconds; git, path and subagents every 5; Claude's status every 5
-    // minutes; the latest version every 6 hours
+    // minutes while its row shows (first when the config turns it on); the latest version every 6 hours
     $.clock.every(30_000, () => quietly(tick($)))
     $.clock.every(5_000, () => {
       quietly(refreshGit($))
