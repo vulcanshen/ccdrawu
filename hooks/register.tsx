@@ -182,8 +182,9 @@ async function refreshConfig($: Engine) {
 
 // Turned on above the prompt in a terminal too narrow for the sidebar, the drawer stays out of sight:
 // the engine holds a pane opened unasked until the terminal is wide enough to dock it, and draws one
-// above the prompt only when the person opens it. Once the open has settled, say how
-const INLINE_HINT = 'The drawer goes above the prompt with /ccdrawu, or when the terminal narrows from beside the transcript'
+// above the prompt only when the person opens it. Once the open has settled, say what to do (the README
+// says why)
+const INLINE_HINT = 'Type /ccdrawu to show the drawer above the prompt'
 
 async function hintInline($: Engine) {
   await $.clock.sleep(1_000)
