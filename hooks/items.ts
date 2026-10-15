@@ -29,6 +29,8 @@ export type Item = {
 
 // The order here is the order on screen
 export const ITEMS: readonly Item[] = [
+  // Drawn by the pane itself (pets.ts), over the rows beside the transcript and left of the columns above the prompt
+  { id: 'pet', label: 'Pet', name: 'Pet', group: 'Pet', description: 'A pixel pet: it walks while Claude works, sits when Claude is done, sleeps when nothing goes on; /ccdrawu pat pats it', dock: true, inline: true },
   { id: 'model', label: 'Model', name: 'Model', group: 'Model', description: 'The model answering in this session', dock: true, inline: true },
   { id: 'effort', label: 'Effort', name: 'Effort level', group: 'Model', description: "The last request's effort level, green for low to red for max", dock: true, inline: true },
   { id: 'mode', label: 'Mode', name: 'Permission mode', group: 'Model', description: 'auto, plan, accept edits, ...; after shift+tab it shows once Claude finishes the tools of a step, or with the next prompt', dock: true, inline: true },

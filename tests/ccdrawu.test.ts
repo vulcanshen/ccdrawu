@@ -24,6 +24,33 @@ import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
 import { cellWidth, columnRows, enabledItems, inlineValue, parseConfig, segWidth } from '../hooks/layout'
 import { locations } from '../hooks/paths'
+import {
+  BALL_LINES,
+  ballAt,
+  LIFT_ROOM,
+  HEART,
+  HEART_COLOR,
+  PAT_LINES,
+  PET_HEIGHT,
+  PET_START,
+  PET_TICK,
+  petCells,
+  petCoat,
+  petEvent,
+  petLook,
+  PETS,
+  petSpecies,
+  petTick,
+  POSES,
+  snore,
+  SNORE_COLOR,
+  SPECIES,
+  TRACK,
+  type Pose,
+  type Run,
+  type Species,
+} from '../hooks/pets'
+import type { PetState } from '../types'
 
 const PANE = {
   title: 'Status',
@@ -162,8 +189,11 @@ test('every catalog item has a unique id, a short key and something to show', as
   expect(new Set(ITEMS.map(i => i.id)).size).toBe(ITEMS.length)
   for (const item of ITEMS) {
     expect(item.label.length).toBeLessThanOrEqual(8)
-    expect(view(item.id, FULL)).toBeDefined()
+    // The pet is no row: the pane draws it itself, first of all and on by default
+    if (item.id === 'pet') expect(view(item.id, FULL)).toBeUndefined()
+    else expect(view(item.id, FULL)).toBeDefined()
   }
+  expect(ITEMS[0]).toMatchObject({ id: 'pet', dock: true, inline: true })
   expect(view('no-such-item', FULL)).toBeUndefined()
 })
 
@@ -265,6 +295,213 @@ test('the new items show what they hold, and nothing while they hold nothing, bu
   }
 })
 
+test('every pose of every pet is 12 x 8 pixels, every mark inked in every coat, and draws 12 x 4 cells', async () => {
+  for (const species of SPECIES) {
+    const pet = PETS[species]
+    expect(pet.coats.length).toBeGreaterThan(1)
+    for (const pose of POSES) {
+      const frame = pet.frames[pose]
+      expect(frame.length).toBe(8)
+      for (const row of frame) expect(row.length).toBe(12)
+      const marks = new Set(frame.join('').replace(/\./g, ''))
+      for (let i = 0; i < pet.coats.length; i++) {
+        const coat = petCoat(species, i)
+        for (const mark of marks) expect(coat[mark]).toBeDefined()
+      }
+      for (const faceLeft of [false, true]) {
+        const cells = petCells(species, pose, petCoat(species, 0), faceLeft)
+        expect(cells.length).toBe(4)
+        for (const row of cells) expect(cellsWide(row)).toBe(12)
+      }
+    }
+    // On the ground, its feet on the bottom row
+    expect(pet.frames.walk1[7]).not.toBe('............')
+    // The limbs are their own ink in every pose, a color every coat names apart from the fur, so a
+    // paw a swipe raises does not run into the head
+    for (const pose of POSES) expect(pet.frames[pose].join('')).toContain('q')
+    for (let i = 0; i < pet.coats.length; i++) expect(petCoat(species, i).q).not.toBe(petCoat(species, i)['#'])
+    // Asleep it leaves the top row of cells for its snore, which keeps the row 12 wide
+    expect(pet.frames.sleep.slice(0, 2).join('')).toBe('.'.repeat(24))
+    for (const n of [1, 2, 3]) {
+      expect(cellsWide(topRow(species, 'sleep', false, n))).toBe(12)
+    }
+    // Sitting it leaves the corner over its head free for a heart
+    for (const faceLeft of [false, true]) {
+      const top = topRow(species, 'sit', faceLeft)
+      expect(top[faceLeft ? 0 : top.length - 1]).toHaveProperty('gap')
+    }
+  }
+  // Facing left is the same drawing the other way about
+  const right = petCells('cat', 'walk1', petCoat('cat', 0))
+  const left = petCells('cat', 'walk1', petCoat('cat', 0), true)
+  expect(left[3]).toEqual([...(right[3] ?? [])].reverse())
+  // The snore is text over the head, growing z, zz, zzZ: at the right facing right, at the left facing left
+  const text = (n: number, faceLeft: boolean) => topRow('cat', 'sleep', faceLeft, n).flatMap(r => ('gap' in r ? [] : [r.ch]))
+  expect([1, 2, 3, 4].map(n => text(n, false)[0])).toEqual(['z', 'zz', 'zzZ', 'z'])
+  expect(text(3, true)).toEqual(['Zzz'])
+  expect(topRow('cat', 'sleep', false, 3)).toEqual([{ gap: 9 }, { ch: 'zzZ', fg: SNORE_COLOR, bg: undefined }])
+  // Beside the transcript the box is taller than the pet: standing, the room is over it; up the wall,
+  // under it
+  const tall = (lift: number) => petCells('cat', 'swipe1', petCoat('cat', 0), false, undefined, PET_HEIGHT + LIFT_ROOM, lift)
+  expect(tall(0).length).toBe(5)
+  expect(tall(0)[0]).toEqual([{ gap: 12 }])
+  expect(tall(2)[4]).toEqual([{ gap: 12 }])
+  expect(tall(2)[0]).not.toEqual([{ gap: 12 }])
+  // A session's coat number counts round any animal's coats
+  expect(petCoat('penguin', 7)).toEqual(PETS.penguin.coats[1])
+})
+
+// How many cells a row of runs takes, and the top row of a pose, its snore n along when asleep
+const cellsWide = (row: readonly Run[]) => row.reduce((w, r) => w + ('gap' in r ? r.gap : r.ch.length), 0)
+const topRow = (species: Species, pose: Pose, faceLeft: boolean, n = 0) =>
+  petCells(species, pose, petCoat(species, 0), faceLeft, n > 0 ? snore(n) : undefined)[0] ?? []
+
+test('the pet wanders while Claude works, sits when it is done, sleeps when nothing goes on, and answers a pat', async () => {
+  const rand = () => 0
+  // Random draws in turn, the last one again once they run out
+  const draws = (...values: number[]) => {
+    let i = 0
+    return () => values[Math.min(i++, values.length - 1)] ?? 0
+  }
+  const quiet = () => 0.99 // nothing left to chance happens
+  const walk = (s: PetState, from: number, ticks: number) => {
+    let t = from
+    for (let i = 0; i < ticks; i++) s = petTick(s, (t += PET_TICK), quiet)
+    return s
+  }
+  // Away from either wall
+  let s: PetState = { ...PET_START, coat: 0, active: 0, x: 5, target: 5 }
+  // Idle and just started: sitting, and a tick changes nothing (no redraw)
+  s = petTick(s, 1_000, quiet)
+  expect(petLook(s).pose).toBe('sit')
+  expect(petTick(s, 1_200, quiet)).toBe(s)
+
+  // Claude at work: it picks a place and goes there, its legs taking turns, facing its way
+  s = petEvent(s, 'busy', 2_000, 'cat', rand)
+  s = petTick(s, 2_200, draws(0.9, 0.5)) // straight on, to the middle
+  expect([s.target, s.run]).toEqual([10, false])
+  s = walk(s, 2_200, 3)
+  expect([s.mode, s.x, s.faceLeft]).toEqual(['walk', 8, false])
+  expect(petLook(s).pose).not.toBe(petLook(walk(s, 2_800, 1)).pose)
+  s = walk(s, 2_800, 2)
+  expect(s.x).toBe(10)
+  // There it rests one to three seconds, sitting, then goes on to the next place, facing it
+  let t = 4_400
+  // or, now and then, swipes at the air a moment, one way and the other
+  const swipes = petTick({ ...s }, t, draws(0.1, 0.5))
+  expect([swipes.mode, petLook(swipes).pose === petLook(petTick(swipes, t + 200, quiet)).pose]).toEqual(['play', false])
+  expect(petTick(swipes, t + 1_400, quiet).mode).not.toBe('play')
+  s = petTick(s, t, draws(0.3, 0.5, 0.1)) // a rest of 2 s, then to 2
+  expect([s.mode, s.restUntil, s.target]).toEqual(['sit', t + 2_000, 2])
+  expect(petTick(s, t + 1_000, quiet).mode).toBe('sit')
+  expect([petTick(s, t + 2_200, quiet).mode, petTick(s, t + 2_200, quiet).faceLeft]).toEqual(['walk', true])
+  // or hops where it is
+  expect(petTick({ ...s, restUntil: 0, target: s.x }, t, draws(0.5, 0.5)).mode).toBe('jump')
+  // A far place it may run to, two steps a tick
+  const far = petTick({ ...s, x: 0, target: 0, restUntil: 0 }, t, draws(0.9, 0.99, 0.1))
+  expect([far.target, far.run]).toEqual([TRACK, true])
+  expect(walk(far, t, 1).x).toBe(2)
+  // At the ends of its walk it does as anywhere else: no climbing
+  expect(petTick({ ...s, x: TRACK, target: TRACK, restUntil: 0 }, 50_000, draws(0.3, 0.5, 0.1)).mode).toBe('sit')
+
+  // A tool fails: a jump, and a line meanwhile, then on its way again. The jump is the pet as it
+  // strides, not squashed, lifted 1, 2, 1 pixels and down
+  s = petEvent(s, 'error', 10_000, 'cat', rand)
+  expect(petTick(s, 10_200, quiet).mode).toBe('jump')
+  expect(petTick(s, 10_200, quiet).line).toBe('Uh oh...')
+  expect([10_000, 10_200, 10_400, 10_600].map(at => petLook(petTick(s, at, quiet)).lift)).toEqual([1, 2, 1, 0])
+  expect(petLook(petTick(s, 10_200, quiet)).pose).toBe('walk2')
+  expect(petTick(s, 10_800, quiet).mode).not.toBe('jump')
+
+  // A turn the user stopped: it stops where it is and sits, saying nothing; one an error ended: it
+  // jumps, worried, and sits
+  const stopped = petEvent({ ...s, target: s.x + 5 }, 'stop', 15_000, 'cat', rand)
+  expect(stopped.target).toBe(stopped.x)
+  expect(petTick(stopped, 15_200, quiet).mode).toBe('sit')
+  expect([stopped.line, stopped.lineUntil]).toEqual([s.line, s.lineUntil])
+  const failed = petEvent(s, 'failed', 15_000, 'cat', rand)
+  expect([petTick(failed, 15_200, quiet).mode, petTick(failed, 15_200, quiet).line]).toEqual(['jump', 'Uh oh...'])
+  expect(petTick(failed, 15_800, quiet).mode).toBe('sit')
+
+  // Done: it stops and sits, and says so for eight seconds
+  s = petEvent(s, 'done', 20_000, 'cat', rand)
+  s = petTick(s, 20_200, quiet)
+  expect([s.mode, s.line, s.target]).toEqual(['sit', 'All done!', s.x])
+  expect(petTick(s, 28_200, quiet).line).toBeUndefined()
+
+  // Idle, now and then it strolls a little, looks the other way, or swipes at the air
+  const strolls = petTick(s, 30_000, draws(0, 0.2, s.x < 10 ? 0.9 : 0.1))
+  expect(Math.abs(strolls.target - s.x)).toBeGreaterThanOrEqual(4)
+  expect(petTick(strolls, 30_200, quiet).mode).toBe('walk')
+  expect(petTick(s, 30_000, draws(0, 0.5)).faceLeft).toBe(!s.faceLeft)
+  expect(petTick(s, 30_000, draws(0, 0.9)).mode).toBe('play')
+
+  // Idle, it winds down: still sitting a minute on, lying down after two, asleep after ten
+  expect(petTick(s, 20_000 + 60_000, quiet).mode).toBe('sit')
+  const lying = petTick(s, 20_000 + 2 * 60_000, quiet)
+  expect([lying.mode, petLook(lying).pose]).toEqual(['lie', 'lie'])
+  // and anything going on gets it up
+  expect(petTick(petEvent(lying, 'busy', 150_000, 'cat', rand), 150_200, draws(0.9, 0.5)).mode).not.toBe('lie')
+
+  // Ten minutes of nothing: asleep, snoring z, zz, zzZ
+  s = petTick(s, 20_000 + 10 * 60_000, quiet)
+  expect(s.mode).toBe('sleep')
+  expect(petLook(s).over?.text).toMatch(/^z/)
+  const snores = new Set([0, 800, 1600].map(d => petLook(petTick(s, 20_000 + 10 * 60_000 + d, quiet)).over?.text))
+  expect(snores.size).toBe(3)
+
+  // A pat wakes it: it sits, a heart over its head, and says what its kind says
+  const patted = petTick(petEvent(s, 'pat', 700_000, 'duck', rand), 700_200, quiet)
+  expect(patted.mode).toBe('sit')
+  expect(petLook(patted).over).toEqual({ text: HEART, color: HEART_COLOR })
+  expect(patted.line).toBe(PAT_LINES.duck[0])
+  // and while Claude works it stops for the pat, then goes on its way
+  const busyPat = petEvent(petEvent({ ...s, target: s.x + 5 }, 'busy', 700_000, 'cat', rand), 'pat', 700_000, 'cat', rand)
+  expect(petTick(busyPat, 700_200, quiet).mode).toBe('sit')
+  const after = petTick(busyPat, 703_200, draws(0.9, 0.5))
+  expect(after.target).not.toBe(after.x)
+  expect(petTick(after, 703_400, quiet).mode).toBe('walk')
+
+  // The config names the animal; one it does not know is a cat
+  expect([petSpecies('penguin'), petSpecies('dragon'), petSpecies(undefined)]).toEqual(['penguin', 'cat', 'cat'])
+  expect(parseConfig('{"pet": {"species": "dog", "name": "Mochi"}}')?.pet).toEqual({ species: 'dog' })
+})
+
+test('a ball thrown in rolls to a stop from the far side; the pet runs over, paws at it, and has it', async () => {
+  const quiet = () => 0.99
+  let s: PetState = { ...PET_START, coat: 0, active: 0, x: 2, target: 2 }
+  s = petEvent(s, 'ball', 1_000, 'dog', () => 0.5)
+  const ball = s.ball
+  // From the far side to a stop in the middle stretch; the pet will stand on its nearer side
+  expect(ball).toMatchObject({ from: 1_000, start: TRACK, rest: 10, goal: 5, line: BALL_LINES.dog[1] })
+  if (ball === undefined) return
+  // It bounces in, 2, 1, 0, 1, 0 pixels off the ground, slowing to a stop
+  expect([0, 200, 400, 600, 800, 1_000].map(d => ballAt(ball, 1_000 + d).lift)).toEqual([2, 1, 0, 1, 0, 0])
+  expect([ballAt(ball, 1_000).pos, ballAt(ball, 2_200).pos, ballAt(ball, 9_000).pos]).toEqual([TRACK, 10, 10])
+
+  const seen: PetState[] = []
+  for (let t = 1_200; t <= 4_000; t += PET_TICK) seen.push((s = petTick(s, t, quiet)))
+  // It runs, two steps a tick, and waits there for the ball to stop
+  expect(seen.slice(0, 2).map(p => [p.mode, p.x])).toEqual([
+    ['walk', 4],
+    ['walk', 5],
+  ])
+  expect(seen[2]?.mode).toBe('sit')
+  // Its place along the walk ticks as the ball rolls in, so the drawing follows it
+  expect(seen[0]?.ballPos).toBeGreaterThan(seen[3]?.ballPos ?? 0)
+  // Stopped: it paws at it, facing it, one way and the other
+  const playing = seen.filter(p => p.mode === 'play')
+  expect(playing.length).toBeGreaterThan(4)
+  expect(playing.every(p => !p.faceLeft)).toBe(true)
+  expect(new Set(playing.map(p => petLook(p).pose))).toEqual(new Set(['swipe1', 'swipe2']))
+  // Then it has it: the ball goes, and it says so
+  expect([s.mode, s.ball, s.line]).toEqual(['sit', undefined, BALL_LINES.dog[1]])
+
+  // A ball not had in 20 seconds goes
+  const left = petEvent({ ...PET_START, active: 0, x: 2, target: 2, heartUntil: 99_000 }, 'ball', 0, 'cat', quiet)
+  expect(petTick({ ...left, heartUntil: 99_000 }, 20_200, quiet).ball).toBeUndefined()
+})
+
 test('Claude Code and ccdrawu have a version row each', async () => {
   const shown = (id: string, s: Snapshot) => view(id, s)?.value.map(g => g.text).join('')
   expect(shown('version', FULL)).toBe('2.1.299  ↑ 2.1.300')
@@ -309,6 +546,9 @@ test('the pane draws on the terminal before any figures arrive, a key on every r
     expect(await ui.find({ type: 'Text', text: new RegExp('^' + key + ' ') })).toBeDefined()
   }
   expect(await ui.find({ type: 'Text', text: /▰|▱/ })).toBeDefined()
+  // The pet, on by default, in pixels in a box of 12 x 4 that keeps its height
+  expect(await ui.find({ type: 'Text', text: /▀|▄/ })).toBeDefined()
+  expect((await ui.find({ type: 'Box', key: 'pet' }))?.props).toMatchObject({ width: 12, height: 5 })
   // One row after another: no blank row between groups
   expect(await ui.find({ type: 'Text', text: /^ $/ })).toBeUndefined()
   expect((await ui.find({ type: 'Box' }))?.props.backgroundColor).toBeUndefined()
@@ -320,5 +560,7 @@ test('above the prompt the pane draws columns of text with no bars', async $ => 
   expect(await ui.find({ type: 'Text', text: /│/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /▰|▱/ })).toBeUndefined()
   expect(await ui.find({ type: 'Text', text: /^Context / })).toBeDefined()
+  // and the pet left of the columns
+  expect((await ui.find({ type: 'Box', key: 'pet' }))?.props).toMatchObject({ width: 12, height: 4 })
   await ui.unmount()
 })

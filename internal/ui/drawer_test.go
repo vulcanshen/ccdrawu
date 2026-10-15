@@ -319,6 +319,36 @@ func TestXResetsTheBackground(t *testing.T) {
 	}
 }
 
+// toField goes into preferences and down to the field label, on its first
+// option when it has options.
+func toField(t *testing.T, d *drawer, label string) {
+	t.Helper()
+	if d.detail.Label != rowPreferences {
+		for range 2 {
+			press(d, key("j"))
+		}
+		press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	}
+	for range 30 {
+		if d.pages[rowPreferences].Current().Label == label {
+			return
+		}
+		press(d, key("j"))
+	}
+	t.Fatalf("no %s field:\n%s", label, frameText(d))
+}
+
+func TestPetIsPicked(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	toField(t, d, "Pet") // on the cat
+	press(d, key("j"))
+	press(d, key("j"))
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Pet.Species != "rabbit" {
+		t.Fatalf("pet = %+v, want the rabbit", c.Pet)
+	}
+}
+
 func TestPluginRowInstallsAfterAsking(t *testing.T) {
 	t.Setenv("CCDRAWU__MARKETPLACE", "")
 	d, _ := newTestDrawer(t)

@@ -30,6 +30,7 @@ ccdrawu  0.1.0
 
 | 列 | 內容 |
 |---|---|
+| Pet | 陪著你的像素寵物，見[寵物](#寵物) |
 | Model、Effort | 這個 session 的模型，以及上一次請求的 effort 等級：`low` 綠色，一路到 `max` 紅色 |
 | Mode | 權限模式：`auto`、`plan`、`accept edits`… |
 | Context、Session、Weekly | context 用量，以及方案的 5 小時和每週用量與重置倒數。bar 在 50%、70%、90% 分別從綠變黃、橘、紅 |
@@ -102,6 +103,18 @@ ccdrawu install claude
 
 執行 `ccdrawu`，在 Drawer 底下選 **sidebar**（對話旁邊）或 **inline**（輸入框上方）按 `Enter`，右邊會列出每一組現在顯示哪些。在任一組上按 `Enter`，打開所有項目的清單、停在那一組（按 `e` 從第一項開始）：`Space` 勾或取消勾、`Enter` 套用、`Esc` 不改，`/` 可以打字篩選。一秒內，開著的 session 就會跟著換。
 
+### 寵物
+
+側邊欄最上面住著一隻像素寵物，沒選的話是貓。在輸入框上方時，它佔最左邊一欄，不顯示台詞和球。
+
+- Claude 工作時它會到處走：停下來、跳一下、跑起來、揮揮爪。
+- Claude 做完時它坐下來說一句話。你中斷 Claude 時它只會安靜坐下；回覆以錯誤結束，或工具執行失敗時，它會跳一下。壓縮對話後它也會說一句。
+- 閒著 2 分鐘它會趴下，10 分鐘後睡著；中間偶爾會散步、轉頭看看或揮爪。
+- `/ccdrawu pat` 摸摸它：它停下來，頭上冒出愛心。
+- `/ccdrawu ball` 丟一顆球給它，它會跑過去玩。
+
+台詞是固定的幾句，不花 token。要換動物（貓、狗、兔子、鴨子、企鵝），執行 `ccdrawu`，在 Settings 底下的 **preferences** 設定 **Pet**，一秒內開著的 session 就會跟著換。花色每個 session 隨機。不想要寵物的話，在項目清單裡取消勾選 **Pet**。
+
 ### 比較短的指令
 
 執行 `ccdrawu`，移到 Settings 底下的 **preferences** 按 `Enter`，在 **Alias** 上再按 `Enter`，輸入例如 `ccd`。一秒內，每個開著的 session 裡 `/ccd` 就跟 `/ccdrawu` 一樣能用。改掉或拿掉的名字，在 session 重開之前都還能用。
@@ -121,7 +134,7 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 
 ## 資料存放位置
 
-- `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目和別名。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
+- `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目、別名和寵物。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
 - `~/.ccdrawu/`：外掛寫的東西，`ccdrawu` 列出的項目清單（`catalog.json`）。`CCDRAWU__DATA` 可以改放別的資料夾。
 
 在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
@@ -132,7 +145,7 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 
 - 用 `shift+tab` 切換權限模式後，**Mode** 要等 Claude 跑完目前這一步的工具才會更新；Claude 閒著的時候，要等你送出下一則訊息。
 - 配色是 Catppuccin Mocha，目前不能更改。
-- 由組織管理的 Claude Code 環境裡，**Mode**、**Compact** 和 **Skills** 可能會是空的，壓縮對話後 **Context** 也要等下一次回覆才會更新：那些事件會略過使用者自己安裝的外掛。
+- 由組織管理的 Claude Code 環境裡，**Mode**、**Compact** 和 **Skills** 可能會是空的，壓縮對話後 **Context** 也要等下一次回覆才會更新，寵物也不會在工具失敗時跳、壓縮後說話：那些事件會略過使用者自己安裝的外掛。
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。
 
 ## 移除

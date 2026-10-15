@@ -48,6 +48,15 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - **不顯示 vim 的 INSERT／NORMAL（2026-10-14）。** mod API 拿不到 vim 的即時狀態，唯一的來源是 Claude Code 跑 `statusLine` 指令時給的 JSON：先做過外掛附的 sh 轉接（要 sh 與 jq），再改成 `ccdrawu bridge` 子指令（Windows 也能用）。但 `statusLine` 只能填一個指令，佔用它就會跟使用者自己的狀態列（例如 ccstatusline）互相蓋掉；而 Claude Code 輸入框下方本來就顯示 vim 模式。所以整列（原本叫 Editor，後來叫 Vim）連同轉接一起拿掉，ccdrawu 不碰 `statusLine`。
 - **不畫底色（2026-10-14）。** 停靠的 pane 外框（上方 × 那列、左邊分隔欄、下方）由引擎的容器畫，底色是主題的 `composerSidebarBackground`（`dark-ansi` 是 `ansi:blackBright`，`dark` 是 `rgb(38, 38, 38)`）。mod 只能畫 body，蓋不到外框；只蓋 body 會變成「外框一個色、內容一個色」。所以底色交給主題，由 TUI 的 theme／background 寫自訂主題（下一條）。這個 token 不在官方文件的清單裡，是從 Claude Code 程式找到的，改名時主題會忽略它，退回灰底。
 - **主題由 TUI 寫進 Claude Code（2026-10-14）。** user 選的做法：選一個內建主題當底，加上側邊欄底色。`internal/claude` 寫 `<Claude 資料夾>/themes/ccdrawu.json`（`CLAUDE_CONFIG_DIR`，否則 `~/.claude`），把 `settings.json` 的 `theme` 換成 `custom:ccdrawu`，換之前的值記在 ccdrawu 的 config.json（`theme.before`），選 off 或 `uninstall claude` 時換回去；使用者之後在 `/theme` 自己換過的就不動。改 `settings.json` 只改最外層 `theme` 那一個值，其他位元組原樣（`json.Decoder` 的 offset，測試守著「換過去再換回來，檔案一模一樣」），用暫存檔 rename、保留權限。否決：交給 mod 用 `$.config.set` 換——2026-10-14 實測 theme 那一列是 `choice`，只收 `auto` 與 6 個內建主題，`custom:…` 會被拒絕。內建主題清單（`claude.Themes`）是從 Claude Code 2.1.299 的執行檔裡找出來的。2026-10-14 實測：TUI 改了 `settings.json` 的 `theme` 與主題檔，開著的 session 立刻換色，不用重開。
+- **寵物 pet（2026-10-15）。** Claude Code 的 `/buddy` 已經移除，user 要 ccdrawu 自己養一隻：叫 pet（不叫 buddy、不抽卡），預設開、是貓，放在 sidebar 最上面（台詞 1 列＋走道），inline 佔最左一欄（寬 14，不畫台詞與球）。圖是自己畫的：vscode-pets 的圖是 GIF、授權屬於各個畫師，只參考玩法。
+  - **畫法**：每格 12×8 px，用 `▀▄` 半格字元畫成 12 欄×4 列；透明的像素是空白 Box，透出 drawer 的底色。5 種動物（`SPECIES`：cat dog rabbit duck penguin）× 7 格（walk1 walk2 sit sleep lie swipe1 swipe2）。記號：`#` 毛、`s` 斑紋／耳朵、`w` 胸腹、`x` 賓士貓多的白、`e` 眼、`n` 鼻、`p` 粉紅、`b` 喙與鴨／企鵝的腳、`q` 四肢（貓狗兔的四隻腳、鴨的翅膀、企鵝的鰭）。每組花色都明訂 `q` 的顏色，所有姿勢一開始就一起上色（user 要的；測試守著每格都有 `q`、`q` 跟 `#` 不同色、每個記號在每組花色都有顏色）。花色在 session.start 隨機抽，不給設定（user 定的）。
+  - **否決**：ASCII（user 算過格數，像素佔的差不多、好看得多）；另外畫的跳格（看起來扁，改成 walk2 整隻抬高 1→2→1 px）；爬牆（另畫的攀爬格讓動物變小、用揮爪格抬高又很怪，三種畫法都否決，整個拿掉）；只有揮爪時手才換色（四肢一開始就要不同色）；從毛色自動算四肢色（每組花色明訂）；Raster＋blit（背景色不保證跟 drawer 一樣）。
+  - **行為**是純函式（`hooks/pets.ts` 的 `petEvent`、`petTick`，亂數由參數注入，測試直接跑），`$.clock.every(200)` 走一步；沒變化就回同一個物件，不寫 state、不重畫。事件：`turn.step`（主對話）→ 工作中，閒逛、偶爾休息、跳、揮爪、跑；`turn.complete` 依 `reason`：answer 坐下說完成的話、aborted 安靜坐下、error／refusal 跳一下說擔心的話；`classic.PostToolUseFailure`（不是 interrupt）跳；`session.compact` 說一句；閒著 2 分鐘趴、10 分鐘睡（z 用文字 `z`→`zz`→`zzZ`，user 說不用像素畫）。台詞固定，不叫模型、不花 token（user 定的）。`/ccdrawu pat`、`/ccdrawu ball` 從 `command.run` 的 `e.args` 來，其他參數照舊是開關 drawer。
+  - **球**從寵物遠的那一側滾進來（1.2 秒減速、彈 2,1,0,1,0 px），停在中段；寵物跑到球的近側 5 格（`BALL_REACH`，畫面上剛好碰到球），等球停了揮爪 1.6 秒，球消失、說一句；20 秒沒拿到就自己消失。球是 `position="absolute"` 的 Box，疊在走道上不佔位置，位置跟寵物一樣依寬度比例換算（`along()`）。
+  - **框固定寬高、每列 `height={1}`**：只有空白 Box 的列會被排版壓成 0 高，睡覺（頭頂空 2 px）或跳的時候框會變高變矮，下面的清單就跟著跳。
+  - **舊 state 要補齊**：`/reload-plugins` 後 `$.state` 保留舊值，session.start 用 `{ ...PET_START, ...old }` 補上新加的欄位，否則讀到 undefined 會算出 NaN。
+  - **物種在 TUI 設**：preferences 的 Pet（radio，畫在原地），放在 Drawer background 與 Plugin 之間，寫進 config.json 的 `pet.species`。Go 的 `config.PetSpecies` 要跟 `SPECIES` 同順序；mod 不認得的物種畫成貓。
+  - **不給取名（2026-10-15）**：做過 Pet name（最多 16 字），user 拿掉：花色每個 session 隨機，每次開都不是同一隻，給名字很怪；留給之後的版本再看。台詞那一列只有台詞。
 - **不用 Fragment。** 這個 surface 把 `<>…</>` 當直排容器排版，放在 row 裡的「·」和 effort 會被疊成上下兩行。同一列的元素都直接放進 `flexDirection="row"` 的 Box。
 - **bar 寬度要扣 paddingX。** 外層 Box 左右各 1 格 padding，`bodyColumns` 沒扣掉的話，bar 會超出寬度、折到下一行，看起來像兩條 bar。
 - **key 欄寬 9。** key 最多 8 個字（測試守著），加一格空白。
@@ -57,12 +66,13 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 - **權限模式有延遲。** 沒有「權限模式改變」的事件。Claude 工作中按 `shift+tab`，等目前這一步的工具跑完才更新；閒置時要等下一個 prompt。mod API 沒有讀目前模式的方法；`statusLine` 指令收到的 JSON 也沒有：2026-10-14 在 Claude Code 2.1.299 把它錄下來看過，按 `shift+tab` 時狀態列馬上重跑，但前後只差 `cost.total_duration_ms`，沒切換時它也會這樣重跑，連「重跑了」都不能當成模式變了的訊號。
 - **tmux 256 色。** Claude Code 偵測到 `$TMUX` 就把顏色限制在 256 色，hex 色會被換成最接近的 256 色（`#11111b` 會變成第 17 號深藍）。要全彩得設 `CLAUDE_CODE_TMUX_TRUECOLOR=1`。
-- **組織管理的環境。** `session.compact`、`skill.prompt` 與 `classic.*` 事件在組織管理的 Claude Code 裡會略過使用者安裝的外掛，Mode、Compact 和 Skills 會是空的，compact 後的 Context 也要等下一輪結束才更新。
+- **組織管理的環境。** `session.compact`、`skill.prompt` 與 `classic.*` 事件在組織管理的 Claude Code 裡會略過使用者安裝的外掛，Mode、Compact 和 Skills 會是空的，compact 後的 Context 也要等下一輪結束才更新，寵物不會在工具失敗時跳、compact 後說話。
 
 ## 未做
 
 - 配色可設定（目前寫死 Catppuccin Mocha）
 - README 的截圖或 demo
+- 寵物取名（做過又拿掉，見設計決定的寵物 pet；之後的版本再看）
 - CHANGELOG：release workflow 從它取 release notes，第一次發布前要有
 - 沒在真的 Windows 上跑過：mod 的 `$.fs` 收不收 `C:\Users\me/.ccdrawu/...` 這種混用分隔的路徑、Windows 上 rename 蓋過 mod 正在讀的檔會不會失敗（TUI 存設定靠 rename）、`.ps1` 的語法（這台 Mac 沒有 PowerShell）
 

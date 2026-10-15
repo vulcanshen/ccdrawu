@@ -7,11 +7,13 @@ import (
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/ccdrawu/internal/claude"
+	"github.com/vulcanshen/ccdrawu/internal/config"
 	terminu "github.com/vulcanshen/terminu-go"
 )
 
 // The preferences past the alias: Claude Code's theme with the drawer's
-// background (internal/claude, theme), and whether the plugin is in Claude Code.
+// background (internal/claude, theme), the pet, and whether the plugin is in
+// Claude Code.
 
 const glyphPalette = "\U000F03D8" // nf-md-palette, the background picker's title
 
@@ -97,6 +99,18 @@ func (d *drawer) applyTheme() tea.Cmd {
 		}
 	}
 	return tea.Batch(d.save(), d.app.Toast(terminu.Info, note))
+}
+
+// petField picks the animal the drawer's pet is, drawn in place; open sessions
+// draw the new one within a second.
+func (d *drawer) petField() *terminu.Field {
+	options := config.PetSpecies
+	f := &terminu.Field{Label: "Pet", Options: options, Selected: max(0, slices.Index(options, d.cfg.Pet.Species))}
+	f.OnChange = func() tea.Cmd {
+		d.cfg.Pet.Species = options[f.Selected]
+		return d.save()
+	}
+	return f
 }
 
 // The plugin row: whether Claude Code has the ccdrawu plugin, found with

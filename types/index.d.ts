@@ -54,8 +54,43 @@ export type Modes = { permission?: string }
 export type Background = Record<string, number>
 
 // The items on in each placement, as the TUI wrote them; one left out takes the catalog's defaults.
-// alias: one more name for /ccdrawu
-export type Config = { dock?: string[]; inline?: string[]; alias?: string }
+// alias: one more name for /ccdrawu; pet: which animal
+export type Config = {
+  dock?: string[]
+  inline?: string[]
+  alias?: string
+  pet?: { species?: string }
+}
+
+// The pet (hooks/pets.ts): what it is doing, where along its walk, and what it says, a session's
+export type PetMode = 'walk' | 'sit' | 'lie' | 'sleep' | 'jump' | 'play'
+// A ball thrown in (/ccdrawu ball): it rolls from start to rest, from the time thrown on; the pet
+// stands at goal to play with it, and says line when it has it
+export type PetBall = { from: number; start: number; rest: number; goal: number; line: string }
+export type PetState = {
+  coat: number // which coat, picked at random once a session; -1 until then
+  busy: boolean // Claude is working
+  active: number // when Claude or the user last did something
+  mode: PetMode
+  x: number // 0 to TRACK, how far along its walk
+  target: number // where along it it is going
+  run: boolean // running there, two steps a tick
+  stride: number // its steps, for its legs to take turns
+  restUntil: number // sitting a while where it got to, before it goes on
+  lift: number // how many pixels off the ground it is, in a jump
+  faceLeft: boolean
+  snore: number // how far along its snore, while asleep
+  heart: boolean
+  line?: string
+  lineUntil: number
+  heartUntil: number
+  jumpFrom: number // in the air from then until jumpUntil
+  jumpUntil: number
+  ball?: PetBall
+  ballPos: number // where the ball is along the walk, and how far off the ground, a tick's
+  ballLift: number
+  playUntil: number // pawing at the ball until then
+}
 
 declare module 'claude-code' {
   interface PluginState {
@@ -78,6 +113,7 @@ declare module 'claude-code' {
       modes: Modes
       now: number
       config: Config
+      pet: PetState
     }
   }
 }

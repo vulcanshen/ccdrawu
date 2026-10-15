@@ -85,10 +85,10 @@ func TestCleanAliasTakesWhatTheModTakes(t *testing.T) {
 	}
 }
 
-// A toggle rewrites the whole file: the alias goes back as it was
-func TestConfigKeepsTheAlias(t *testing.T) {
+// A toggle rewrites the whole file: the alias and the pet go back as they were
+func TestConfigKeepsTheAliasAndPet(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
-	if err := os.WriteFile(path, []byte(`{"dock": null, "alias": "ccd"}`), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte(`{"dock": null, "alias": "ccd", "pet": {"species": "duck"}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	c, err := ReadConfig(path)
@@ -99,7 +99,7 @@ func TestConfigKeepsTheAlias(t *testing.T) {
 	if err := WriteConfig(path, c); err != nil {
 		t.Fatal(err)
 	}
-	if c, _ = ReadConfig(path); c.Alias != "ccd" {
-		t.Fatalf("alias = %q after a toggle, want ccd", c.Alias)
+	if c, _ = ReadConfig(path); c.Alias != "ccd" || c.Pet != (Pet{Species: "duck"}) {
+		t.Fatalf("alias = %q, pet = %+v after a toggle, want ccd and the duck", c.Alias, c.Pet)
 	}
 }

@@ -13,7 +13,9 @@ export async function registerCommands(
   for (const name of commandNames(alias)) {
     if (registered.has(name)) continue
     const description =
-      name === 'ccdrawu' ? 'Toggle the status drawer' : 'Toggle the status drawer (alias of /ccdrawu)'
+      name === 'ccdrawu'
+        ? 'Toggle the status drawer; pat or ball to play with the pet'
+        : 'Toggle the status drawer; pat or ball to play with the pet (alias of /ccdrawu)'
     await register({ name, description, immediate: true })
     registered.add(name)
   }

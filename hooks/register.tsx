@@ -15,6 +15,25 @@ import type {
   Usage,
   VersionInfo,
 } from '../types'
+import {
+  BALL,
+  BALL_INK,
+  BALL_LEFT,
+  drawnCells,
+  LIFT_ROOM,
+  PET_HEIGHT,
+  PET_START,
+  PET_TICK,
+  petCells,
+  petCoat,
+  petEvent,
+  petLook,
+  petSpecies,
+  petTick,
+  TRACK,
+  type PetEvent,
+  type Run,
+} from './pets'
 import { registerCommands } from './commands'
 import {
   bar,
@@ -51,6 +70,7 @@ const version = atom({ plugin: 'ccdrawu', key: 'version' } as const, null as Ver
 const drawer = atom({ plugin: 'ccdrawu', key: 'drawer' } as const, null as string | null)
 const modes = atom({ plugin: 'ccdrawu', key: 'modes' } as const, {} as Modes)
 const now = atom({ plugin: 'ccdrawu', key: 'now' } as const, 0)
+const pet = atom({ plugin: 'ccdrawu', key: 'pet' } as const, PET_START)
 const config = atom({ plugin: 'ccdrawu', key: 'config' } as const, {} as Config)
 
 async function refreshUsage($: Engine) {
@@ -138,6 +158,30 @@ async function refreshConfig($: Engine) {
   configStamp = stamp
   await update($, config, () => parsed)
   await registerCommands(spec => $.command.register(spec), commands, parsed.alias)
+}
+
+// The pet on either side of the prompt: it has no need of a tick, or of events, when it shows nowhere
+async function petShown($: Engine) {
+  const c = await read($, config)
+  return (['dock', 'inline'] as const).some(p => enabledItems(c, p).some(i => i.id === 'pet'))
+}
+
+// A tick of the pet: written only when what it shows changed, worked out again on the value it has
+// then, so an event that came in between is kept
+async function stepPet($: Engine) {
+  if (!(await petShown($))) return
+  const t = await $.clock.now()
+  const s = await read($, pet)
+  const next = petTick(s, t)
+  if (next === s) return
+  await update($, pet, current => (current === s ? next : petTick(current, t)))
+}
+
+async function petHears($: Engine, event: PetEvent) {
+  if (!(await petShown($))) return
+  const t = await $.clock.now()
+  const species = petSpecies((await read($, config)).pet?.species)
+  await update($, pet, s => petEvent(s, event, t, species, Math.random))
 }
 
 // No API reports the permission mode; Claude Code's own hook events carry permission_mode,
@@ -250,6 +294,15 @@ export const register: Register = on => {
     await registerCommands(spec => $.command.register(spec), commands, undefined)
 
     await tick($)
+    // The pet's coat, once a session (a reload keeps it), and it starts awake. A reload keeps the state
+    // an older module wrote too: fields it did not have yet take their defaults
+    const started = await $.clock.now()
+    await update($, pet, p => ({
+      ...PET_START,
+      ...p,
+      coat: p.coat < 0 ? Math.floor(Math.random() * 1000) : p.coat,
+      active: started,
+    }))
     await locateFiles($).catch(() => undefined)
     quietly(installCatalog($))
     quietly(refreshConfig($))
@@ -273,6 +326,7 @@ export const register: Register = on => {
     $.clock.every(5 * 60_000, () => quietly(refreshStatus($)))
     $.clock.every(6 * 60 * 60_000, () => quietly(refreshVersion($)))
     $.clock.every(1_000, () => quietly(refreshConfig($)))
+    $.clock.every(PET_TICK, () => quietly(stepPet($)))
 
     // In a terminal too narrow for a sidebar the engine holds the pane until it widens
     void $.ui.open(PANE_OPEN)
@@ -283,6 +337,12 @@ export const register: Register = on => {
   // Every slash command passes through here, so a failure must leave other commands alone
   on('command.run', async ($, e, next) => {
     if (!commands.has(e.command)) return next(e)
+    // /ccdrawu pat pats the pet, /ccdrawu ball throws it a ball; anything else opens or closes the drawer
+    const word = e.args.trim().toLowerCase()
+    if (word === 'pat' || word === 'ball') {
+      await petHears($, word)
+      return {}
+    }
     const isOpen = (await $.ui.panes()).some(p => p.id === PANE)
     if (isOpen) await $.ui.close({ id: PANE })
     else await $.ui.open(PANE_OPEN)
@@ -299,6 +359,7 @@ export const register: Register = on => {
   // Each request of the main conversation: its effort, how much the prompt cache served, the tokens it
   // took, and its output tokens a second (the time from asking to the last token, waiting included)
   on('turn.step', async function* ($, e, next) {
+    if (e.agentId === undefined) quietly(petHears($, 'busy'))
     const start = await $.clock.now()
     const result = yield* next(e)
     if (e.agentId === undefined) {
@@ -324,6 +385,7 @@ export const register: Register = on => {
   on('turn.complete', async ($, e, next) => {
     const result = await next(e)
     if (e.agentId === undefined) {
+      quietly(petHears($, e.reason === 'answer' ? 'done' : e.reason === 'aborted' ? 'stop' : 'failed'))
       quietly(refreshTurns($))
       quietly(refreshModelName($))
       // The output style may have changed in /config meanwhile
@@ -352,7 +414,15 @@ export const register: Register = on => {
     const result = await next(e)
     if (e.agentId === undefined && e.trigger !== 'precompute' && !('skip' in result && result.skip)) {
       quietly(update($, compacts, n => n + 1))
+      quietly(petHears($, 'compact'))
     }
+    return result
+  }).catch(($, e, next) => next(e))
+
+  // A tool of Claude's own failed, not one the user stopped: the pet jumps
+  on('classic.PostToolUseFailure', async ($, e, next) => {
+    const result = await next(e)
+    if (e.agent_id === undefined && e.is_interrupt !== true) quietly(petHears($, 'error'))
     return result
   }).catch(($, e, next) => next(e))
 
@@ -416,7 +486,10 @@ export const register: Register = on => {
       modes: await read($, modes),
       now: await read($, now),
     }
-    const shown = enabledItems(await read($, config), placement).flatMap(item => {
+    const conf = await read($, config)
+    const enabled = enabledItems(conf, placement)
+    // The pet is not a row: it is drawn on its own, over the rows or left of the columns
+    const shown = enabled.flatMap(item => {
       const v = view(item.id, s)
       return v ? [{ item, view: v }] : []
     })
@@ -429,15 +502,50 @@ export const register: Register = on => {
         </Text>
       ))
 
+    // The pet, in this session's coat of the animal the config names
+    const hasPet = enabled.some(item => item.id === 'pet')
+    const p = await read($, pet)
+    const species = petSpecies(conf.pet?.species)
+    const look = petLook(p)
+    // Columns from the left of the strip for a place along the walk, spread over the width there is
+    const along = (pos: number) => Math.round((pos / TRACK) * Math.max(0, inner - 12))
+    const ball = p.ball === undefined ? undefined : { pos: p.ballPos, lift: p.ballLift }
+    // A pet's box keeps its size, each row one high: a row of nothing but gaps (a sleeping pet's top
+    // row with no snore yet) would otherwise fold to nothing and the rows under it jump up. Beside the
+    // transcript it is taller than the pet, room for it to jump into; above the prompt there is none
+    const cellRows = (rows: Run[][]) =>
+      rows.map(row => (
+        <Box flexDirection="row" height={1} flexShrink={0}>
+          {row.map(r =>
+            'gap' in r ? (
+              <Box width={r.gap} flexShrink={0} />
+            ) : (
+              <Text color={r.fg} backgroundColor={r.bg}>
+                {r.ch}
+              </Text>
+            ),
+          )}
+        </Box>
+      ))
+    const drawPet = (pixels: number) => (
+      <Box key="pet" flexDirection="column" width={12} height={pixels / 2} flexShrink={0}>
+        {cellRows(
+          petCells(species, look.pose, petCoat(species, p.coat), p.faceLeft, look.over, pixels, pixels > PET_HEIGHT ? look.lift : 0),
+        )}
+      </Box>
+    )
+
     // Above the prompt: text alone, in columns side by side
     if (placement === 'inline') {
+      // The pet takes the leftmost columns, 12 and 2 to spare, and walks on the spot
+      const petWidth = hasPet ? 14 : 0
       const cells = shown.map(({ item, view: v }) => {
         const value = inlineValue(v)
         return { label: item.label, value, width: segWidth(value) }
       })
       const rows = columnRows(
         cells.map(c => ({ label: c.label.length, value: c.width })),
-        inner,
+        inner - petWidth,
       )
       const columns = chunk(cells, rows).map(list => ({
         list,
@@ -459,8 +567,13 @@ export const register: Register = on => {
         </Box>
       ))
       return (
-        <Box flexDirection="column" paddingX={1}>
-          {lines}
+        <Box flexDirection="row" paddingX={1}>
+          {hasPet ? (
+            <Box flexDirection="column" flexShrink={0} marginRight={2}>
+              {drawPet(PET_HEIGHT)}
+            </Box>
+          ) : null}
+          <Box flexDirection="column">{lines}</Box>
         </Box>
       )
     }
@@ -501,6 +614,33 @@ export const register: Register = on => {
     }
 
     const rows = []
+    // The pet over the rows: what it says, then the strip it walks along, its place along its walk spread
+    // over the width there is
+    if (hasPet) {
+      rows.push(
+        <Box flexDirection="row" height={1} flexShrink={0}>
+          {p.line === undefined ? null : <Text color={C.text}>{p.line.slice(0, inner)}</Text>}
+        </Box>,
+        <Box flexDirection="row" height={(PET_HEIGHT + LIFT_ROOM) / 2} flexShrink={0}>
+          <Box width={along(p.x)} flexShrink={0} />
+          {drawPet(PET_HEIGHT + LIFT_ROOM)}
+          {/* A ball over the strip, out of the flow: where a pet at its place would have its middle */}
+          {ball === undefined ? null : (
+            <Box
+              key="ball"
+              position="absolute"
+              top={0}
+              left={along(ball.pos) + BALL_LEFT}
+              width={4}
+              height={(PET_HEIGHT + LIFT_ROOM) / 2}
+              flexDirection="column"
+            >
+              {cellRows(drawnCells(BALL, BALL_INK, PET_HEIGHT + LIFT_ROOM, ball.lift))}
+            </Box>
+          )}
+        </Box>,
+      )
+    }
     for (const { item, view: v } of shown) {
       rows.push(dockRow(item.label, v))
       if (v.resets !== undefined) {

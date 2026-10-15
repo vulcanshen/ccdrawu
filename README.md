@@ -30,6 +30,7 @@ ccdrawu  0.1.0
 
 | Row | What it is |
 |---|---|
+| Pet | A pixel-art pet that keeps you company: see [The pet](#the-pet) |
 | Model, Effort | The session's model, and the last request's effort level: green for `low` through red for `max` |
 | Mode | The permission mode: `auto`, `plan`, `accept edits`, … |
 | Context, Session, Weekly | How full the context window is, and your 5-hour and weekly plan limits with their reset countdowns. Bars turn green, yellow, peach, then red at 50%, 70% and 90% |
@@ -102,6 +103,18 @@ It installs the ccdrawu plugin for your user, so every session has the drawer. S
 
 Run `ccdrawu`, pick **sidebar** (beside the transcript) or **inline** (above the prompt) under Drawer and press `Enter`: the right side lists what each group shows now. Press `Enter` on any group for the list of every item, opened at that group (`e` opens it at the top): `Space` checks or unchecks one, `Enter` applies, `Esc` leaves things as they were, and `/` filters as you type. Open sessions follow within a second.
 
+### The pet
+
+A pixel-art pet lives at the top of the drawer, a cat unless you pick another. Above the prompt it takes the leftmost column, without its lines or the ball.
+
+- While Claude works, it wanders about: it stops, hops, runs and swipes at the air.
+- When Claude is done, it sits down and says so. If you stop Claude it just sits; if the reply ends in an error, or a tool fails, it jumps. It has something to say after a compaction too.
+- Left alone, it lies down after 2 minutes and falls asleep after 10, and now and then it strolls, looks around or swipes.
+- `/ccdrawu pat` pats it: it stops, and a heart shows over it.
+- `/ccdrawu ball` throws it a ball, which it runs after and plays with.
+
+What it says comes from a fixed set of lines, so it costs no tokens. To pick the animal (cat, dog, rabbit, duck or penguin), run `ccdrawu` and set **Pet** in **preferences** under Settings; open sessions follow within a second. Its coat is picked at random each session. To hide it, uncheck **Pet** in the list of items.
+
 ### A shorter command
 
 Run `ccdrawu`, move to **preferences** under Settings and press `Enter`, then `Enter` on **Alias** and type a name such as `ccd`. Within a second `/ccd` works as well as `/ccdrawu`, in every open session. A name you change or remove keeps working in a session until you restart it.
@@ -121,7 +134,7 @@ Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` 
 
 ## Where it keeps things
 
-- `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`, the items and the alias. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
+- `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`: the items, the alias and the pet. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
 - `~/.ccdrawu/`: what the plugin writes, the list of items `ccdrawu` offers (`catalog.json`). `CCDRAWU__DATA` names another folder for it.
 
 On Windows, `~` is your user folder (`%USERPROFILE%`).
@@ -132,7 +145,7 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 
 - After you switch the permission mode with `shift+tab`, **Mode** changes once Claude finishes the tools of the step it is on; while Claude is idle, it changes when you send the next prompt.
 - The colors are Catppuccin Mocha and cannot be changed yet.
-- Where an organization manages Claude Code, **Mode**, **Compact** and **Skills** may stay empty, and **Context** catches up with a compaction only after the next reply: those events skip plugins the user installed.
+- Where an organization manages Claude Code, **Mode**, **Compact** and **Skills** may stay empty, **Context** catches up with a compaction only after the next reply, and the pet does not jump when a tool fails or speak after a compaction: those events skip plugins the user installed.
 - Claude Code's mod interface is in early access and may change between releases.
 
 ## Uninstall
