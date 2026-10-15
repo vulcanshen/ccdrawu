@@ -1,5 +1,7 @@
 # ccdrawu
 
+<p align="center"><img src="docs/icon.svg" width="128" alt="ccdrawu icon" /></p>
+
 [![License](https://img.shields.io/github/license/vulcanshen/ccdrawu)](LICENSE)
 
 [繁體中文](README-zh_TW.md)
