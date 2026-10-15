@@ -109,6 +109,11 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - splash 不錄進 gif：它是彩蛋，`V` 才開，tdp S2 不寫進 README。
 - 寵物的動作是隨機的，錄完要看；vhs 偶爾會漏幾秒畫面（一張 gif 停格好幾秒），重錄即可。
 
+### Social preview
+
+- `docs/social-preview.png` 是 GitHub 的 social preview：icon 在上、下面 Tiny5 字樣 `ccdrawu`，跟家族其他專案同一個構圖。`/social-preview ccdrawu` 產生（`.claude/commands/` 與 `.claude/agents/` 從 locku 搬來），輸出在 `/tmp`，看過再複製進 `docs/`（2026-10-15）。
+- GitHub 沒有上傳 social preview 的 API：repo 的 Settings → General → Social preview 手動上傳。
+
 ### 檢查
 
 - `make check`：gofmt、`go vet`、`go test` 加上 `make mod-check`（下面兩個 plugin 指令），commit 前跑。有 `go.work` 時另外跑 `GOWORK=off make check`，確認對 go.mod 裡的 terminu-go 版本也過。
