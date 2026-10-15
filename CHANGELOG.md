@@ -2,7 +2,7 @@
 
 ## [Unreleased]
 
-## [0.1.2] - 2026-10-15
+## [0.1.2] - 2026-10-16
 ### Added
 - **Statusline** `on when narrow`: the status line only while the terminal is too narrow for the sidebar, under about 144 columns, and the drawer is not beside the transcript. Otherwise the row goes away.
 ### Changed
