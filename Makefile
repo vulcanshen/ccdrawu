@@ -50,6 +50,12 @@ snapshot: ## goreleaser 本機 snapshot 打包（不發布、不推 tap / bucket
 run: ## 本地跑設定 TUI（讀真正的 config）
 	go run $(PKG)
 
+# dev build 的 install claude 不指 CCDRAWU__MARKETPLACE 會裝 GitHub main 的外掛，
+# 把這個資料夾裝的換掉；這個 target 一律指著這裡
+.PHONY: plugin
+plugin: build ## 把這個資料夾當市集，裝或更新 Claude Code 裡的外掛（真正的 Claude Code 設定）；開著的 session 跑 /reload-plugins
+	CCDRAWU__MARKETPLACE=$(CURDIR) ./$(BINARY) install claude
+
 ##@ 測試 / 檢查（test）
 
 .PHONY: test
