@@ -175,5 +175,6 @@ Both ask before removing `~/.config/ccdrawu/` and `~/.ccdrawu/`. With Homebrew o
 
 ## More
 
+- [Changelog](CHANGELOG.md)
 - [Developer notes](docs/dev-remarks.md)
 - [License: GPL-3.0](LICENSE)

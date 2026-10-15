@@ -175,5 +175,6 @@ irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | ie
 
 ## 更多
 
+- [更新紀錄](CHANGELOG.md)
 - [開發者備忘](docs/dev-remarks.md)
 - [授權：GPL-3.0](LICENSE)
