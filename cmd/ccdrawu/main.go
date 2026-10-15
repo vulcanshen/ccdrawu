@@ -129,7 +129,8 @@ const usage = `ccdrawu — a status drawer for Claude Code
 
 Usage:
   ccdrawu                     pick the items the drawer shows
-  ccdrawu install claude      add the drawer to Claude Code (its ccdrawu plugin)
+  ccdrawu install claude      add the drawer to Claude Code (its ccdrawu plugin),
+                              or update it there
   ccdrawu uninstall claude    take it out again
   ccdrawu statusline          Claude Code's status line, as set in ccdrawu
                               (Claude Code runs it; the session on stdin)

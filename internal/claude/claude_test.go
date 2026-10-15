@@ -28,23 +28,56 @@ const listed = `[{"id": "other@x", "enabled": true}, {"id": "ccdrawu@ccdrawu", "
 
 func TestInstallTakesTheMarketplaceItIsGiven(t *testing.T) {
 	f := &fake{answers: map[string]string{
+		"claude plugin list":    `[{"id": "other@x", "enabled": true}]`,
 		"claude plugin install": `{"command":"install","outcome":"ok","message":"Installed ccdrawu"}`,
 	}}
 	msg, err := Install(f.run, "/dev/ccdrawu")
 	if err != nil || msg != "Installed ccdrawu" {
 		t.Fatalf("Install = %q, %v", msg, err)
 	}
-	if want := "claude plugin install ccdrawu --marketplace /dev/ccdrawu --json"; !slices.Equal(f.ran, []string{want}) {
+	want := []string{"claude plugin list --json", "claude plugin install ccdrawu --marketplace /dev/ccdrawu --json"}
+	if !slices.Equal(f.ran, want) {
+		t.Fatalf("ran %q, want %q", f.ran, want)
+	}
+}
+
+// Claude Code has the plugin already: install refreshes its marketplace, which
+// Claude Code does not do by itself for one like ours, then updates it
+func TestInstallUpdatesThePluginThere(t *testing.T) {
+	f := &fake{answers: map[string]string{
+		"claude plugin list":               listed,
+		"claude plugin marketplace update": `{"command":"marketplace-update","outcome":"ok","message":"Successfully updated marketplace: ccdrawu"}`,
+		"claude plugin update":             `{"command":"update","outcome":"ok","message":"ccdrawu is already at the latest version (0.1.2).","updateOutcome":"up_to_date"}`,
+	}}
+	msg, err := Install(f.run, Source)
+	if err != nil || msg != "ccdrawu is already at the latest version (0.1.2)." {
+		t.Fatalf("Install = %q, %v", msg, err)
+	}
+	want := []string{
+		"claude plugin list --json",
+		"claude plugin marketplace update ccdrawu --json",
+		"claude plugin update ccdrawu@ccdrawu --json",
+	}
+	if !slices.Equal(f.ran, want) {
 		t.Fatalf("ran %q, want %q", f.ran, want)
 	}
 }
 
 func TestInstallSaysWhatClaudeCodeRefused(t *testing.T) {
 	f := &fake{answers: map[string]string{
+		"claude plugin list":    `[]`,
 		"claude plugin install": "fetching…\n" + `{"outcome":"error","message":"Marketplace file not found"}`,
 	}}
 	if _, err := Install(f.run, Source); err == nil || err.Error() != "Marketplace file not found" {
 		t.Fatalf("err = %v, want Claude Code's message", err)
+	}
+	// An update the marketplace refused stops there
+	f = &fake{answers: map[string]string{
+		"claude plugin list":               listed,
+		"claude plugin marketplace update": `{"outcome":"error","message":"Marketplace 'ccdrawu' not found"}`,
+	}}
+	if _, err := Install(f.run, Source); err == nil || len(f.ran) != 2 {
+		t.Fatalf("err = %v, ran %q; want the marketplace's refusal, and no update", err, f.ran)
 	}
 }
 

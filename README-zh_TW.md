@@ -205,6 +205,20 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。
 - Windows 上在 Windows Terminal 試過。Termius 的本機終端會把畫面畫亂（見[疑難排解](#疑難排解)），其他 Windows 終端機還沒試過，歡迎回報。
 
+## 更新
+
+`ccdrawu` 指令和 Claude Code 裡的外掛是分開更新的，但兩者要搭配：指令是新版、外掛還是舊版的話，有些設定會沒有作用。
+
+1. 照你安裝的方式更新指令：`brew upgrade ccdrawu`、`scoop update ccdrawu`，或再跑一次安裝腳本。
+2. 更新外掛：
+
+   ```sh
+   ccdrawu install claude
+   ```
+
+   外掛已經裝了的話，這個指令會更新它。Claude Code 不會自己更新這個外掛。
+3. 已經開著的 session 跑一次 `/reload-plugins`。新開的 session 直接就是新版。
+
 ## 移除
 
 先把側邊欄從 Claude Code 拿掉：

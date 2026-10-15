@@ -43,10 +43,25 @@ func Exec(name string, args ...string) ([]byte, error) {
 }
 
 // Install installs the plugin for the user from source, adding its
-// marketplace first when Claude Code does not have it. Installing it again is
-// no change. It returns Claude Code's own word on what it did.
+// marketplace first when Claude Code does not have it. Where Claude Code has
+// the plugin already it updates it instead, from the marketplace it came
+// from: Claude Code refreshes a marketplace like ours only when asked, and
+// installing again is no change. It returns Claude Code's own word on what it
+// did.
 func Install(run Run, source string) (string, error) {
-	return result(run("claude", "plugin", "install", Plugin, "--marketplace", source, "--json"))
+	id, _, err := Installed(run)
+	if err != nil {
+		return "", err
+	}
+	if id == "" {
+		return result(run("claude", "plugin", "install", Plugin, "--marketplace", source, "--json"))
+	}
+	if _, market, found := strings.Cut(id, "@"); found {
+		if _, err := result(run("claude", "plugin", "marketplace", "update", market, "--json")); err != nil {
+			return "", err
+		}
+	}
+	return result(run("claude", "plugin", "update", id, "--json"))
 }
 
 // Uninstall removes the plugin and then its marketplace. ok is false when

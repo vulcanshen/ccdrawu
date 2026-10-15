@@ -205,6 +205,20 @@ The ccdrawu plugin is not running in that session, so the status line shows what
 - Claude Code's mod interface is in early access and may change between releases.
 - On Windows, ccdrawu has been tried in Windows Terminal. Termius's local terminal draws it out of place (see [Troubleshooting](#troubleshooting)), and other Windows terminals have not been tried yet; reports are welcome.
 
+## Update
+
+The `ccdrawu` command and the plugin in Claude Code update apart, and go together: a newer command with an older plugin can leave a setting without effect.
+
+1. Update the command the way you installed it: `brew upgrade ccdrawu`, `scoop update ccdrawu`, or the install script again.
+2. Update the plugin:
+
+   ```sh
+   ccdrawu install claude
+   ```
+
+   With the plugin there already, this updates it. Claude Code does not update it by itself.
+3. In sessions already open, run `/reload-plugins`. New sessions have the new plugin from the start.
+
 ## Uninstall
 
 First take the drawer out of Claude Code:
