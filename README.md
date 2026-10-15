@@ -2,9 +2,11 @@
 
 <p align="center"><img src="docs/icon.svg" width="128" alt="ccdrawu icon" /></p>
 
-[![License](https://img.shields.io/github/license/vulcanshen/ccdrawu)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/vulcanshen/ccdrawu)](https://github.com/vulcanshen/ccdrawu/releases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/vulcanshen/ccdrawu)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-[繁體中文](README-zh_TW.md)
+**Language**: English · [繁體中文](README-zh_TW.md)
 
 **A sidebar for Claude Code.** Usage limits, context, model, cost, git and session stats sit in a pane beside the transcript, so they no longer crowd the space under your prompt.
 
@@ -18,6 +20,7 @@
 | Model, Effort | The session's model, and the last request's effort level: green for `low` through red for `max` |
 | Mode | The permission mode: `auto`, `plan`, `accept edits`, … |
 | Context, Session, Weekly | How full the context window is, and your 5-hour and weekly plan limits with their reset countdowns. Bars turn green, yellow, peach, then red at 50%, 70% and 90% |
+| Spend | Where you go through a gateway with a spend limit: how much of it is used, and when it resets |
 | Cost | What the session has cost so far |
 | Uptime | How long the session has run, and how many prompts you sent |
 | Cache | How much of the last request the prompt cache served |
@@ -46,7 +49,7 @@ These start off; turn them on in `ccdrawu`:
 - A terminal wide enough for a sidebar: a pane opened on its own waits until the terminal is about 110–144 columns wide
 - A [Nerd Font](https://www.nerdfonts.com) in your terminal: the drawer draws its bars with it, and so does the `ccdrawu` command. Without one, set **Bar** to `line` in **preferences** under Settings: each choice there shows its own bar, so you can see which one your terminal draws
 - The `ccdrawu` command, to pick what the drawer shows
-- macOS, Linux or Windows
+- macOS, Linux or Windows (Windows not yet tried on a real machine: see [Limitations](#limitations))
 
 ## Install
 
@@ -76,6 +79,8 @@ ccdrawu install claude
 ```
 
 It installs the ccdrawu plugin for your user, so every session has the drawer. Sessions already open take it with `/reload-plugins`. Then run `ccdrawu` to pick what the drawer shows.
+
+You can also add only the plugin, from inside Claude Code: `/plugin install ccdrawu --marketplace vulcanshen/ccdrawu`. This is not recommended: the drawer then shows its default rows, and picking the rows, their order, the pet, the bar or the theme takes the `ccdrawu` command, or editing `~/.config/ccdrawu/config.json` by hand.
 
 ## Usage
 
@@ -134,6 +139,7 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 - The colors are Catppuccin Mocha and cannot be changed yet.
 - Where an organization manages Claude Code, **Mode**, **Compact** and **Skills** may stay empty, **Context** catches up with a compaction only after the next reply, and the pet does not jump when a tool fails or speak after a compaction: those events skip plugins the user installed.
 - Claude Code's mod interface is in early access and may change between releases.
+- The Windows builds are made and can be installed, but ccdrawu has not been tried on a Windows machine yet. Reports are welcome.
 
 ## Uninstall
 

@@ -2,9 +2,11 @@
 
 <p align="center"><img src="docs/icon.svg" width="128" alt="ccdrawu icon" /></p>
 
-[![License](https://img.shields.io/github/license/vulcanshen/ccdrawu)](LICENSE)
+[![GitHub Release](https://img.shields.io/github/v/release/vulcanshen/ccdrawu)](https://github.com/vulcanshen/ccdrawu/releases)
+[![Go Version](https://img.shields.io/github/go-mod/go-version/vulcanshen/ccdrawu)](https://go.dev/)
+[![License](https://img.shields.io/badge/license-GPL--3.0-blue)](LICENSE)
 
-[English](README.md)
+**語言**：[English](README.md) · 繁體中文
 
 **Claude Code 的側邊欄。** 用量上限、context、模型、花費、git 和 session 統計都放在對話旁邊的面板裡，不再擠在輸入框下方。
 
@@ -18,6 +20,7 @@
 | Model、Effort | 這個 session 的模型，以及上一次請求的 effort 等級：`low` 綠色，一路到 `max` 紅色 |
 | Mode | 權限模式：`auto`、`plan`、`accept edits`… |
 | Context、Session、Weekly | context 用量，以及方案的 5 小時和每週用量與重置倒數。bar 在 50%、70%、90% 分別從綠變黃、橘、紅 |
+| Spend | 透過有消費上限的 gateway 使用時：用了多少、什麼時候重置 |
 | Cost | 這個 session 到目前為止的花費 |
 | Uptime | session 開了多久、你送出了幾則訊息 |
 | Cache | 上一次請求有多少是從 prompt cache 讀的 |
@@ -46,7 +49,7 @@
 - 終端機要夠寬：自動開啟的面板會等終端機寬到大約 110～144 欄才出現
 - 終端機要用 [Nerd Font](https://www.nerdfonts.com)：側邊欄的 bar 和 `ccdrawu` 指令都用到它的圖示。沒有的話，在 Settings 底下的 **preferences** 把 **Bar** 設成 `line`：每個選項旁邊都畫著它的 bar，你的終端機畫得出哪一種，一看就知道
 - `ccdrawu` 指令，用來挑側邊欄顯示的項目
-- macOS、Linux 或 Windows
+- macOS、Linux 或 Windows（Windows 還沒在真的機器上測過，見[限制](#限制)）
 
 ## 安裝
 
@@ -76,6 +79,8 @@ ccdrawu install claude
 ```
 
 它會幫你的使用者裝好 ccdrawu 外掛，之後每個 session 都有側邊欄；已經開著的 session 跑一次 `/reload-plugins`。接著執行 `ccdrawu` 挑要顯示的項目。
+
+也可以只在 Claude Code 裡裝外掛：`/plugin install ccdrawu --marketplace vulcanshen/ccdrawu`。不建議這樣裝：側邊欄只會顯示預設的項目，要挑項目、排順序、換寵物、bar 或主題，都得用 `ccdrawu` 指令，或自己改 `~/.config/ccdrawu/config.json`。
 
 ## 使用方式
 
@@ -134,6 +139,7 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 - 配色是 Catppuccin Mocha，目前不能更改。
 - 由組織管理的 Claude Code 環境裡，**Mode**、**Compact** 和 **Skills** 可能會是空的，壓縮對話後 **Context** 也要等下一次回覆才會更新，寵物也不會在工具失敗時跳、壓縮後說話：那些事件會略過使用者自己安裝的外掛。
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。
+- Windows 版有建置、也能安裝，但還沒在真的 Windows 上測過，歡迎回報問題。
 
 ## 移除
 
