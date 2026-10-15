@@ -1,6 +1,6 @@
 {
   "name": "ccdrawu",
-  "description": "ccdrawu: a sidebar for Claude Code with usage limits, context, model, cost, git and session stats",
+  "description": "ccdrawu: a sidebar and a status line for Claude Code with usage limits, context, model, cost, git and session stats",
   "owner": { "name": "vulcanshen" },
   "plugins": [{ "name": "ccdrawu", "source": "./" }]
 }
