@@ -8,25 +8,7 @@
 
 **A sidebar for Claude Code.** Usage limits, context, model, cost, git and session stats sit in a pane beside the transcript, so they no longer crowd the space under your prompt.
 
-```
-Model    claude-opus-5-5
-Effort   xhigh
-Mode     auto
-Context  ■■■■■■■■■□□□□□  65%
-Session  ■□□□□□□□□□□□□□   6%
-         resets 2h12m
-Weekly   ■■■□□□□□□□□□□□  23%
-         resets 3d17h
-Cost     $35.46
-Uptime   11h39m · 43 turns
-Cache    100%
-Compact  0
-Tasks    none
-Git      main  +12 -3
-Path     ~/projects/app
-Claude   2.1.299  ↑ 2.1.300
-ccdrawu  0.1.0
-```
+![demo](docs/demo.gif)
 
 ## What it shows
 
@@ -105,6 +87,8 @@ It installs the ccdrawu plugin for your user, so every session has the drawer. S
 ### Pick what it shows
 
 Run `ccdrawu`, pick **sidebar** (beside the transcript) or **inline** (above the prompt) under Drawer and press `Enter`. The right side shows **Items**, the ones on, and **Order**, the same in the order the drawer shows them. Press `Enter` on **Items** for the list of every item: `Space` checks or unchecks one, `Enter` applies, `Esc` leaves things as they were, and `/` filters as you type. An item you turn on goes after the one before it in that list. Press `Enter` on **Order** to change the order: `D` picks an item up, `j` and `k` move it, `Enter` puts it down, and `Enter` again saves the order (`Esc` puts things back). Open sessions follow within a second.
+
+![settings](docs/settings.gif)
 
 ### The pet
 

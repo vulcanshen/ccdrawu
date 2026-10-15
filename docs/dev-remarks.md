@@ -96,6 +96,16 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - 本機同時改 terminu-go 時用 `go work init . ../terminu-go`（`go.work` 不進版控）。
 - `internal/ui/icon.svg` 是 `docs/icon.svg` 的複本：splash 用 `go:embed` 讀 icon，讀不到上層目錄。換 icon 時兩個一起換，`TestSplashIconIsDocsIcon` 會抓不一致。
 
+### 錄 gif
+
+- `make gif` 錄 README 的兩張：`docs/demo.gif`（Claude Code 裡的 drawer：問 `~/my-app` 一句話、寵物在 Claude 工作時走動、做完坐下說話、`/ccdrawu pat`、`/ccdrawu ball`）與 `docs/settings.gif`（設定畫面：Items 勾兩項、Order 用 `D` 搬 Cost、preferences 把寵物換成狗）。tape 都在 `.local/demos/`（不進版控）。
+- 沙盒照 sshu：`.local/demos/setup.sh` 每次重做 `.local/demos/home`（全新的 ccdrawu 設定、從 `~/.ccdrawu` 複製的 catalog、重建的 `my-app`：一個 commit 加一處沒 commit 的改動），tape 再 `export HOME` 過去，畫面上的路徑就是 `~/my-app`、`~/.config/ccdrawu/config.json`，真正的設定不會被碰。Claude Code 的設定、外掛與登入用 symlink 接真的：`~/.claude`、`~/.claude.json`，還有 `~/Library`（登入在 keychain，macOS 從 `$HOME/Library` 找；沒接會是 Not logged in，而且沙盒裡會長出一個真的 `Library`，setup.sh 會換回 symlink）。
+- tape 要先 unset `XDG_CONFIG_HOME`／`XDG_DATA_HOME`／`XDG_STATE_HOME`（user 的環境有設，ccdrawu 照 E3 先讀它，就會讀到真正的設定），以及從 Claude Code 裡跑 vhs 時繼承來的 `TMUX*`、`TERM_PROGRAM*`、`CLAUDECODE`、`CLAUDE_CODE_*`（留 `CLAUDE_CODE_NO_FLICKER`），否則畫面上有 tmux focus-events 與「Transcript saving is off」的提示。
+- `export HOME` 之後要 `cd $HOME/my-app`：這台的 bash 5.3 換了 `HOME` 之後 `~` 還是原本的家目錄。vhs 的 `Type` 字串不收 `\"`。
+- demo 會開真的 Claude Code（要 fullscreen、ccdrawu 外掛），送一個 prompt，花一點 token；問句要指定英文回答，否則照 user 的 CLAUDE.md 回繁中。`~/my-app` 第一次要先信任：`vhs .local/demos/trust.tape`（信任對話框預設是 No，要 `↓` 再 `Enter`）。
+- splash 不錄進 gif：它是彩蛋，`V` 才開，tdp S2 不寫進 README。
+- 寵物的動作是隨機的，錄完要看；vhs 偶爾會漏幾秒畫面（一張 gif 停格好幾秒），重錄即可。
+
 ### 檢查
 
 - `make check`：gofmt、`go vet`、`go test` 加上 `make mod-check`（下面兩個 plugin 指令），commit 前跑。有 `go.work` 時另外跑 `GOWORK=off make check`，確認對 go.mod 裡的 terminu-go 版本也過。

@@ -84,6 +84,17 @@ package: build ## 打包 → dist/ccdrawu_<ver>_<os>_<arch>.tar.gz
 	tar -czf $(DIST_DIR)/$(BINARY)_$(VERSION)_$(GOOS)_$(GOARCH).tar.gz $(BINARY)
 	@echo "packaged $(DIST_DIR)/$(BINARY)_$(VERSION)_$(GOOS)_$(GOARCH).tar.gz"
 
+##@ 展示（demo）
+
+# vhs 0.12.0 有時兩秒就結束、不出檔也不報錯（webu 踩過）；0.12.1 正常。
+# 要指定別的版本：make gif VHS=/path/to/vhs
+VHS ?= vhs
+
+.PHONY: gif
+gif: build ## 錄 docs/demo.gif 與 docs/settings.gif（需 vhs、JetBrainsMono Nerd Font；demo 開 Claude Code、送一個 prompt；tape 與展示用設定在 .local/demos/，不碰你的設定）
+	$(VHS) .local/demos/demo.tape
+	$(VHS) .local/demos/settings.tape
+
 ##@ 其他
 
 .PHONY: clean

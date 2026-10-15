@@ -8,25 +8,7 @@
 
 **Claude Code 的側邊欄。** 用量上限、context、模型、花費、git 和 session 統計都放在對話旁邊的面板裡，不再擠在輸入框下方。
 
-```
-Model    claude-opus-5-5
-Effort   xhigh
-Mode     auto
-Context  ■■■■■■■■■□□□□□  65%
-Session  ■□□□□□□□□□□□□□   6%
-         resets 2h12m
-Weekly   ■■■□□□□□□□□□□□  23%
-         resets 3d17h
-Cost     $35.46
-Uptime   11h39m · 43 turns
-Cache    100%
-Compact  0
-Tasks    none
-Git      main  +12 -3
-Path     ~/projects/app
-Claude   2.1.299  ↑ 2.1.300
-ccdrawu  0.1.0
-```
+![demo](docs/demo.gif)
 
 ## 顯示的內容
 
@@ -105,6 +87,8 @@ ccdrawu install claude
 ### 挑要顯示的項目
 
 執行 `ccdrawu`，在 Drawer 底下選 **sidebar**（對話旁邊）或 **inline**（輸入框上方）按 `Enter`。右邊有兩列：**Items** 是勾了的項目，**Order** 是同樣這些，照側邊欄顯示的順序列出。在 **Items** 上按 `Enter`，打開所有項目的清單：`Space` 勾或取消勾、`Enter` 套用、`Esc` 不改，`/` 可以打字篩選。新勾的項目會排在清單裡它前一項的後面。要調整順序，在 **Order** 上按 `Enter`：`D` 拿起一項，`j`、`k` 移動，`Enter` 放下，再按一次 `Enter` 存起來（`Esc` 放回原樣）。一秒內，開著的 session 就會跟著換。
+
+![settings](docs/settings.gif)
 
 ### 寵物
 
