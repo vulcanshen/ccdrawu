@@ -48,6 +48,8 @@ var placements = map[string]config.Placement{rowSidebar: config.Dock, rowInline:
 
 const glyphPencil = "\U000F03EB" // nf-md-pencil, the title of the alias input and of the items popup
 
+const petID = "pet" // the pet's id in the catalog (hooks/items.ts)
+
 type catalogTick struct{}
 
 // Run opens the TUI on the files in loc.
@@ -171,30 +173,35 @@ func (d *drawer) onMsg(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// summary is the page id in [2]: a row for each of the catalog's groups, the
-// drawer's keys for the items of it shown there. They are all set in one popup,
-// which Enter on a row opens on that group's first item, and e (editItems) on
-// the first of all.
+// summary is the page id in [2]: Items, how many of the catalog's items show
+// there, all set in one popup that Enter (or e, editItems) opens; and Order,
+// the drawer's keys of the ones shown, in the order it draws them. The order
+// is set in a reorder popup once terminu-go has one (CD9); until then the row
+// only shows it.
 func (d *drawer) summary(id string) []*terminu.Field {
 	p := placements[id]
-	var fields []*terminu.Field
-	for i, it := range d.cat.Items {
-		if len(fields) == 0 || fields[len(fields)-1].Label != it.Group {
-			group := it.Group
-			fields = append(fields, &terminu.Field{
-				Label: group, Empty: "none",
-				Value: func() string { return d.shown(p, group) },
-				Edit:  func() tea.Cmd { return d.pick(id, i) },
-			})
-		}
+	return []*terminu.Field{
+		{Label: "Items", Value: func() string { return d.counted(p) }, Edit: func() tea.Cmd { return d.pick(id) }},
+		{Label: "Order", Empty: "none", Value: func() string { return d.order(p) }, Disabled: func() bool { return true }},
 	}
-	return fields
 }
 
-func (d *drawer) shown(p config.Placement, group string) string {
-	var keys []string
+func (d *drawer) counted(p config.Placement) string {
+	n := 0
 	for _, it := range d.cat.Items {
-		if it.Group == group && d.cfg.On(p, it) {
+		if d.cfg.On(p, it) {
+			n++
+		}
+	}
+	return fmt.Sprintf("%d of %d", n, len(d.cat.Items))
+}
+
+// order leaves out the pet: the drawer draws it on its own, over the rows or
+// left of the columns, wherever it is in the list.
+func (d *drawer) order(p config.Placement) string {
+	var keys []string
+	for _, it := range d.cfg.Shown(p, d.cat) {
+		if it.ID != petID {
 			keys = append(keys, it.Label)
 		}
 	}
@@ -204,7 +211,7 @@ func (d *drawer) shown(p config.Placement, group string) string {
 // editItems is [2]'s panel operation on the sidebar and inline pages: one
 // checkbox popup of every item, more than five so a popup (tdp
 // components/input/checkbox), where Space checks and Enter applies them all.
-// Enter on a row opens it too and is the one in the hint.
+// Enter on Items opens it too and is the one in the hint.
 func (d *drawer) editItems() terminu.Action {
 	return terminu.Action{
 		Key: "e", Label: "Edit", Desc: "pick the items it shows", Scope: terminu.PanelScope,
@@ -213,14 +220,14 @@ func (d *drawer) editItems() terminu.Action {
 			return !ok
 		},
 		Disabled: func() bool { return len(d.cat.Items) == 0 },
-		Do:       func() tea.Cmd { return d.pick(d.detail.Label, 0) },
+		Do:       func() tea.Cmd { return d.pick(d.detail.Label) },
 	}
 }
 
-// pick opens the checkbox popup for the page id on the item at cursor: the
-// items in the catalog's order, each as its group, its key in the drawer and,
-// where that says more, its name.
-func (d *drawer) pick(id string, cursor int) tea.Cmd {
+// pick opens the checkbox popup for the page id: the items in the catalog's
+// order, each as its group, its key in the drawer and, where that says more,
+// its name.
+func (d *drawer) pick(id string) tea.Cmd {
 	p, cat := placements[id], d.cat
 	gw, lw := 0, 0
 	for _, it := range cat.Items {
@@ -237,7 +244,7 @@ func (d *drawer) pick(id string, cursor int) tea.Cmd {
 		checked[i] = d.cfg.On(p, it)
 	}
 	return d.app.Checks(terminu.Checks{
-		Title: "Edit", Glyph: glyphPencil, Subject: id, Options: options, Checked: checked, Cursor: cursor,
+		Title: "Edit", Glyph: glyphPencil, Subject: id, Options: options, Checked: checked,
 		Done: func(on []bool) tea.Cmd {
 			for i, it := range cat.Items {
 				if on[i] != d.cfg.On(p, it) {

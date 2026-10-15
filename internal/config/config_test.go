@@ -71,6 +71,36 @@ func TestConfigKeepsUnknownIDsAndWritesAllOff(t *testing.T) {
 	}
 }
 
+// The drawer's order is the list's: a toggle keeps it, and an item turned on
+// goes after the nearest one before it in the catalog
+func TestConfigKeepsTheOrder(t *testing.T) {
+	c := Config{Dock: []string{"context", "model"}}
+	c.Set(Dock, testCatalog, "mode", true)
+	if want := []string{"context", "model", "mode"}; !slices.Equal(c.Dock, want) {
+		t.Fatalf("dock = %v, want mode after model: %v", c.Dock, want)
+	}
+	c.Set(Dock, testCatalog, "model", false)
+	c.Set(Dock, testCatalog, "model", true)
+	if want := []string{"model", "context", "mode"}; !slices.Equal(c.Dock, want) {
+		t.Fatalf("dock = %v, want model first, with nothing before it in the catalog: %v", c.Dock, want)
+	}
+	var ids []string
+	for _, it := range c.Shown(Dock, testCatalog) {
+		ids = append(ids, it.ID)
+	}
+	if want := []string{"model", "context", "mode"}; !slices.Equal(ids, want) {
+		t.Fatalf("shown = %v, want the list's order %v", ids, want)
+	}
+	var unset Config
+	ids = nil
+	for _, it := range unset.Shown(Inline, testCatalog) {
+		ids = append(ids, it.ID)
+	}
+	if want := []string{"model", "context", "git"}; !slices.Equal(ids, want) {
+		t.Fatalf("shown = %v, want the catalog's defaults %v", ids, want)
+	}
+}
+
 // The same names as hooks/format.ts commandNames takes
 func TestCleanAliasTakesWhatTheModTakes(t *testing.T) {
 	for in, want := range map[string]string{"": "", "  ": "", "ccd": "ccd", " /ccd ": "ccd", "dr-2": "dr-2"} {

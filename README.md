@@ -102,7 +102,7 @@ It installs the ccdrawu plugin for your user, so every session has the drawer. S
 
 ### Pick what it shows
 
-Run `ccdrawu`, pick **sidebar** (beside the transcript) or **inline** (above the prompt) under Drawer and press `Enter`: the right side lists what each group shows now. Press `Enter` on any group for the list of every item, opened at that group (`e` opens it at the top): `Space` checks or unchecks one, `Enter` applies, `Esc` leaves things as they were, and `/` filters as you type. Open sessions follow within a second.
+Run `ccdrawu`, pick **sidebar** (beside the transcript) or **inline** (above the prompt) under Drawer and press `Enter`. The right side shows **Items**, how many are on, and **Order**, the ones on in the order the drawer shows them. Press `Enter` on **Items** for the list of every item: `Space` checks or unchecks one, `Enter` applies, `Esc` leaves things as they were, and `/` filters as you type. An item you turn on goes after the one before it in that list. Open sessions follow within a second.
 
 ### The pet
 

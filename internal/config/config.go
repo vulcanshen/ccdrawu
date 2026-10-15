@@ -151,8 +151,10 @@ func (c Config) On(p Placement, it Item) bool {
 }
 
 // Set turns the item on or off in p. The first change in a placement writes
-// out the catalog's defaults for it; ids the catalog does not know (from a
-// newer mod) are kept.
+// out the catalog's defaults for it. The list keeps its order, the order the
+// drawer draws it in, and the ids the catalog does not know (from a newer
+// mod): an item turned on goes after the nearest one before it in the catalog
+// that is on, so a list never reordered stays in the catalog's order.
 func (c *Config) Set(p Placement, cat Catalog, id string, on bool) {
 	list := c.ids(p)
 	if *list == nil {
@@ -165,27 +167,35 @@ func (c *Config) Set(p Placement, cat Catalog, id string, on bool) {
 		*list = next
 	}
 	*list = slices.DeleteFunc(*list, func(s string) bool { return s == id })
-	if on {
-		*list = append(*list, id)
+	if !on {
+		return
 	}
-	// In the catalog's order, then the unknown ones as they were
-	order := map[string]int{}
-	for i, it := range cat.Items {
-		order[it.ID] = i
-	}
-	slices.SortStableFunc(*list, func(a, b string) int {
-		ia, okA := order[a]
-		ib, okB := order[b]
-		switch {
-		case okA && okB:
-			return ia - ib
-		case okA:
-			return -1
-		case okB:
-			return 1
+	at := 0
+	i := slices.IndexFunc(cat.Items, func(it Item) bool { return it.ID == id })
+	for k := i - 1; k >= 0; k-- {
+		if j := slices.Index(*list, cat.Items[k].ID); j >= 0 {
+			at = j + 1
+			break
 		}
-		return 0
-	})
+	}
+	*list = slices.Insert(*list, at, id)
+}
+
+// Shown is the items on in p in the order the drawer draws them: the config's
+// list when it has one, else the catalog's defaults in its order. Ids the
+// catalog does not know are left out.
+func (c Config) Shown(p Placement, cat Catalog) []Item {
+	list := *c.ids(p)
+	if list == nil {
+		return slices.DeleteFunc(slices.Clone(cat.Items), func(it Item) bool { return !c.On(p, it) })
+	}
+	var items []Item
+	for _, id := range list {
+		if i := slices.IndexFunc(cat.Items, func(it Item) bool { return it.ID == id }); i >= 0 {
+			items = append(items, cat.Items[i])
+		}
+	}
+	return items
 }
 
 // WriteConfig writes the whole file at once (a temporary file renamed over

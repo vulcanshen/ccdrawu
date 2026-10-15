@@ -521,7 +521,7 @@ test('files sit where terminu design E3 puts them, unless CCDRAWU__ variables sa
   expect(locations({ home: '/h', xdgConfig: '/x', config: '/c', data: '/d' })).toEqual({ data: '/d', configFile: '/c/config.json' })
 })
 
-test('the config picks items per placement, in the catalog order', async () => {
+test('the config picks items per placement, in the order it lists them', async () => {
   expect(parseConfig('{"dock": ["git", "model", 3], "inline": "x"}')).toEqual({ dock: ['git', 'model'] })
   expect(parseConfig('{"dock": [')).toBeUndefined()
   expect(parseConfig('null')).toEqual({})
@@ -529,7 +529,7 @@ test('the config picks items per placement, in the catalog order', async () => {
   expect(parseConfig('{"alias": 3}')).toEqual({})
   expect(parseConfig('{"bar": "line"}')).toEqual({ bar: 'line' })
   expect(parseConfig('{"bar": 1}')).toEqual({})
-  expect(enabledItems({ dock: ['git', 'model', 'gone'] }, 'dock').map(i => i.id)).toEqual(['model', 'git'])
+  expect(enabledItems({ dock: ['git', 'model', 'gone', 'git'] }, 'dock').map(i => i.id)).toEqual(['git', 'model'])
   expect(enabledItems({ dock: [] }, 'dock')).toEqual([])
   expect(enabledItems({}, 'inline').map(i => i.id)).toEqual(ITEMS.filter(i => i.inline).map(i => i.id))
 })

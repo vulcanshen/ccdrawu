@@ -124,9 +124,9 @@ func frameText(d *drawer) string { return terminu.StripStyles(strings.Join(d.app
 
 var space = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}
 
-// [2] of sidebar and inline lists what each group shows; Enter on any row, or
-// e, opens every item in one checkbox popup, where Space checks, Esc drops it
-// all and Enter applies it all
+// [2] of sidebar and inline has Items, how many show, and Order, the ones
+// shown in the drawer's order; Enter on Items, or e, opens every item in one
+// checkbox popup, where Space checks, Esc drops it all and Enter applies it all
 func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	// [1] starts on sidebar; Enter goes into [2] (tdp K3, details)
@@ -135,7 +135,7 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 		t.Fatalf("Enter on [1] left the focus there:\n%s", frameText(d))
 	}
 	text := frameText(d)
-	for _, want := range []string{"Model Mode", "Context", "none", "Enter:edit"} {
+	for _, want := range []string{"ITEMS", "3 of 4", "ORDER", "Model Mode Context", "Enter:edit"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("no %q on the sidebar page:\n%s", want, text)
 		}
@@ -156,36 +156,49 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 		return c.Dock
 	}
 
-	press(d, key("j"))
-	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // on Usage: the popup of every item, on Usage's first
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // on Items: the popup of every item
 	if text := frameText(d); !strings.Contains(text, "EDIT: sidebar") || !strings.Contains(text, "Mode     Permission mode") {
-		t.Fatalf("Enter on a row did not open the popup of every item with their keys:\n%s", text)
+		t.Fatalf("Enter on Items did not open the popup of every item with their keys:\n%s", text)
 	}
-	press(d, space) // Context off
+	press(d, space) // Model off
 	press(d, tea.KeyMsg{Type: tea.KeyEsc})
 	if _, err := os.Stat(loc.ConfigFile); err == nil {
 		t.Fatal("Esc kept what was checked")
 	}
 
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
-	press(d, space) // Context off
+	press(d, space) // Model off
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
-	if got, want := dock(), []string{"model", "mode"}; !slices.Equal(got, want) {
-		t.Fatalf("dock = %v from Usage, want %v", got, want)
+	if got, want := dock(), []string{"mode", "context"}; !slices.Equal(got, want) {
+		t.Fatalf("dock = %v, want %v", got, want)
 	}
 
-	press(d, key("e")) // the same popup, on the first item of all
-	press(d, space)    // Model off
+	press(d, key("e")) // the same popup
 	for range 3 {      // Mode, Context, Git
 		press(d, key("j"))
 	}
 	press(d, space) // Git on
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
-	if got, want := dock(), []string{"mode", "git"}; !slices.Equal(got, want) {
+	if got, want := dock(), []string{"mode", "context", "git"}; !slices.Equal(got, want) {
 		t.Fatalf("dock = %v after e, want %v", got, want)
 	}
-	if !strings.Contains(frameText(d), "Git") {
-		t.Fatalf("[2] does not show Git once applied:\n%s", frameText(d))
+	if text := frameText(d); !strings.Contains(text, "3 of 4") || !strings.Contains(text, "Mode Context Git") {
+		t.Fatalf("[2] does not show what was applied:\n%s", text)
+	}
+}
+
+// Order is the drawer's order, the config's list as it is; until there is a
+// reorder popup (CD9) it is off, and the cursor passes it by
+func TestOrderShowsTheDrawersOrder(t *testing.T) {
+	d, _ := newTestDrawer(t)
+	d.cfg.Dock = []string{"context", "model"}
+	if f := d.pages[rowSidebar].Fields[1]; f.Label != "Order" || f.Value() != "Context Model" {
+		t.Fatalf("%q shows %q, want Order showing Context Model", f.Label, f.Value())
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	press(d, key("j"))
+	if f := d.pages[rowSidebar].Current(); f.Label != "Items" {
+		t.Fatalf("the cursor went to %q, which opens nothing yet", f.Label)
 	}
 }
 

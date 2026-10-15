@@ -35,10 +35,12 @@ export function parseConfig(text: string): Config | undefined {
   return config
 }
 
-// In the catalog's order; a placement the config leaves out takes the catalog's defaults
+// In the order the config lists them (set in ccdrawu), the ones the catalog knows, each once; a placement
+// the config leaves out takes the catalog's defaults, in its order
 export function enabledItems(config: Config, placement: Placement): Item[] {
   const ids = config[placement]
-  return ITEMS.filter(item => (ids === undefined ? item[placement] : ids.includes(item.id)))
+  if (ids === undefined) return ITEMS.filter(item => item[placement])
+  return [...new Set(ids)].flatMap(id => ITEMS.find(item => item.id === id) ?? [])
 }
 
 const INLINE_PATH = 32 // above the prompt a path keeps its last 32 characters
