@@ -173,27 +173,29 @@ func (d *drawer) onMsg(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// summary is the page id in [2]: Items, how many of the catalog's items show
-// there, all set in one popup that Enter (or e, editItems) opens; and Order,
-// the drawer's keys of the ones shown, in the order it draws them. The order
-// is set in a reorder popup once terminu-go has one (CD9); until then the row
-// only shows it.
+// summary is the page id in [2], its values shown as tdp components/input
+// shows a checkbox popup's and a reorder's, joined with ", ": Items, the
+// drawer's keys of the items on there, all set in one popup that Enter (or e,
+// editItems) opens; and Order, the same in the order the drawer draws them.
+// The order is set in a reorder popup once terminu-go has one (CD9, tdp
+// v0.6.6 components/input/reorder); until then the row only shows it.
 func (d *drawer) summary(id string) []*terminu.Field {
 	p := placements[id]
 	return []*terminu.Field{
-		{Label: "Items", Value: func() string { return d.counted(p) }, Edit: func() tea.Cmd { return d.pick(id) }},
+		{Label: "Items", Empty: "none", Value: func() string { return d.chosen(p) }, Edit: func() tea.Cmd { return d.pick(id) }},
 		{Label: "Order", Empty: "none", Value: func() string { return d.order(p) }, Disabled: func() bool { return true }},
 	}
 }
 
-func (d *drawer) counted(p config.Placement) string {
-	n := 0
+// chosen is the items on in p, in the catalog's order, as the popup lists them.
+func (d *drawer) chosen(p config.Placement) string {
+	var keys []string
 	for _, it := range d.cat.Items {
 		if d.cfg.On(p, it) {
-			n++
+			keys = append(keys, it.Label)
 		}
 	}
-	return fmt.Sprintf("%d of %d", n, len(d.cat.Items))
+	return strings.Join(keys, ", ")
 }
 
 // order leaves out the pet: the drawer draws it on its own, over the rows or
@@ -205,7 +207,7 @@ func (d *drawer) order(p config.Placement) string {
 			keys = append(keys, it.Label)
 		}
 	}
-	return strings.Join(keys, " ")
+	return strings.Join(keys, ", ")
 }
 
 // editItems is [2]'s panel operation on the sidebar and inline pages: one

@@ -124,9 +124,9 @@ func frameText(d *drawer) string { return terminu.StripStyles(strings.Join(d.app
 
 var space = tea.KeyMsg{Type: tea.KeySpace, Runes: []rune{' '}}
 
-// [2] of sidebar and inline has Items, how many show, and Order, the ones
-// shown in the drawer's order; Enter on Items, or e, opens every item in one
-// checkbox popup, where Space checks, Esc drops it all and Enter applies it all
+// [2] of sidebar and inline has Items, the ones shown, and Order, the same in
+// the drawer's order; Enter on Items, or e, opens every item in one checkbox
+// popup, where Space checks, Esc drops it all and Enter applies it all
 func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	// [1] starts on sidebar; Enter goes into [2] (tdp K3, details)
@@ -135,7 +135,7 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 		t.Fatalf("Enter on [1] left the focus there:\n%s", frameText(d))
 	}
 	text := frameText(d)
-	for _, want := range []string{"ITEMS", "3 of 4", "ORDER", "Model Mode Context", "Enter:edit"} {
+	for _, want := range []string{"ITEMS", "ORDER", "Model, Mode, Context", "Enter:edit"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("no %q on the sidebar page:\n%s", want, text)
 		}
@@ -182,7 +182,7 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 	if got, want := dock(), []string{"mode", "context", "git"}; !slices.Equal(got, want) {
 		t.Fatalf("dock = %v after e, want %v", got, want)
 	}
-	if text := frameText(d); !strings.Contains(text, "3 of 4") || !strings.Contains(text, "Mode Context Git") {
+	if text := frameText(d); !strings.Contains(text, "Mode, Context, Git") {
 		t.Fatalf("[2] does not show what was applied:\n%s", text)
 	}
 }
@@ -192,8 +192,12 @@ func TestEditPicksTheItemsInOnePopup(t *testing.T) {
 func TestOrderShowsTheDrawersOrder(t *testing.T) {
 	d, _ := newTestDrawer(t)
 	d.cfg.Dock = []string{"context", "model"}
-	if f := d.pages[rowSidebar].Fields[1]; f.Label != "Order" || f.Value() != "Context Model" {
-		t.Fatalf("%q shows %q, want Order showing Context Model", f.Label, f.Value())
+	fields := d.pages[rowSidebar].Fields
+	if f := fields[0]; f.Label != "Items" || f.Value() != "Model, Context" {
+		t.Fatalf("%q shows %q, want Items showing Model, Context", f.Label, f.Value())
+	}
+	if f := fields[1]; f.Label != "Order" || f.Value() != "Context, Model" {
+		t.Fatalf("%q shows %q, want Order showing Context, Model", f.Label, f.Value())
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	press(d, key("j"))
@@ -219,7 +223,7 @@ func TestNoCatalogSaysWhatToDo(t *testing.T) {
 func TestDetailFollowsTheSidebar(t *testing.T) {
 	d, _ := newTestDrawer(t)
 	text := frameText(d)
-	for _, want := range []string{"[1] PREFERENCES", "DRAWER", "SETTINGS", "[2] SIDEBAR", "Model Mode"} {
+	for _, want := range []string{"[1] PREFERENCES", "DRAWER", "SETTINGS", "[2] SIDEBAR", "Model, Mode"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("no %q in\n%s", want, text)
 		}
