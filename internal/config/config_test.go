@@ -15,18 +15,21 @@ var testCatalog = Catalog{Version: 1, Items: []Item{
 	{ID: "git", Label: "Git", Name: "Git branch and changes", Group: "Workspace", Dock: false, Inline: true},
 }}
 
+// The paths ccdrawu puts together use the platform's separator (\ on
+// Windows); a folder a variable names is kept as it is
 func TestLocateFollowsE3(t *testing.T) {
 	env := func(vars map[string]string) func(string) string { return func(k string) string { return vars[k] } }
+	j := filepath.Join
 	got := locate(env(nil), "/h")
-	if got != (Locations{Data: "/h/.ccdrawu", ConfigFile: "/h/.config/ccdrawu/config.json", Claude: "/h/.claude"}) {
+	if got != (Locations{Data: j("/h", ".ccdrawu"), ConfigFile: j("/h", ".config", "ccdrawu", "config.json"), Claude: j("/h", ".claude")}) {
 		t.Fatalf("defaults: %+v", got)
 	}
 	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "CCDRAWU__DATA": ""}), "/h")
-	if got != (Locations{Data: "/h/.ccdrawu", ConfigFile: "/x/ccdrawu/config.json", Claude: "/h/.claude"}) {
+	if got != (Locations{Data: j("/h", ".ccdrawu"), ConfigFile: j("/x", "ccdrawu", "config.json"), Claude: j("/h", ".claude")}) {
 		t.Fatalf("XDG: %+v", got)
 	}
 	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "CCDRAWU__CONFIG": "/c", "CCDRAWU__DATA": "/d"}), "/h")
-	if got != (Locations{Data: "/d", ConfigFile: "/c/config.json", Claude: "/h/.claude"}) {
+	if got != (Locations{Data: "/d", ConfigFile: j("/c", "config.json"), Claude: j("/h", ".claude")}) {
 		t.Fatalf("CCDRAWU__: %+v", got)
 	}
 }

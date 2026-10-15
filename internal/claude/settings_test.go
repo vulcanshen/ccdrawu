@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -101,7 +102,8 @@ func TestThemeIsAppliedAndPutBack(t *testing.T) {
 	if _, switched, _ := ApplyTheme(dir, "dark", ""); switched {
 		t.Fatal("switched again while ccdrawu's theme was already the one")
 	}
-	if info, _ := os.Stat(path); info.Mode().Perm() != 0o600 {
+	// Windows has no such mode to keep: a file there reads 0666 unless read-only
+	if info, _ := os.Stat(path); runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Fatalf("settings.json is now %v, want its 0600 kept", info.Mode().Perm())
 	}
 
@@ -132,7 +134,7 @@ func TestRestoreLeavesAThemeChosenSince(t *testing.T) {
 
 func TestDirFollowsClaudeConfigDir(t *testing.T) {
 	env := func(v string) func(string) string { return func(string) string { return v } }
-	if got := Dir(env(""), "/h"); got != "/h/.claude" {
+	if got := Dir(env(""), "/h"); got != filepath.Join("/h", ".claude") {
 		t.Fatalf("Dir = %q", got)
 	}
 	if got := Dir(env("/c"), "/h"); got != "/c" {
