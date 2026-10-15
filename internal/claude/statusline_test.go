@@ -3,6 +3,7 @@ package claude
 import (
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 )
@@ -66,8 +67,8 @@ func TestStatuslineReplacesAnotherAndPutsItBack(t *testing.T) {
 	if got := readBack(t, dir); got != theirs {
 		t.Fatalf("restored:\n%s", got)
 	}
-	// Owner-only permissions survive the writes
-	if info, _ := os.Stat(filepath.Join(dir, "settings.json")); info.Mode().Perm() != 0o600 {
+	// Owner-only permissions survive the writes (Windows has no 0600 to keep)
+	if info, _ := os.Stat(filepath.Join(dir, "settings.json")); runtime.GOOS != "windows" && info.Mode().Perm() != 0o600 {
 		t.Errorf("mode %v", info.Mode().Perm())
 	}
 }
