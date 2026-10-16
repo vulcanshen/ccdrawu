@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.1.4] - 2026-10-16
 ### Added
 - Kits: while subagents run, a small one of the pet's kind walks behind the pet for each, up to three, beside the transcript, each in a coat of its own, never the pet's. It comes in at an end of the walk as its subagent starts, and walks off the nearer end once it is done; the pet goes on as before, drawn over them.
 ### Changed

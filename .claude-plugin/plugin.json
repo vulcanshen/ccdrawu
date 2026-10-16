@@ -1,6 +1,6 @@
 {
   "name": "ccdrawu",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "description": "A sidebar and a status line for Claude Code: usage limits, context, model, cost, git and session stats in a pane beside the transcript, or under the prompt",
   "author": { "name": "vulcanshen" },
   "repository": "https://github.com/vulcanshen/ccdrawu",
