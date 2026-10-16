@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.1.3] - 2026-10-16
 ### Added
 - `ccdrawu update`: updates ccdrawu to its latest release the way it was installed, through Homebrew, or, from the install script, in place, checked against the release's checksums; then the plugin in Claude Code to the same release, where Claude Code has it. Installed with Scoop, it says what to run, since Scoop does not update ccdrawu while it runs. A folder it cannot write in, it says so, and never asks for more rights.
 ### Changed
