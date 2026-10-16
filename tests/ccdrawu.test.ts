@@ -32,6 +32,13 @@ import { statuslineFile, statuslineItems } from '../hooks/statusline'
 import {
   BALL_LINES,
   ballAt,
+  KIT_HEIGHT,
+  KIT_WIDTH,
+  kitCells,
+  KIT_MAX,
+  KITS,
+  kitsFor,
+  kitsTick,
   LIFT_ROOM,
   HEART,
   HEART_COLOR,
@@ -55,7 +62,7 @@ import {
   type Run,
   type Species,
 } from '../hooks/pets'
-import type { PetState } from '../types'
+import type { Kit, PetState } from '../types'
 
 const PANE = {
   title: 'Status',
@@ -370,7 +377,7 @@ test('every pose of every pet is 12 x 8 pixels, every mark inked in every coat, 
   expect(tall(2)[4]).toEqual([{ gap: 12 }])
   expect(tall(2)[0]).not.toEqual([{ gap: 12 }])
   // A session's coat number counts round any animal's coats
-  expect(petCoat('penguin', 7)).toEqual(PETS.penguin.coats[1])
+  expect(petCoat('penguin', PETS.penguin.coats.length + 1)).toEqual(PETS.penguin.coats[1])
 })
 
 // How many cells a row of runs takes, and the top row of a pose, its snore n along when asleep
@@ -522,6 +529,73 @@ test('a ball thrown in rolls to a stop from the far side; the pet runs over, paw
   // A ball not had in 20 seconds goes
   const left = petEvent({ ...PET_START, active: 0, x: 2, target: 2, heartUntil: 99_000 }, 'ball', 0, 'cat', quiet)
   expect(petTick({ ...left, heartUntil: 99_000 }, 20_200, quiet).ball).toBeUndefined()
+})
+
+test("a kit of the pet's kind walks for each subagent running, three at most, each in a coat of its own, and leaves once it is done", async () => {
+  // Every kit is 6 pixels wide and stands in a box 6 high, inked in every coat, and draws 6 x 3 cells in
+  // its own coat's colors; every kind has coats enough for the pet and three kits apart
+  for (const species of SPECIES) {
+    expect(PETS[species].coats.length).toBeGreaterThan(KIT_MAX)
+    for (const pose of ['walk1', 'walk2'] as const) {
+      const frame = KITS[species][pose]
+      expect(frame.length % 2).toBe(0)
+      expect(frame.length).toBeLessThanOrEqual(KIT_HEIGHT)
+      for (const row of frame) expect(row.length).toBe(KIT_WIDTH)
+      const marks = new Set(frame.join('').replace(/\./g, ''))
+      for (let i = 0; i < PETS[species].coats.length; i++) {
+        const coat = petCoat(species, i)
+        for (const mark of marks) expect(coat[mark]).toBeDefined()
+        expect(coat.q).not.toBe(coat['#'])
+      }
+    }
+    const colors = new Set(Object.values(petCoat(species, 1)))
+    const cells = kitCells(species, { id: 'a', coat: 1, x: 0, target: 5, stride: 1, faceLeft: true, restUntil: 0, leaving: false })
+    expect(cells.length).toBe(KIT_HEIGHT / 2)
+    for (const row of cells) {
+      expect(cellsWide(row)).toBe(KIT_WIDTH)
+      for (const r of row) if ('ch' in r) for (const c of [r.fg, r.bg]) if (c) expect(colors.has(c)).toBe(true)
+    }
+  }
+
+  const rand = () => 0.2
+  const ticks = (list: Kit[], from: number, n: number) => {
+    let t = from
+    for (let i = 0; i < n; i++) list = kitsTick(list, (t += PET_TICK), rand)
+    return list
+  }
+  // Three subagents at most get a kit, each in at an end of the walk, in a coat neither the pet (coat 0)
+  // nor another kit has
+  let ks = kitsFor([], ['a', 'b', 'c', 'd'], 'cat', 0, rand)
+  expect(ks.map(k => [k.id, k.coat, k.x, k.target])).toEqual([
+    ['a', 1, 0, 4],
+    ['b', 2, 0, 4],
+    ['c', 3, 0, 4],
+  ])
+  expect(kitsFor(ks, ['a', 'b', 'c', 'd'], 'cat', 0, rand)).toBe(ks)
+  // A step a tick to where each goes, its legs taking turns; there a rest, then the next place
+  ks = ticks(ks, 0, 4)
+  expect(ks.map(k => [k.x, k.stride])).toEqual([
+    [4, 4],
+    [4, 4],
+    [4, 4],
+  ])
+  ks = kitsTick(ks, 1_000, rand)
+  expect(ks[1]).toMatchObject({ x: 4, target: TRACK, restUntil: 2_400 })
+  expect(kitsTick(ks, 1_200, rand)).toBe(ks)
+  // a and c done: they head for the nearer end, resting no more, and go once there; b rests on
+  ks = kitsFor(ks, ['b', 'd'], 'cat', 0, rand)
+  expect(ks.map(k => [k.id, k.leaving, k.target])).toEqual([
+    ['a', true, 0],
+    ['b', false, TRACK],
+    ['c', true, 0],
+  ])
+  ks = ticks(ks, 1_200, 5)
+  expect(ks.map(k => k.id)).toEqual(['b'])
+  // Room again: the subagent still running gets its kit, in a coat b and the pet do not have
+  expect(kitsFor(ks, ['b', 'd'], 'cat', 0, rand).map(k => [k.id, k.coat])).toEqual([
+    ['b', 2],
+    ['d', 1],
+  ])
 })
 
 test('Claude Code and ccdrawu have a version row each', async () => {

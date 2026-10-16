@@ -9,7 +9,7 @@
 // from the body and a paw a swipe raises does not run into the head (user, 2026-10-15: the limbs are
 // colored from the first, all of them). A session picks one coat of its pet at random.
 
-import type { PetBall, PetMode, PetState } from '../types'
+import type { Kit, PetBall, PetMode, PetState } from '../types'
 
 export const SPECIES = ['cat', 'dog', 'rabbit', 'duck', 'penguin'] as const
 export type Species = (typeof SPECIES)[number]
@@ -176,11 +176,12 @@ export const PETS: Record<Species, Pet> = {
         '..q###.q....',
       ],
     },
-    // a shiba, a black-and-tan, a white
+    // a shiba, a black-and-tan, a white, a black-and-white
     coats: [
       { q: '#f4ead8', '#': '#d98b4a', s: '#a8602c', w: '#f4ead8', e: '#3a2a20', n: '#2b2b2b' },
       { q: '#d9a066', '#': '#6b625a', s: '#3e3934', w: '#d9a066', e: '#f0c060', n: '#2b2b2b' },
       { q: '#d8c8b0', '#': '#eee8dc', s: '#d8c8b0', w: '#ffffff', e: '#3a2a20', n: '#2b2b2b' },
+      { q: '#f4f1ea', '#': '#35302e', s: '#35302e', w: '#f4f1ea', e: '#e8c060', n: '#c08a7a' },
     ],
   },
   rabbit: {
@@ -256,11 +257,12 @@ export const PETS: Record<Species, Pet> = {
         '.qqq.qq.....',
       ],
     },
-    // a grey, a white with red eyes, a brown
+    // a grey, a white with red eyes, a brown, a ginger
     coats: [
       { q: '#f4f1ea', '#': '#b8b4ac', p: '#f2a7b5', w: '#f4f1ea', e: '#3a2a40' },
       { q: '#c4c0b8', '#': '#f0ece4', p: '#f2a7b5', w: '#ffffff', e: '#d9534f' },
       { q: '#f4f1ea', '#': '#9a6a44', p: '#e8a0a8', w: '#f4f1ea', e: '#2a1a10' },
+      { q: '#f4ead8', '#': '#d9894a', p: '#f2a7b5', w: '#f4ead8', e: '#2a1a10' },
     ],
   },
   duck: {
@@ -336,11 +338,12 @@ export const PETS: Record<Species, Pet> = {
         '....b..b....',
       ],
     },
-    // a yellow duckling, a white duck, a brown one
+    // a yellow duckling, a white duck, a brown one, a grey one
     coats: [
       { q: '#c99a2e', '#': '#f2d24b', b: '#f08a24', e: '#2b2b2b' },
       { q: '#c4c0b8', '#': '#f2efe8', b: '#f0a830', e: '#2b2b2b' },
       { q: '#6a5038', '#': '#a88a64', b: '#e8c040', e: '#2b2b2b' },
+      { q: '#7a7f88', '#': '#b8bcc4', b: '#f0a830', e: '#2b2b2b' },
     ],
   },
   penguin: {
@@ -416,11 +419,41 @@ export const PETS: Record<Species, Pet> = {
         '.....b..b...',
       ],
     },
-    // a dark grey one, a little blue
+    // a dark grey one, a little blue, a gentoo, a chinstrap
     coats: [
       { q: '#8a93a6', '#': '#5a6170', w: '#f4f1ea', b: '#f0a830', e: '#f4f1ea' },
       { q: '#4a6a94', '#': '#6f8fb8', w: '#f4f1ea', b: '#3a3f4b', e: '#f4f1ea' },
+      { q: '#3a414d', '#': '#4a5260', w: '#f4f1ea', b: '#f06a30', e: '#f4f1ea' },
+      { q: '#6a7280', '#': '#8c94a2', w: '#ffffff', b: '#2b2b2b', e: '#2b2b2b' },
     ],
+  },
+}
+
+// Kits: a small one of the pet's kind, 6 x 4 pixels, so 6 columns by 2 rows, the rabbit two pixels
+// taller for its ears, in the same inks; they only walk (see kitsFor)
+export type KitPose = 'walk1' | 'walk2'
+export const KIT_WIDTH = 6
+export const KIT_HEIGHT = 6 // the box a kit stands in, as high as the rabbit
+export const KITS: Record<Species, Record<KitPose, string[]>> = {
+  cat: {
+    walk1: ['#..#.#', '#..#e#', '.#s#sx', '.q..q.'],
+    walk2: ['#..#.#', '#..#e#', '.#s#sx', 'q.q..q'],
+  },
+  dog: {
+    walk1: ['#..##.', '.#s#e#', '.####n', '.q..q.'],
+    walk2: ['#..##.', '.#s#e#', '.####n', 'q.q..q'],
+  },
+  rabbit: {
+    walk1: ['...#.#', '...p.p', '..##ep', 'w####.', '.####.', '.qq.q.'],
+    walk2: ['...#.#', '...p.p', '..##ep', 'w####.', '.####.', 'qq..qq'],
+  },
+  duck: {
+    walk1: ['...##.', '...#eb', '#q###.', '.b..b.'],
+    walk2: ['...##.', '...#eb', '#q###.', 'b...b.'],
+  },
+  penguin: {
+    walk1: ['..##..', '.##eb.', 'q#ww..', '.b.b..'],
+    walk2: ['..##..', '.##eb.', 'q#ww..', 'b...b.'],
   },
 }
 
@@ -764,6 +797,72 @@ export function petLook(s: PetState): { pose: Pose; over?: Over; lift: number } 
     case 'sit':
       return { pose: 'sit', over: s.heart ? { text: HEART, color: HEART_COLOR } : undefined, lift: 0 }
   }
+}
+
+// Kits (user, 2026-10-16): the pet sits while Claude waits on its subagents, though work goes on. For
+// each subagent running, up to three, a kit walks behind the pet beside the transcript, drawn under
+// it; the pet goes on as before. A kit is in a coat of its kind's own colors, none the pet's and none
+// another kit's, so each reads apart (user: in the pet's colors it would not; in grey, or muted, they
+// ran together and looked dead). A kit comes in at an end of the walk as its subagent starts, wanders
+// while it runs, and walks off the nearer end once it is done.
+export const KIT_MAX = 3
+
+// The kits for the subagents running now: one comes in for each new one while there are fewer than
+// KIT_MAX, in a coat neither the pet (coat petCoat of species) nor another kit has, and one whose
+// subagent is gone heads for the nearer end. The same array back when none changed
+export function kitsFor(kits: Kit[], running: readonly string[], species: Species, petCoat: number, rand: () => number): Kit[] {
+  const coats = PETS[species].coats.length
+  const worn = (n: number) => Math.max(0, n) % coats
+  let changed = false
+  const next = kits.map(k => {
+    if (k.leaving || running.includes(k.id)) return k
+    changed = true
+    return { ...k, leaving: true, target: k.x < TRACK / 2 ? 0 : TRACK, restUntil: 0 }
+  })
+  for (const id of running) {
+    if (next.length >= KIT_MAX) break
+    if (next.some(k => k.id === id)) continue
+    const x = rand() < 0.5 ? 0 : TRACK
+    const target = nextTarget(x, rand)
+    const free = Array.from({ length: coats }, (_, n) => n).filter(n => n !== worn(petCoat) && !next.some(k => worn(k.coat) === n))
+    const coat = free[Math.floor(rand() * free.length)] ?? Math.floor(rand() * coats)
+    next.push({ id, coat, x, target, stride: 0, faceLeft: target < x, restUntil: 0, leaving: false })
+    changed = true
+  }
+  return changed ? next : kits
+}
+
+// The kits a tick later: a step towards where each goes, and there a rest now and then and the next
+// place; one leaving goes once it is at the end. The same array back when none moved
+export function kitsTick(kits: Kit[], now: number, rand: () => number = Math.random): Kit[] {
+  let changed = false
+  const next: Kit[] = []
+  for (const k of kits) {
+    if (k.leaving && k.x === k.target) {
+      changed = true
+      continue
+    }
+    if (now < k.restUntil) {
+      next.push(k)
+      continue
+    }
+    if (k.x !== k.target) {
+      const faceLeft = k.target < k.x
+      next.push({ ...k, x: k.x + (faceLeft ? -1 : 1), faceLeft, stride: k.stride + 1 })
+    } else {
+      const restUntil = rand() < 0.4 ? now + 1_000 + Math.floor(rand() * 2_000) : 0
+      next.push({ ...k, target: nextTarget(k.x, rand), restUntil })
+    }
+    changed = true
+  }
+  return changed ? next : kits
+}
+
+// The cells of a kit, standing on the bottom of its box, its legs taking turns as it goes
+export function kitCells(species: Species, k: Kit): Run[][] {
+  const pose: KitPose = k.stride % 2 === 0 ? 'walk1' : 'walk2'
+  const drawn = KITS[species][pose].map(r => (k.faceLeft ? [...r].reverse().join('') : r))
+  return drawnCells(drawn, petCoat(species, k.coat), KIT_HEIGHT)
 }
 
 // The pet the config names, cat when it names none or one there is not

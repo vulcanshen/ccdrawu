@@ -97,6 +97,18 @@ export type PetState = {
   playUntil: number // pawing at the ball until then
 }
 
+// A kit (hooks/pets.ts): a small one of the pet's kind for a subagent running, walking behind the pet
+export type Kit = {
+  id: string // the subagent's, as $.agent.list() names it
+  coat: number // of its kind's coats, neither the pet's nor another kit's
+  x: number // 0 to TRACK along the walk, as the pet's
+  target: number
+  stride: number
+  faceLeft: boolean
+  restUntil: number
+  leaving: boolean // its subagent is done: it heads for the nearer end, and goes there
+}
+
 declare module 'claude-code' {
   interface PluginState {
     ccdrawu: {
@@ -119,6 +131,7 @@ declare module 'claude-code' {
       now: number
       config: Config
       pet: PetState
+      kits: Kit[]
       manual: 'on' | 'off' | null
     }
   }

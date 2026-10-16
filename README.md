@@ -130,6 +130,7 @@ A pixel-art pet lives at the top of the drawer, a cat unless you pick another. A
 - Left alone, it lies down after 2 minutes and falls asleep after 10, and now and then it strolls, looks around or swipes.
 - `/ccdrawu pat` pats it: it stops, and a heart shows over it.
 - `/ccdrawu ball` throws it a ball, which it runs after and plays with.
+- While subagents run, a small one of its kind walks behind it for each, up to three, beside the transcript only, each in a coat of its own, never the pet's. It comes in at an end as its subagent starts and walks off when it is done.
 
 What it says comes from a fixed set of lines, so it costs no tokens. To pick the animal (cat, dog, rabbit, duck or penguin), run `ccdrawu` and set **Pet** in **preferences** under Settings; open sessions follow within a second. Its coat is picked at random each session. To hide it, uncheck **Pet** in the list of items.
 

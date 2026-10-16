@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- Kits: while subagents run, a small one of the pet's kind walks behind the pet for each, up to three, beside the transcript, each in a coat of its own, never the pet's. It comes in at an end of the walk as its subagent starts, and walks off the nearer end once it is done; the pet goes on as before, drawn over them.
 ### Changed
 - A row turned on is there from the start, in the drawer and the status line, and reads `-` until its value comes, or where there is none, as Spend without a spend limit. Rows were missing until then, Mode until the first prompt of a new session, and the rows under them moved down when they came. Model and Uptime read `-` where they read `…`. In the sidebar Session, Weekly and Spend keep their resets row the same way.
 - Spend starts off, as few go through a gateway with a spend limit and the rest would see `-` there always. Where you picked your rows in `ccdrawu`, they stay as you picked them.

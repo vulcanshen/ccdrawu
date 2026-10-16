@@ -82,6 +82,18 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **球**從寵物遠的那一側滾進來（1.2 秒減速、彈 2,1,0,1,0 px），停在中段；寵物跑到球的近側 5 格（`BALL_REACH`，畫面上剛好碰到球），等球停了揮爪 1.6 秒，球消失、說一句；20 秒沒拿到就自己消失。球是 `position="absolute"` 的 Box，疊在走道上不佔位置，位置跟寵物一樣依寬度比例換算（`along()`）。
   - **框固定寬高、每列 `height={1}`**：只有空白 Box 的列會被排版壓成 0 高，睡覺（頭頂空 2 px）或跳的時候框會變高變矮，下面的清單就跟著跳。
   - **舊 state 要補齊**：`/reload-plugins` 後 `$.state` 保留舊值，session.start 用 `{ ...PET_START, ...old }` 補上新加的欄位，否則讀到 undefined 會算出 NaN。
+  - **小隻 kits（2026-10-16，user 的點子）**：main agent 等 subagent 時主寵物坐著不動，背景的工作卻還在跑。現在每個跑著的 subagent 會有一隻同種的小隻，在主寵物後面走。user 定的範圍：
+    - 只算 subagent。來源跟 Tasks 一樣：`$.agent.list()` 裡 `pending`、`running`、`waiting` 的，每 5 秒、`agent.spawn`、每輪結束時更新。背景的 shell、monitor 只在回覆結束時才知道，開著的 dev server 會讓一隻永遠留著，所以不算。
+    - 最多三隻。只畫在 sidebar，輸入框上方的寵物欄只有 14 欄寬，沒空間。
+    - 主寵物照原本的規則動。main agent 也在工作時，主寵物和小隻一起走。
+    - 小隻是 6×4 px（6 欄×2 列），兔子多兩 px 給耳朵（6×6，不然看起來像老鼠），只畫 walk1、walk2（`KITS`），站在 6 px 高的框底部。原本做 8×6，user 實際看了覺得太大：走道只有 30 欄，三隻 8 欄的小隻就佔掉 24 欄。
+    - 顏色：用該物種真正的花色、正常上色，每隻進場時從主寵物和其他小隻都沒用的花色裡抽一個（`kitsFor` 的 `coat`），所以四隻（主寵物加三隻）一定不同色。和主寵物的區隔靠體型、在後面、花色不同。狗、兔、鴨各補一組花色，企鵝補兩組（主寵物也會抽到），每種動物都至少 4 組，測試守著。經過四版：
+      - 用主寵物的花色調暗 0.7：user 一開始就說要跟主寵物有區隔，不然畫面太花。
+      - 一律灰階，亮度壓在 64–192（單純調暗的話，深色花色在深色底上幾乎看不見）：兩隻疊在一起會「變怪獸」，分不出是兩隻。
+      - 灰色混入 Catppuccin 的藍、橘、綠，每隻一個色調：user 看了說暗色系「跟殭屍一樣」，在後面也要認真上色。
+      - 真正的花色，每隻都跟主寵物、跟彼此不同（現在的做法）。每一版都先用 SVG 轉 PNG 預覽：30 欄的走道上，主寵物在中間、三隻小隻在兩邊和後面。
+    - 狀態在 `$.state` 的 `kits` 陣列（`Kit`），跟主寵物分開。`kitsFor` 依 subagent 的 id 補進新的小隻（從走道兩端之一進來），也把結束的標成 `leaving`；`kitsTick` 跟主寵物共用 200ms 的 tick 走一步，到了目的地偶爾停一下再換下一個點，`leaving` 的走到近的那一端就移除。都是純函式，有測試。
+    - 畫法：小隻是走道上 `position="absolute"` 的 Box，在 children 裡排在主寵物之前，所以主寵物畫在它們上面。主寵物透明的格子（空白 Box）不會蓋掉後面的小隻。這點 2026-10-16 在 tmux 沙盒裡用 3 個背景 subagent（各跑 `sleep 45`）實測過：`capture-pane -e` 逐格看顏色，重疊處是主寵物的彩色，主寵物透明的格子看得到後面灰色的小隻；subagent 結束後小隻都消失了。小隻的 `kits` 只在 sidebar 那條路徑讀，所以小隻走動不會讓輸入框上方的版面重畫。
   - **物種在 TUI 設**：preferences 的 Pet（radio，畫在原地），放在 Bar 與 Plugin 之間，寫進 config.json 的 `pet.species`。Go 的 `config.PetSpecies` 要跟 `SPECIES` 同順序；mod 不認得的物種畫成貓。
   - **不給取名（2026-10-15）**：做過 Pet name（最多 16 字），user 拿掉：花色每個 session 隨機，每次開都不是同一隻，給名字很怪；留給之後的版本再看。台詞那一列只有台詞。
 - **不用 Fragment。** 這個 surface 把 `<>…</>` 當直排容器排版，放在 row 裡的「·」和 effort 會被疊成上下兩行。同一列的元素都直接放進 `flexDirection="row"` 的 Box。

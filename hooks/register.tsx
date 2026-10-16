@@ -6,6 +6,7 @@ import type {
   CacheInfo,
   Config,
   GitInfo,
+  Kit,
   ModelInfo,
   Modes,
   ServiceStatus,
@@ -20,6 +21,11 @@ import {
   BALL_INK,
   BALL_LEFT,
   drawnCells,
+  KIT_HEIGHT,
+  KIT_WIDTH,
+  kitCells,
+  kitsFor,
+  kitsTick,
   LIFT_ROOM,
   PET_HEIGHT,
   PET_START,
@@ -85,6 +91,7 @@ const drawer = atom({ plugin: 'ccdrawu', key: 'drawer' } as const, null as strin
 const modes = atom({ plugin: 'ccdrawu', key: 'modes' } as const, {} as Modes)
 const now = atom({ plugin: 'ccdrawu', key: 'now' } as const, 0)
 const pet = atom({ plugin: 'ccdrawu', key: 'pet' } as const, PET_START)
+const kits = atom({ plugin: 'ccdrawu', key: 'kits' } as const, [] as Kit[])
 const config = atom({ plugin: 'ccdrawu', key: 'config' } as const, {} as Config)
 // Kept by the host, so a reload keeps what /ccdrawu set
 const manual = atom({ plugin: 'ccdrawu', key: 'manual' } as const, null as Manual)
@@ -233,11 +240,14 @@ async function petShown($: Engine) {
   return showsAnywhere(await read($, config), 'pet')
 }
 
-// A tick of the pet: written only when what it shows changed, worked out again on the value it has
-// then, so an event that came in between is kept
+// A tick of the pet and its kits: written only when what they show changed, worked out again on the
+// value there is then, so an event that came in between is kept
 async function stepPet($: Engine) {
   if (!(await petShown($))) return
   const t = await $.clock.now()
+  const ks = await read($, kits)
+  const movedKits = kitsTick(ks, t)
+  if (movedKits !== ks) await update($, kits, current => (current === ks ? movedKits : kitsTick(current, t)))
   const s = await read($, pet)
   const next = petTick(s, t)
   if (next === s) return
@@ -333,6 +343,10 @@ async function refreshAgents($: Engine) {
   const list = await $.agent.list()
   const running = list.filter(a => a.status === 'pending' || a.status === 'running' || a.status === 'waiting')
   await update($, agents, () => running.length)
+  const ids = running.map(a => a.id)
+  const species = petSpecies((await read($, config)).pet?.species)
+  const coat = (await read($, pet)).coat
+  await update($, kits, ks => kitsFor(ks, ids, species, coat, Math.random))
 }
 
 async function refreshVersion($: Engine) {
@@ -729,6 +743,8 @@ export const register: Register = on => {
     }
 
     const rows = []
+    // Read here, not above the prompt, where no kit is drawn: a kit's step redraws only the sidebar
+    const ks = hasPet ? await read($, kits) : []
     // The pet over the rows: what it says, then the strip it walks along, its place along its walk spread
     // over the width there is
     if (hasPet) {
@@ -737,6 +753,21 @@ export const register: Register = on => {
           {p.line === undefined ? null : <Text color={C.text}>{p.line.slice(0, inner)}</Text>}
         </Box>,
         <Box flexDirection="row" height={(PET_HEIGHT + LIFT_ROOM) / 2} flexShrink={0}>
+          {/* The kits, out of the flow and first, so the pet goes over them: on the ground, along a
+              walk as long as the pet's, spread over the width there is less their own */}
+          {ks.map(k => (
+            <Box
+              key={'kit-' + k.id}
+              position="absolute"
+              top={(PET_HEIGHT + LIFT_ROOM - KIT_HEIGHT) / 2}
+              left={Math.round((k.x / TRACK) * Math.max(0, inner - KIT_WIDTH))}
+              width={KIT_WIDTH}
+              height={KIT_HEIGHT / 2}
+              flexDirection="column"
+            >
+              {cellRows(kitCells(species, k))}
+            </Box>
+          ))}
           <Box width={along(p.x)} flexShrink={0} />
           {drawPet(PET_HEIGHT + LIFT_ROOM)}
           {/* A ball over the strip, out of the flow: where a pet at its place would have its middle */}

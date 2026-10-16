@@ -130,6 +130,7 @@ Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h |
 - 閒著 2 分鐘它會趴下，10 分鐘後睡著；中間偶爾會散步、轉頭看看或揮爪。
 - `/ccdrawu pat` 摸摸它：它停下來，頭上冒出愛心。
 - `/ccdrawu ball` 丟一顆球給它，它會跑過去玩。
+- 有 subagent 在跑時，每個 subagent 會有一隻同類的小隻在它後面走，最多三隻，只出現在側邊欄，每隻的花色都不同，也不會跟大隻的一樣。subagent 開始時從一端走進來，結束時走出去。
 
 台詞是固定的幾句，不花 token。要換動物（貓、狗、兔子、鴨子、企鵝），執行 `ccdrawu`，在 Settings 底下的 **preferences** 設定 **Pet**，一秒內開著的 session 就會跟著換。花色每個 session 隨機。不想要寵物的話，在項目清單裡取消勾選 **Pet**。
 
