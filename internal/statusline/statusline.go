@@ -53,6 +53,11 @@ const (
 	sepColor      = "#45475a"
 )
 
+// noValue is what an item on reads while it has no value, as in the drawer
+// (hooks/items.ts): it keeps its place, so the items after it do not move when
+// the value comes.
+const noValue = "-"
+
 // edge is the cells of the terminal's width Claude Code keeps off its status
 // line: two on either side (a longer line it cuts itself, in the middle of an
 // item).
@@ -113,7 +118,7 @@ func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now tim
 
 // Line lays out the items on in the statusline, in the config's order: each
 // one's label as its format says and its value, the separator between them;
-// an item with nothing to show is left out. Highlighted, every piece has its
+// an item with nothing to show reads noValue. Highlighted, every piece has its
 // color, as Claude Code dims what has none; dimmed, none has, and Claude Code
 // dims it all alike. It is cut to columns cells when that is above 0.
 func Line(cfg config.Config, cat config.Catalog, items map[string][]Seg, columns int) string {
@@ -125,7 +130,7 @@ func Line(cfg config.Config, cat config.Catalog, items map[string][]Seg, columns
 	for _, it := range cfg.Shown(config.Status, cat) {
 		segs := items[it.ID]
 		if len(segs) == 0 {
-			continue
+			segs = []Seg{{Text: noValue, Color: textColor}}
 		}
 		var b strings.Builder
 		switch label := it.Label; cfg.Statusline.Format {

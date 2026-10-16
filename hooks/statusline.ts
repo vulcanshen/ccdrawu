@@ -7,7 +7,7 @@ import { tasksText } from './format'
 import { C, ITEMS, view, type Seg, type Snapshot } from './items'
 import { inlineValue } from './layout'
 
-// Every item with something to show, the pet aside: it draws nothing on one row of text. Tasks part
+// Every item, the pet aside: it draws nothing on one row of text. Tasks part
 // their counts with ", " here, as the statusline parts its items with |
 export function statuslineItems(s: Snapshot): Record<string, Seg[]> {
   const items: Record<string, Seg[]> = {}

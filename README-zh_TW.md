@@ -20,7 +20,6 @@
 | Model、Effort | 這個 session 的模型，以及上一次請求的 effort 等級：`low` 綠色，一路到 `max` 紅色 |
 | Mode | 權限模式：`auto`、`plan`、`accept edits`… |
 | Context、Session、Weekly | context 用量，以及方案的 5 小時和每週用量與重置倒數。bar 在 50%、70%、90% 分別從綠變黃、橘、紅 |
-| Spend | 透過有消費上限的 gateway 使用時：用了多少、什麼時候重置 |
 | Cost | 這個 session 到目前為止的花費 |
 | Uptime | session 開了多久、你送出了幾則訊息 |
 | Cache | 上一次請求有多少是從 prompt cache 讀的 |
@@ -34,14 +33,17 @@
 | 列 | 內容 |
 |---|---|
 | Style | `/config` 裡設的 output style |
-| ID、Account | 這個 session 的 id 開頭，以及登入的 Claude 帳號 |
+| ID | 這個 session 的 id 開頭 |
 | Window | context 用了多少 token、視窗多大：`420k / 1M` |
+| Spend | 透過有消費上限的 gateway 使用時：用了多少、什麼時候重置 |
 | Rate | 這個 session 到目前為止，平均每小時花多少 |
 | Tokens、Speed | 側邊欄載入後，對話累計的 input、output、cache token，以及上一次回覆每秒輸出幾個 token |
 | Skills | 這個 session 用過幾次 skill，以及最後一個 |
 | Sync、Files、Commit、Repo | 跟 upstream 差幾個 commit、staged／changed／new 的檔案數、HEAD 的短 hash，以及 origin 的 owner/repo（在 worktree 裡時加上 worktree 名稱）；沒有 upstream、commit 或 origin 時顯示 `no upstream`、`no commits`、`no origin`，不在 repo 裡時顯示 `not a repo` |
 | Directory | 工作目錄本身的名稱，不含前面的路徑：`ccdrawu` |
 | Status | [status.claude.com](https://status.claude.com) 的服務狀態：正常是綠色，有事故是橘色或紅色 |
+
+打開的列一定會顯示：值還沒拿到、或根本沒有值的時候（例如沒有消費上限時的 Spend）顯示 `-`。
 
 狀態列可以顯示上面除了寵物以外的任何一項，見[狀態列](#狀態列)。
 

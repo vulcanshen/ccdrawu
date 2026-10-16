@@ -47,10 +47,10 @@ func TestLineFormats(t *testing.T) {
 }
 
 func TestLineOrderSeparatorAndGaps(t *testing.T) {
-	// The config's order and separator; an item with nothing to show (context here) is left out
+	// The config's order and separator; an item with nothing to show (context here) reads -
 	cfg := config.Config{Statusline: config.Statusline{Items: []string{"git", "context", "model"}, Separator: "·"}}
 	got := ansi.Strip(Line(cfg, cat, map[string][]Seg{"git": items["git"], "model": items["model"]}, 0))
-	if want := "Git main  +12 -3 · Model Opus 5.5"; got != want {
+	if want := "Git main  +12 -3 · Context - · Model Opus 5.5"; got != want {
 		t.Errorf("%q, want %q", got, want)
 	}
 	// A short label the catalog lacks (from an older mod) falls back on the label
@@ -154,8 +154,8 @@ func TestRunWithoutTheFileShowsWhatTheInputHas(t *testing.T) {
 	if got := run(t, loc, input, 0, time.Now()); got != "Model claude-opus-5-5 | Context 72% | Cost $0.50\n" {
 		t.Errorf("%q", got)
 	}
-	// Before the first reply the input has no percentage: that item is left out
-	if got := run(t, loc, `{"session_id": "no-file", "model": {"id": "claude-opus-5-5"}}`, 0, time.Now()); got != "Model claude-opus-5-5\n" {
+	// Before the first reply the input has no percentage nor cost: those items read -
+	if got := run(t, loc, `{"session_id": "no-file", "model": {"id": "claude-opus-5-5"}}`, 0, time.Now()); got != "Model claude-opus-5-5 | Context - | Cost -\n" {
 		t.Errorf("%q", got)
 	}
 	// An id that would reach out of the folder is not read
@@ -171,7 +171,7 @@ func TestRunWithNoCatalogOrConfig(t *testing.T) {
 	dir := t.TempDir()
 	loc := config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "none", "config.json")}
 	input := `{"model": {"id": "claude-opus-5-5"}, "cost": {"total_cost_usd": 0}}`
-	if got := run(t, loc, input, 0, time.Now()); got != "Model claude-opus-5-5 | Cost $0.00\n" {
+	if got := run(t, loc, input, 0, time.Now()); got != "Model claude-opus-5-5 | Context - | Cost $0.00\n" {
 		t.Errorf("%q", got)
 	}
 }

@@ -35,8 +35,8 @@ export type CacheInfo = { read: number; total: number }
 // The main conversation's tokens since the drawer loaded, and its last reply's output tokens a second
 export type TokenInfo = { input: number; output: number; cacheRead: number; cacheWrite: number; speed?: number }
 
-// This session: its id, the account signed in, the output style
-export type SessionInfo = { id?: string; account?: string; outputStyle?: string }
+// This session: its id, the output style
+export type SessionInfo = { id?: string; outputStyle?: string }
 
 // status.claude.com's overall status: indicator none, minor, major or critical
 export type ServiceStatus = { indicator: string; description: string }

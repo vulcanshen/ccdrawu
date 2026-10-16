@@ -1,6 +1,11 @@
 # Changelog
 
 ## [Unreleased]
+### Changed
+- A row turned on is there from the start, in the drawer and the status line, and reads `-` until its value comes, or where there is none, as Spend without a spend limit. Rows were missing until then, Mode until the first prompt of a new session, and the rows under them moved down when they came. Model and Uptime read `-` where they read `…`. In the sidebar Session, Weekly and Spend keep their resets row the same way.
+- Spend starts off, as few go through a gateway with a spend limit and the rest would see `-` there always. Where you picked your rows in `ccdrawu`, they stay as you picked them.
+### Removed
+- Account: Claude Code tells the account only to plugins an organization installs, so for one you installed yourself it never had a value. Where your config still lists it, it is left out.
 
 ## [0.1.3] - 2026-10-16
 ### Added

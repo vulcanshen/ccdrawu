@@ -38,12 +38,11 @@ export const ITEMS: readonly Item[] = [
   { id: 'mode', label: 'Mode', short: 'mode', name: 'Permission mode', group: 'Model', description: 'auto, plan, accept edits, ...; after shift+tab it shows once Claude finishes the tools of a step, or with the next prompt', dock: true, inline: true, statusline: false },
   { id: 'style', label: 'Style', short: 'sty', name: 'Output style', group: 'Model', description: 'The output style set in /config', dock: false, inline: false, statusline: false },
   { id: 'id', label: 'ID', short: 'id', name: 'Session ID', group: 'Session', description: "The start of this session's id", dock: false, inline: false, statusline: false },
-  { id: 'account', label: 'Account', short: 'acct', name: 'Account', group: 'Session', description: 'The Claude account signed in', dock: false, inline: false, statusline: false },
   { id: 'context', label: 'Context', short: 'ctx', name: 'Context', group: 'Usage', description: 'How full the context window is', dock: true, inline: true, statusline: true },
   { id: 'window', label: 'Window', short: 'win', name: 'Context size', group: 'Usage', description: 'Tokens in the context window, out of its size', dock: false, inline: false, statusline: false },
   { id: 'session', label: 'Session', short: '5h', name: 'Session limit', group: 'Usage', description: 'The 5-hour usage limit, and when it resets', dock: true, inline: true, statusline: true },
   { id: 'weekly', label: 'Weekly', short: '7d', name: 'Weekly limit', group: 'Usage', description: 'The 7-day usage limit, and when it resets', dock: true, inline: true, statusline: true },
-  { id: 'spend', label: 'Spend', short: 'spnd', name: 'Spend limit', group: 'Usage', description: "A gateway's spend limit, where there is one", dock: true, inline: true, statusline: false },
+  { id: 'spend', label: 'Spend', short: 'spnd', name: 'Spend limit', group: 'Usage', description: "A gateway's spend limit, where there is one", dock: false, inline: false, statusline: false },
   { id: 'cost', label: 'Cost', short: 'cost', name: 'Session cost', group: 'Usage', description: 'What this session has cost so far, as /cost totals it', dock: true, inline: true, statusline: true },
   { id: 'rate', label: 'Rate', short: 'rate', name: 'Cost rate', group: 'Usage', description: 'What the session costs an hour, so far', dock: false, inline: false, statusline: false },
   { id: 'tokens', label: 'Tokens', short: 'tok', name: 'Tokens', group: 'Usage', description: 'Input, output and cache tokens of the main conversation since the drawer loaded', dock: false, inline: false, statusline: false },
@@ -93,23 +92,34 @@ export type Seg = { text: string; color: string; bold?: boolean }
 // above the prompt all is text on one row
 export type View = { value: Seg[]; meter?: number; resets?: string; below?: Seg[]; cutStart?: boolean }
 
-function limitView(limit: Limit | undefined, now: number): View | undefined {
-  if (limit === undefined) return undefined
+// What an item shows before it has a value, or where it has none: its row is there all the same, so the
+// rows after it do not move when the value comes
+export const NO_VALUE = '-'
+
+// A limit's bar and countdown; its resets row is there before them too
+function limitView(limit: Limit | undefined, now: number): View {
+  if (limit === undefined) return { value: [{ text: NO_VALUE, color: C.text }], resets: NO_VALUE }
   return {
     value: [{ text: percentText(limit.percentUsed), color: usageColor(limit.percentUsed) }],
     meter: limit.percentUsed,
-    resets: limit.resetsAt === undefined ? undefined : countdown(Date.parse(limit.resetsAt) - now),
+    resets: limit.resetsAt === undefined ? NO_VALUE : countdown(Date.parse(limit.resetsAt) - now),
   }
 }
 
-// An item's view, or undefined while it has nothing to show (or for an id the catalog does not have)
+// An item's view; undefined only for the pet, which the pane draws itself, and an id the catalog does not have
 export function view(id: string, s: Snapshot): View | undefined {
+  if (id === 'pet' || !ITEMS.some(item => item.id === id)) return undefined
+  return held(id, s) ?? { value: [{ text: NO_VALUE, color: C.text }] }
+}
+
+// What an item holds, or undefined while it holds nothing
+function held(id: string, s: Snapshot): View | undefined {
   const text = (value: string, color: string = C.text): View => ({ value: [{ text: value, color }] })
   const limit = (kind: string) => limitView(s.usage?.limits.find(l => l.kind === kind), s.now)
 
   switch (id) {
     case 'model':
-      return { value: [{ text: s.model?.name ?? '…', color: C.lavender, bold: true }] }
+      return s.model === null ? undefined : { value: [{ text: s.model.name, color: C.lavender, bold: true }] }
     case 'effort':
       return s.model?.effort === undefined ? undefined : text(s.model.effort, effortColor(s.model.effort))
     case 'mode':
@@ -127,7 +137,7 @@ export function view(id: string, s: Snapshot): View | undefined {
     case 'cost':
       return s.usage?.costUsd === undefined ? undefined : text('$' + s.usage.costUsd.toFixed(2))
     case 'uptime':
-      return text((s.usage ? duration(s.now - s.usage.startedAt) : '…') + ` · ${s.turns} turns`)
+      return text((s.usage ? duration(s.now - s.usage.startedAt) : NO_VALUE) + ` · ${s.turns} turns`)
     case 'cache':
       return s.cache && s.cache.total > 0 ? text(percentText((s.cache.read / s.cache.total) * 100)) : undefined
     case 'compact':
@@ -159,8 +169,6 @@ export function view(id: string, s: Snapshot): View | undefined {
       return s.session.outputStyle ? text(s.session.outputStyle) : undefined
     case 'id':
       return s.session.id ? text(s.session.id.slice(0, 8)) : undefined
-    case 'account':
-      return s.session.account ? text(s.session.account) : undefined
     case 'window': {
       const u = s.usage
       if (u?.contextWindow === undefined) return undefined

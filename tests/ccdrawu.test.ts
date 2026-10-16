@@ -104,7 +104,7 @@ const FULL: Snapshot = {
   turns: 14,
   cache: { read: 92, total: 100 },
   tokens: { input: 12_300, output: 3_400, cacheRead: 1_200_000, cacheWrite: 45_000, speed: 61.4 },
-  session: { id: '46daa4a7-76e0-44f1-be38-3216d29934ea', account: 'me@example.com', outputStyle: 'default' },
+  session: { id: '46daa4a7-76e0-44f1-be38-3216d29934ea', outputStyle: 'default' },
   status: { indicator: 'none', description: 'All Systems Operational' },
   skills: { count: 3, last: 'commit' },
   compacts: 1,
@@ -265,11 +265,10 @@ test('counts read short, and git status, remotes and file counts are read as sho
   expect(syncText(0, 0)).toBe('up to date')
 })
 
-test('the new items show what they hold, and nothing while they hold nothing, but Sync and Repo say what is missing', async () => {
+test('the new items show what they hold, and - while they hold nothing, but Sync and Repo say what is missing', async () => {
   const shown = (id: string, s: Snapshot = FULL) => view(id, s)?.value.map(g => g.text).join('')
   expect(shown('style')).toBe('default')
   expect(shown('id')).toBe('46daa4a7')
-  expect(shown('account')).toBe('me@example.com')
   expect(shown('window')).toBe('420k / 1M')
   expect(shown('rate')).toBe('$72.00/h')
   expect(shown('tokens')).toBe('in 12k · out 3.4k · cache 1.2M')
@@ -282,7 +281,7 @@ test('the new items show what they hold, and nothing while they hold nothing, bu
   expect(shown('status')).toBe('All Systems Operational')
   expect(view('status', { ...FULL, status: { indicator: 'major', description: 'Major outage' } })?.value[0]?.color).toBe('#f38ba8')
   // Before a minute has passed, the hourly rate would jump about
-  expect(shown('rate', { ...FULL, now: 30_000 })).toBeUndefined()
+  expect(shown('rate', { ...FULL, now: 30_000 })).toBe('-')
   const empty: Snapshot = {
     ...FULL,
     tokens: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
@@ -292,10 +291,18 @@ test('the new items show what they hold, and nothing while they hold nothing, bu
     git: { branch: 'main', added: 0, removed: 0 },
   }
   // Files has nothing to count only when git status itself failed
-  for (const id of ['style', 'id', 'account', 'tokens', 'speed', 'files', 'status']) {
-    expect(shown(id, empty)).toBeUndefined()
+  for (const id of ['style', 'id', 'tokens', 'speed', 'files', 'status']) {
+    expect(shown(id, empty)).toBe('-')
   }
   expect(shown('skills', empty)).toBe('none')
+  // So are the first rows: a new session hears its mode only with the first prompt
+  const fresh: Snapshot = { ...empty, usage: null, model: null, modes: {}, cache: null, version: null, drawer: null }
+  for (const id of ['model', 'effort', 'mode', 'session', 'weekly', 'spend', 'cost', 'cache', 'version', 'ccdrawu']) {
+    expect(shown(id, fresh)).toBe('-')
+  }
+  expect(shown('uptime', fresh)).toBe('- · 14 turns')
+  // and a limit's resets row with them
+  expect(view('session', fresh)?.resets).toBe('-')
   // A git row turned on is always there: it says what is missing, or that there is no repo
   expect(shown('sync', empty)).toBe('no upstream')
   expect(shown('commit', empty)).toBe('no commits')
@@ -304,7 +311,7 @@ test('the new items show what they hold, and nothing while they hold nothing, bu
     expect(shown(id, { ...FULL, git: null })).toBe('not a repo')
   }
   // New items start off: the drawer does not grow by itself
-  const added = ['style', 'id', 'account', 'window', 'rate', 'tokens', 'speed', 'skills', 'sync', 'files', 'commit', 'repo', 'status']
+  const added = ['style', 'id', 'window', 'rate', 'tokens', 'speed', 'skills', 'sync', 'files', 'commit', 'repo', 'status']
   for (const item of ITEMS.filter(i => added.includes(i.id))) {
     expect(item.dock || item.inline).toBe(false)
   }
@@ -521,7 +528,7 @@ test('Claude Code and ccdrawu have a version row each', async () => {
   const shown = (id: string, s: Snapshot) => view(id, s)?.value.map(g => g.text).join('')
   expect(shown('version', FULL)).toBe('2.1.299  ↑ 2.1.300')
   expect(shown('ccdrawu', FULL)).toBe('0.1.0')
-  expect(shown('ccdrawu', { ...FULL, drawer: null })).toBeUndefined()
+  expect(shown('ccdrawu', { ...FULL, drawer: null })).toBe('-')
 })
 
 test('files sit where terminu design E3 puts them, unless CCDRAWU__ variables say otherwise', async () => {
@@ -566,6 +573,9 @@ test('the config picks items per placement, in the order it lists them', async (
 test('above the prompt a limit reads as text with its countdown, and columns take the fewest rows that fit', async () => {
   const session = view('session', FULL)!
   expect(inlineValue(session).map(s => s.text)).toEqual(['18%', ' · ', '59m'])
+  // A countdown not known holds the sidebar's resets row, but is left out here
+  expect(view('weekly', FULL)?.resets).toBe('-')
+  expect(inlineValue(view('weekly', FULL)!).map(s => s.text)).toEqual(['40%'])
   expect(inlineValue(view('path', { ...FULL, path: '~/' + 'x'.repeat(40) })!)[0]!.text).toHaveLength(32)
   // The branch whole, its diff on a row of its own in the sidebar and after it here
   const branch = 'customization-yuanta-' + 'x'.repeat(30)
@@ -589,11 +599,9 @@ test('the statusline file holds each item as it reads above the prompt, the pet 
   expect(items.model).toEqual([{ text: 'Opus 5.5', color: '#b4befe', bold: true }])
   // Tasks part their counts with a comma, as the statusline parts its items with |
   expect(items.tasks!.map(s => s.text).join('')).toBe('2 agents, 1 shell')
-  // An item with nothing to show is left out, for the command to skip
+  // An item with nothing to show reads -, as in the drawer
   const bare = statuslineItems({ ...FULL, model: null, session: {}, drawer: null })
-  expect(bare.effort).toBeUndefined()
-  expect(bare.id).toBeUndefined()
-  expect(bare.ccdrawu).toBeUndefined()
+  for (const id of ['model', 'effort', 'id', 'ccdrawu']) expect(bare[id]).toEqual([{ text: '-', color: '#cdd6f4' }])
 
   const text = statuslineFile(FULL, true)
   expect(JSON.parse(text)).toEqual({ version: 1, docked: true, items })
@@ -605,9 +613,12 @@ test('the statusline file holds each item as it reads above the prompt, the pet 
 test('the pane draws on the terminal before any figures arrive, a key on every row', async $ => {
   const ui = await $.ui.mount(MOUNT)
   expect(await ui.find({ type: 'Text', text: /not a repo/ })).toBeDefined()
-  for (const key of ['Model', 'Context', 'Uptime', 'Git', 'Path']) {
+  // Each row turned on is there from the start, the figures not come yet reading -
+  for (const key of ITEMS.filter(i => i.dock && i.id !== 'pet').map(i => i.label)) {
     expect(await ui.find({ type: 'Text', text: new RegExp('^' + key + ' ') })).toBeDefined()
   }
+  expect(await ui.find({ type: 'Text', text: '-' })).toBeDefined()
+  expect(await ui.find({ type: 'Text', text: /^resets $/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /\u{F445}|\u{F51D}/u })).toBeDefined()
   // The pet, on by default, in pixels in a box of 12 x 4 that keeps its height
   expect(await ui.find({ type: 'Text', text: /▀|▄/ })).toBeDefined()

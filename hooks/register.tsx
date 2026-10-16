@@ -305,14 +305,12 @@ async function repoPlace($: Engine, cwd: string): Promise<{ repo?: string; workt
   return { repo: placeOf.repo, worktree: placeOf.worktree }
 }
 
-// The session's id, the account signed in and the output style
+// The session's id and the output style
 async function refreshSession($: Engine) {
   const id = (await $.session.id()).replace(/\.jsonl$/, '')
-  const who = await $.session.identity().catch(() => undefined)
   const style = (await $.config.list()).find(r => r.key === 'outputStyle')?.value
   await update($, sessionInfo, () => ({
     id,
-    account: who?.email,
     outputStyle: typeof style === 'string' ? style : undefined,
   }))
 }

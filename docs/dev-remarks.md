@@ -27,7 +27,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 | 列 | 來源 | 更新時機 |
 |---|---|---|
 | Style | `$.config.list()` 裡 `outputStyle` 那一列 | session 開始、每輪結束 |
-| ID、Account | `$.session.id()` 的前 8 字；`$.session.identity()` 的 `email` | session 開始 |
+| ID | `$.session.id()` 的前 8 字 | session 開始 |
 | Window | `usage().context` 的 `tokens`／`window` | 跟 Context 一樣 |
 | Rate | 花費 ÷ 開了幾小時，滿一分鐘才算（太早一個請求就讓數字亂跳） | 跟 Cost、Uptime 一樣 |
 | Tokens、Speed | `turn.step` 結果的 `usage` 累計（主對話；`SessionCost` 只有 usd，沒有累計 token，所以只能從 mod 載入後自己加，reload 或接續舊 session 會少算）；速度是 output tokens ÷ 從送出到收完的秒數（含等第一個字） | 每次主對話送出請求 |
@@ -88,6 +88,8 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - **bar 寬度要扣 paddingX。** 外層 Box 左右各 1 格 padding，`bodyColumns` 沒扣掉的話，bar 會超出寬度、折到下一行，看起來像兩條 bar。
 - **bar 用 Nerd Font 的方塊（2026-10-15）。** 填滿的是 `nf-oct-square_fill`（U+F445），空的是 `nf-oct-square`（U+F51D），user 挑的。原本用 `▰▱`：很多程式字型沒有這兩個字（Maple Mono、JetBrains Mono、Fira Code 都沒有），終端機只能跟別的字型借，借到哪一套看那個終端機開啟後先出現過哪些缺的字（Ghostty 先找已經借過的字型）。2026-10-15 user 的 Ghostty 開機後第一個缺的字就是 bar，借到 Apple Symbols，字比一格寬，整串黏成一塊；前一天先出現過 Claude Code 的轉圈符號 `✻`，借到的是 Menlo，畫出來是正常的小平行四邊形。程式、字型、終端機都沒變，只差在出現順序。Nerd Font 的字在字型自己裡面，不用借；Maple Mono NF CN 與 JetBrains、Hack 的 Mono 版，方塊寬 10、一格 12，左右分開，高度只佔一列的中段，上下兩列也分開。代價是 drawer 也要 Nerd Font（README 的需求寫了）。終端機不會告訴程式它用什麼字型，mod API 也沒有字型或終端機能力的資訊（2.1.300 的型別檔查過），查電腦裝了哪些字型也不準（裝了不一定在用；沒用 Nerd Font 也可能從 Symbols Nerd Font 借到），所以不自動偵測：preferences 的 **Bar** 讓使用者選 squares（預設，user 定的）或 line（`━`，框線字元，等寬字型都有），每個選項旁邊畫著自己的 bar，畫不出來的那個一看就知道；寫進 config.json 的 `bar`，mod 不認得的值畫方塊。另外，非 Mono 版的 Nerd Font（例如 MesloLGS NF）方塊比一格寬（-0.8～13.65），有的終端機上可能又黏在一起。README 的範例用 `■□` 示意，因為 GitHub 網頁沒有 Nerd Font。否決：`█░`（整格高，上下兩列的 bar 會黏在一起）；請使用者把 `▰▱` 指定給 Menlo（只有 macOS 有，ccdrawu 也支援 Windows、Linux）。
 - **key 欄寬 9。** key 最多 8 個字，加一格空白；只有 Directory 是 9 個字（user 定的名字，跟 Path／Working directory 對應），所以欄寬照目前顯示的最長 key 算：沒顯示 Directory 時跟原本一樣，顯示時才寬一格。測試守著其他 key 都在 8 個字以內。
+- **設定了的項目一定列出，沒有值時顯示 `-`（2026-10-16，user 定）。** 原本沒有值的項目整列不畫（`view` 回 undefined）。新 session 的 Mode 要到第一個 prompt 才拿到 permission mode，那時這列才冒出來，下面的列被往下推。user 定的規則：設定裡有的項目一律列出，值拿到以前顯示 `-`。現在 `view` 只有 pet（pane 自己畫）和 catalog 沒有的 id 會回 undefined；sidebar、輸入框上方、狀態列都照這個規則，狀態列包括 `ccdrawu statusline` 的 `Line`，session 檔還沒寫出來時的 fallback 也一樣。Model、Uptime 拿到值以前原本顯示 `…`，也改成 `-`。否決：`…`，user 覺得意思不清楚。不用 `N/A`：字面意思是「不適用」，但大多數情況其實是「還沒拿到」。Session、Weekly、Spend 的 resets 列在 sidebar 上一樣先留著，顯示 `resets -`（user 定）。用量上限要等第一個 API 回應才有，型別檔寫 rateLimits 是「上一個 API 回應報的」。拿到上限但沒有重置時間時也顯示 `-`；輸入框上方和狀態列只有一列，不用預留位置，所以那裡不顯示 `· -`。Git 的增減行數還是拿到值才出現。
+- **拿掉 Account（2026-10-16，user 定）。** Account 原本讀 `$.session.identity()` 的 `email`。2.1.300 的型別檔寫明，identity 只回答組織 managed settings 裝的 mod，其他 mod 收到 `{ deny: 原因 }`；`SessionIdentity` 是 union，不是 reject。一開始以為會 reject，判斷錯了，所以 user 的 session 一直顯示 `-`。ccdrawu 只用 `ccdrawu install claude` 自己裝，所以每個人都拿不到。中間試過兩種做法：拿不到時顯示 `api unavailable`；在 TUI 的項目選單把它停用（CD11，tdp v0.6.13 定了停用選項的樣子，terminu-go 在 v0.1.12 加 `Checks.Disabled`）。結果卡住：照 v0.6.13，勾著的停用選項 cursor 碰不到，已經勾的人取消不了。user 認為拿不到值的項目不該出現，所以整個拿掉，等 API 開放再加回來。config 裡還列著 `account` 的照舊讀得進來，mod（`enabledItems`）與狀態列都略過 catalog 沒有的 id。
 - **會擋住引擎動作的 hook 都有 `.catch`。** `agent.spawn`、`session.compact`、`classic.*` 事件都是 gating hook；側邊欄出錯時 `.catch(($, e, next) => next(e))` 讓引擎照常進行（`next` 已呼叫過就沿用那次結果，不會重跑）。
 
 ## 已知的牆
@@ -113,7 +115,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 ### 載入
 
 - 只跑一次：`claude --plugin-dir ~/Documents/sideproj/ccdrawu`
-- 長期：`make plugin`，把這個資料夾當市集安裝（`CCDRAWU__MARKETPLACE=$(CURDIR) ./ccdrawu install claude`）；市集是資料夾、`source` 是相對路徑時，Claude Code 直接讀資料夾本身，改完在 session 裡跑 `/reload-plugins` 就生效，不用重新安裝。不要直接跑 dev build 的 `ccdrawu install claude`：沒有 `CCDRAWU__MARKETPLACE` 時它會裝 GitHub main 的外掛，把這個資料夾裝的換掉。
+- 長期：`make plugin`，把這個資料夾 git 收的檔案當市集安裝：先把 git 收的檔案（`git ls-files -co --exclude-standard`，含還沒 commit、還沒 add 的）照原樣放進 `.local/plugin`，再 `CCDRAWU__MARKETPLACE=<repo>/.local/plugin ./ccdrawu install claude`。Claude Code 會把市集資料夾整個複製進外掛快取（`~/.claude/plugins/cache/ccdrawu/ccdrawu/<版本>`），不是直接讀資料夾。原本直接指著 repo，連 git 不收的 `.local` 也複製進去，一份 1.8G（demos 裡有 Claude Code 的執行檔，還有 `.local/draft` 的貼文草稿），2026-10-16 改成先挑檔案。改完要再跑一次 `make plugin`，開著的 session 再跑 `/reload-plugins`。不要直接跑 dev build 的 `ccdrawu install claude`：沒有 `CCDRAWU__MARKETPLACE` 時它會裝 GitHub main 的外掛，把這個資料夾裝的換掉。
 
 ### 設定程式（Go）
 

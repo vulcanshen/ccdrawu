@@ -20,7 +20,6 @@
 | Model, Effort | The session's model, and the last request's effort level: green for `low` through red for `max` |
 | Mode | The permission mode: `auto`, `plan`, `accept edits`, … |
 | Context, Session, Weekly | How full the context window is, and your 5-hour and weekly plan limits with their reset countdowns. Bars turn green, yellow, peach, then red at 50%, 70% and 90% |
-| Spend | Where you go through a gateway with a spend limit: how much of it is used, and when it resets |
 | Cost | What the session has cost so far |
 | Uptime | How long the session has run, and how many prompts you sent |
 | Cache | How much of the last request the prompt cache served |
@@ -34,14 +33,17 @@ These start off; turn them on in `ccdrawu`:
 | Row | What it is |
 |---|---|
 | Style | The output style set in `/config` |
-| ID, Account | The start of this session's id, and the Claude account signed in |
+| ID | The start of this session's id |
 | Window | Tokens in the context window, out of its size: `420k / 1M` |
+| Spend | Where you go through a gateway with a spend limit: how much of it is used, and when it resets |
 | Rate | What the session costs an hour so far |
 | Tokens, Speed | Input, output and cache tokens of the conversation since the drawer loaded, and the last reply's output tokens a second |
 | Skills | Skills run in this session, and the last one |
 | Sync, Files, Commit, Repo | Commits ahead of and behind the upstream, files staged, changed and new, the short hash of HEAD, and origin's owner/repo with the worktree when you are in one; `no upstream`, `no commits` or `no origin` when there is none, and `not a repo` outside one |
 | Directory | The working directory's own name, without the path to it: `ccdrawu` |
 | Status | [status.claude.com](https://status.claude.com): all clear in green, an incident in peach or red |
+
+A row you turned on is always there: it reads `-` until its value comes, or where there is none, as Spend without a spend limit.
 
 The status line can show any of them but the pet: see [The status line](#the-status-line).
 

@@ -3,7 +3,7 @@
 
 import type { Config } from '../types'
 import { truncateStart } from './format'
-import { C, ITEMS, type Item, type Seg, type View } from './items'
+import { C, ITEMS, NO_VALUE, type Item, type Seg, type View } from './items'
 
 export type Placement = 'dock' | 'inline'
 
@@ -77,11 +77,11 @@ const INLINE_PATH = 32 // above the prompt a path keeps its last 32 characters
 export const COLUMN_GAP = ' │ '
 
 // Above the prompt: no bars, what the sidebar puts below after the value, the reset countdown after
-// the percentage
+// the percentage, but not one not known: on one row it holds no row in place
 export function inlineValue(v: View): Seg[] {
   const cut = v.cutStart ? v.value.map(s => ({ ...s, text: truncateStart(s.text, INLINE_PATH) })) : v.value
   const value = v.below === undefined ? cut : [...cut, { text: '  ', color: C.text }, ...v.below]
-  if (v.resets === undefined) return value
+  if (v.resets === undefined || v.resets === NO_VALUE) return value
   return [...value, { text: ' · ', color: C.surface }, { text: v.resets, color: C.text }]
 }
 
