@@ -59,6 +59,15 @@ export function drawerShows(config: Config, placement: Placement): boolean {
   return placement === 'dock' ? config.drawer?.sidebarOff !== true : config.drawer?.inlineOff !== true
 }
 
+// /ccdrawu turns the drawer on or off for the session, wherever it sits, over the config; null until it
+// does, and again once the config's Drawer changes (the last of the two wins)
+export type Manual = 'on' | 'off' | null
+
+// Whether the drawer belongs in a place: as /ccdrawu last set it for the session, else as the config has it
+export function drawerWanted(config: Config, placement: Placement, manual: Manual): boolean {
+  return manual === null ? drawerShows(config, placement) : manual === 'on'
+}
+
 // Whether an item shows beside the transcript or above the prompt
 export function showsAnywhere(config: Config, id: string): boolean {
   return (['dock', 'inline'] as const).some(p => enabledItems(config, p).some(item => item.id === id))
@@ -67,9 +76,11 @@ export function showsAnywhere(config: Config, id: string): boolean {
 const INLINE_PATH = 32 // above the prompt a path keeps its last 32 characters
 export const COLUMN_GAP = ' │ '
 
-// Above the prompt: no bars, the reset countdown after the percentage
+// Above the prompt: no bars, what the sidebar puts below after the value, the reset countdown after
+// the percentage
 export function inlineValue(v: View): Seg[] {
-  const value = v.cutStart ? v.value.map(s => ({ ...s, text: truncateStart(s.text, INLINE_PATH) })) : v.value
+  const cut = v.cutStart ? v.value.map(s => ({ ...s, text: truncateStart(s.text, INLINE_PATH) })) : v.value
+  const value = v.below === undefined ? cut : [...cut, { text: '  ', color: C.text }, ...v.below]
   if (v.resets === undefined) return value
   return [...value, { text: ' · ', color: C.surface }, { text: v.resets, color: C.text }]
 }

@@ -1,4 +1,4 @@
-import { expect, test } from 'claude-code/testing'
+import { expect, test, type Mounted } from 'claude-code/testing'
 
 import {
   bar,
@@ -26,7 +26,7 @@ import {
 } from '../hooks/format'
 import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
-import { cellWidth, columnRows, drawerShows, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from '../hooks/layout'
+import { cellWidth, columnRows, drawerShows, drawerWanted, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from '../hooks/layout'
 import { locations } from '../hooks/paths'
 import { statuslineFile, statuslineItems } from '../hooks/statusline'
 import {
@@ -548,6 +548,10 @@ test('the config picks items per placement, in the order it lists them', async (
   expect([drawerShows({}, 'dock'), drawerShows({}, 'inline')]).toEqual([true, true])
   const narrowOff = parseConfig('{"drawer": {"inlineOff": true}}')!
   expect([drawerShows(narrowOff, 'dock'), drawerShows(narrowOff, 'inline')]).toEqual([true, false])
+  // /ccdrawu sets it for the session in both places over the config; until it does, the config goes
+  expect([drawerWanted(narrowOff, 'dock', null), drawerWanted(narrowOff, 'inline', null)]).toEqual([true, false])
+  expect([drawerWanted(narrowOff, 'dock', 'on'), drawerWanted(narrowOff, 'inline', 'on')]).toEqual([true, true])
+  expect([drawerWanted({}, 'dock', 'off'), drawerWanted({}, 'inline', 'off')]).toEqual([false, false])
   expect(parseConfig('{"statusline": 3}')).toEqual({})
   expect(enabledItems({ dock: ['git', 'model', 'gone', 'git'] }, 'dock').map(i => i.id)).toEqual(['git', 'model'])
   expect(enabledItems({ dock: [] }, 'dock')).toEqual([])
@@ -563,6 +567,12 @@ test('above the prompt a limit reads as text with its countdown, and columns tak
   const session = view('session', FULL)!
   expect(inlineValue(session).map(s => s.text)).toEqual(['18%', ' · ', '59m'])
   expect(inlineValue(view('path', { ...FULL, path: '~/' + 'x'.repeat(40) })!)[0]!.text).toHaveLength(32)
+  // The branch whole, its diff on a row of its own in the sidebar and after it here
+  const branch = 'customization-yuanta-' + 'x'.repeat(30)
+  const git = view('git', { ...FULL, git: { ...FULL.git!, branch } })!
+  expect(git.value.map(s => s.text)).toEqual([branch])
+  expect(git.below?.map(s => s.text)).toEqual(['+12', ' -3'])
+  expect(inlineValue(git).map(s => s.text).join('')).toBe(branch + '  +12 -3')
 
   // Four cells of key 5 and value 5: one row needs 4 * 11 + 3 * 3 = 53 cells
   const cells = Array.from({ length: 4 }, () => ({ label: 5, value: 5 }))
@@ -615,5 +625,36 @@ test('above the prompt the pane draws columns of text with no bars', async $ => 
   expect(await ui.find({ type: 'Text', text: /^Context / })).toBeDefined()
   // and the pet left of the columns
   expect((await ui.find({ type: 'Box', key: 'pet' }))?.props).toMatchObject({ width: 12, height: 4 })
+  await ui.unmount()
+})
+
+// Waits for the drawing to hold a Text that reads text, once the work a hook left running wrote it
+// (each find gives that work its turn)
+async function drawn(ui: Mounted<'terminal', 'Pane'>, text: string) {
+  for (let i = 0; i < 200; i++) {
+    if (await ui.find({ type: 'Text', text })) return
+  }
+  const texts = (await ui.findAll({ type: 'Text' })).map(t => t.text)
+  throw new Error(`no ${JSON.stringify(text)} among ${JSON.stringify(texts)}`)
+}
+
+test('a compaction empties the context, though the engine answers the fill before it a moment longer', async ($, on) => {
+  let fill: { tokens?: number; percent?: number } = { tokens: 640_000, percent: 64 }
+  const context = () => ({ ...fill, window: 1_000_000 })
+  on('session.usage', () => ({ value: { startedAt: 0, context: context(), rateLimits: [] } }))
+  on('session.measure', (_, e) => ({ changed: e.changed }))
+  on('classic.PostCompact', () => ({}))
+  const measure = () => $.session.measure({ context: context(), rateLimits: [], changed: ['context'] })
+  const ui = await $.ui.mount({ ...MOUNT, props: { ...PANE, placement: 'inline', bodyColumns: 100 } })
+
+  await measure()
+  await drawn(ui, '64%')
+  // At PostCompact $.session.usage() still answers the fill from before (Claude Code 2.1.300)
+  await $.classic.PostCompact({ trigger: 'manual', compact_summary: '' })
+  await drawn(ui, '0%')
+  // The next response measures it again
+  fill = { tokens: 30_000, percent: 3 }
+  await measure()
+  await drawn(ui, '3%')
   await ui.unmount()
 })

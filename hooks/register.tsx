@@ -46,7 +46,20 @@ import {
   usageColor,
 } from './format'
 import { C, ITEMS, view, type Seg, type Snapshot, type View } from './items'
-import { chunk, COLUMN_GAP, columnRows, drawerShows, enabledItems, inlineValue, parseConfig, type Placement, segWidth, showsAnywhere } from './layout'
+import {
+  chunk,
+  COLUMN_GAP,
+  columnRows,
+  drawerShows,
+  drawerWanted,
+  enabledItems,
+  inlineValue,
+  type Manual,
+  parseConfig,
+  type Placement,
+  segWidth,
+  showsAnywhere,
+} from './layout'
 import { locations } from './paths'
 import { statuslineFile } from './statusline'
 
@@ -73,6 +86,8 @@ const modes = atom({ plugin: 'ccdrawu', key: 'modes' } as const, {} as Modes)
 const now = atom({ plugin: 'ccdrawu', key: 'now' } as const, 0)
 const pet = atom({ plugin: 'ccdrawu', key: 'pet' } as const, PET_START)
 const config = atom({ plugin: 'ccdrawu', key: 'config' } as const, {} as Config)
+// Kept by the host, so a reload keeps what /ccdrawu set
+const manual = atom({ plugin: 'ccdrawu', key: 'manual' } as const, null as Manual)
 
 async function refreshUsage($: Engine) {
   const u = await $.session.usage()
@@ -166,12 +181,11 @@ async function refreshConfig($: Engine) {
   const shown = showsAnywhere(parsed, 'status')
   if (shown && !statusWasShown) quietly(refreshStatus($))
   statusWasShown = shown
-  // The drawer just turned on or off in a place: open sessions open it, close it, or take it out of a
-  // place it is off in. The first read leaves it as session.start has it, so a reload keeps a drawer
-  // /ccdrawu opened
+  // The drawer just turned on or off in a place: what /ccdrawu set goes, and open sessions open it, close
+  // it, or take it out of a place it is off in. The first read leaves it as session.start has it
   const shows = { dock: drawerShows(parsed, 'dock'), inline: drawerShows(parsed, 'inline') }
   if (drawerWas !== undefined && (shows.dock !== drawerWas.dock || shows.inline !== drawerWas.inline)) {
-    asked = undefined
+    await update($, manual, () => null)
     if (!shows.dock && !shows.inline) await closePane($)
     else if (!(await $.ui.panes()).some(p => p.id === PANE)) void $.ui.open(PANE_OPEN)
     else await keepPlace($)
@@ -192,9 +206,6 @@ async function hintInline($: Engine) {
   if (pane !== undefined && !pane.isPlaced) $.ui.toast(INLINE_HINT, { timeoutMs: 8_000 })
 }
 
-// Where /ccdrawu opened the drawer: it stays there, the place off or not, until it moves. pending until
-// the drawer is drawn
-let asked: 'pending' | Placement | undefined
 // Whether the terminal docks panes beside the transcript, as the pane's last drawing says
 let fullscreen = false
 
@@ -203,18 +214,18 @@ async function closePane($: Engine) {
   await $.ui.close({ id: PANE })
 }
 
-// The drawer out of a place the config has it off in. Above the prompt, in a terminal that docks panes,
-// it opens again unasked: the engine holds it undrawn until the terminal is wide enough to dock it
+// The drawer out of a place it does not belong in (drawerWanted). Above the prompt, in a terminal that
+// docks panes, it opens again unasked: the engine holds it undrawn until the terminal is wide enough to
+// dock it
 async function keepPlace($: Engine) {
   const place = placedAs
   if (place !== 'dock' && place !== 'inline') return
-  if (asked === place) return
-  asked = undefined
   const pane = (await $.ui.panes()).find(p => p.id === PANE)
   const conf = await read($, config)
-  if (pane?.isPlaced !== true || drawerShows(conf, place)) return
+  const set = await read($, manual)
+  if (pane?.isPlaced !== true || drawerWanted(conf, place, set)) return
   await closePane($)
-  if (place === 'inline' && fullscreen && drawerShows(conf, 'dock')) void $.ui.open(PANE_OPEN)
+  if (place === 'inline' && fullscreen && drawerWanted(conf, 'dock', set)) void $.ui.open(PANE_OPEN)
 }
 
 // The pet on either side of the prompt: it has no need of a tick, or of events, when it shows nowhere
@@ -436,9 +447,10 @@ export const register: Register = on => {
 
     // In a terminal too narrow for a sidebar the engine holds the pane until it widens. With the drawer
     // off in both places the session starts without it, and /ccdrawu opens it; off in one, the pane
-    // drawn there is taken out of it (keepPlace)
+    // drawn there is taken out of it (keepPlace). A reload keeps what /ccdrawu set
     const conf = await read($, config)
-    if (drawerShows(conf, 'dock') || drawerShows(conf, 'inline')) void $.ui.open(PANE_OPEN)
+    const set = await read($, manual)
+    if (drawerWanted(conf, 'dock', set) || drawerWanted(conf, 'inline', set)) void $.ui.open(PANE_OPEN)
 
     return next(e)
   })
@@ -452,15 +464,12 @@ export const register: Register = on => {
       await petHears($, word)
       return {}
     }
-    // A pane waiting undrawn for a wider terminal reads as closed: opened again, asked, it is drawn
+    // The drawer on or off for this session, wherever it sits, whatever the config has (drawerWanted). A
+    // pane waiting undrawn for a wider terminal reads as closed: opened again, asked, it is drawn
     const isShown = (await $.ui.panes()).some(p => p.id === PANE && p.isPlaced)
-    if (isShown) {
-      asked = undefined
-      await closePane($)
-    } else {
-      asked = 'pending'
-      await $.ui.open(PANE_OPEN)
-    }
+    await update($, manual, () => (isShown ? 'off' : 'on'))
+    if (isShown) await closePane($)
+    else await $.ui.open(PANE_OPEN)
     return {}
   }).catch(($, e, next) => (commands.has(e.command) ? {} : next(e)))
 
@@ -541,10 +550,14 @@ export const register: Register = on => {
     return result
   }).catch(($, e, next) => next(e))
 
-  // A compaction starts the context over, and no turn ends to measure it: read it again
+  // A compaction starts the context over, and no turn ends to measure it: empty it here, as the status
+  // line's figures are, until the next response measures it. Read again, it is the fill from before:
+  // $.session.usage() still answers that here and empties a moment later (Claude Code 2.1.300)
   on('classic.PostCompact', async ($, e, next) => {
     const result = await next(e)
-    if (e.agent_id === undefined) quietly(refreshUsage($))
+    if (e.agent_id === undefined) {
+      quietly(update($, usage, u => (u === null ? u : { ...u, contextPercent: undefined, contextTokens: undefined })))
+    }
     return result
   }).catch(($, e, next) => next(e))
 
@@ -582,8 +595,7 @@ export const register: Register = on => {
     const inner = Math.max(22, e.props.bodyColumns - 2)
     const placement = e.props.placement
     fullscreen = e.viewport?.isFullscreen === true
-    if (asked === 'pending') asked = placement
-    // Drawn somewhere new: out of it if the config has the drawer off there
+    // Drawn somewhere new: out of it if the drawer does not belong there
     if (placement !== placedAs) {
       placedAs = placement
       quietly(keepPlace($))
@@ -748,6 +760,14 @@ export const register: Register = on => {
     }
     for (const { item, view: v } of shown) {
       rows.push(dockRow(item.label, v))
+      if (v.below !== undefined) {
+        rows.push(
+          <Box flexDirection="row">
+            {label('')}
+            {segs(v.below)}
+          </Box>,
+        )
+      }
       if (v.resets !== undefined) {
         rows.push(
           <Box flexDirection="row">

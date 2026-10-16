@@ -119,6 +119,7 @@ declare module 'claude-code' {
       now: number
       config: Config
       pet: PetState
+      manual: 'on' | 'off' | null
     }
   }
 }

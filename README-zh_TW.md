@@ -83,13 +83,13 @@ ccdrawu install claude
 
 它會幫你的使用者裝好跟這個 `ccdrawu` 同一版發布的 ccdrawu 外掛，之後每個 session 都有側邊欄；已經開著的 session 跑一次 `/reload-plugins`。接著執行 `ccdrawu` 挑要顯示的項目，或打開狀態列。
 
-外掛請只用 `ccdrawu install claude` 安裝和更新，不要在 Claude Code 裡用 `/plugin`，也不要用 `claude plugin marketplace`。自己從 marketplace 裝的外掛，是 repo main 分支上當下的版本，可能比你的 `ccdrawu` 新，讀設定的方式也可能不一樣；`ccdrawu install claude` 會裝跟指令同一版的外掛。
+外掛請只用 `ccdrawu install claude`，或會幫你執行它的 `ccdrawu update`，來安裝和更新，不要在 Claude Code 裡用 `/plugin`，也不要用 `claude plugin marketplace`。自己從 marketplace 裝的外掛，是 repo main 分支上當下的版本，可能比你的 `ccdrawu` 新，讀設定的方式也可能不一樣；`ccdrawu install claude` 會裝跟指令同一版的外掛。
 
 ## 使用方式
 
 - session 開始時會自動打開。
 - `ccdrawu` 裡 sidebar 頁和 inline 頁最上面的 **Drawer**，各自只關掉那個位置。inline 頁設成 `off` 的話，終端機縮到放不下側邊欄時，側邊欄會收起來，不會跑到輸入框上方；拉寬之後再回到對話旁邊。終端機窄的時候把 inline 設回 `on`，側邊欄不會自己回到輸入框上方，見[限制](#限制)。兩頁都設成 `off`，session 開始時就不會打開。開著的 session 會在一秒內跟著換。
-- `/ccdrawu` 開關側邊欄，Claude 回覆到一半也能用；**Drawer** 設成 `off` 的位置也一樣：打開之後就留在那裡，直到它被移到別的位置。
+- `/ccdrawu` 開關「輸入它的這個 session」的側邊欄，Claude 回覆到一半也能用。打開後，不管在對話旁邊還是輸入框上方都會顯示，**Drawer** 設成 `off` 的位置也一樣；關掉後，終端機拉寬或縮窄都不會再出現。之後在 `ccdrawu` 改了 **Drawer**，就改回照設定走；新的 session 一律照 **Drawer** 的設定開始。
 - 點右上角的 `×` 關閉，或按 `Ctrl+X Tab` 移過去再按 `Ctrl+X X`。
 - 焦點在側邊欄上時，`Ctrl+X ←`、`Ctrl+X →` 可以調寬或調窄。
 
@@ -207,17 +207,15 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 
 ## 更新
 
-`ccdrawu` 指令和 Claude Code 裡的外掛是分開更新的，但兩者要搭配：指令是新版、外掛還是舊版的話，有些設定會沒有作用。
+```sh
+ccdrawu update
+```
 
-1. 照你安裝的方式更新指令：`brew upgrade ccdrawu`、`scoop update ccdrawu`，或再跑一次安裝腳本。
-2. 更新外掛：
+它會查最新的 release，照你安裝的方式更新 `ccdrawu` 指令：用 Homebrew 裝的交給 Homebrew；用安裝腳本裝的，就下載 release 的執行檔，用 release 的 checksum 驗證後換掉自己。接著，如果 Claude Code 裡有 ccdrawu 外掛，就把它更新成同一版；指令和外掛要搭配，而 Claude Code 不會自己更新這個外掛。已經開著的 session 跑一次 `/reload-plugins`，新開的 session 直接就是新版。
 
-   ```sh
-   ccdrawu install claude
-   ```
-
-   外掛已經裝了的話，這個指令會把它更新成跟指令同一版。Claude Code 不會自己更新這個外掛。
-3. 已經開著的 session 跑一次 `/reload-plugins`。新開的 session 直接就是新版。
+- 用 Scoop 裝的：它會告訴你先跑 `scoop update ccdrawu`，再跑 `ccdrawu install claude`。Scoop 不會在 ccdrawu 執行中更新它。
+- `ccdrawu` 所在的資料夾不能寫入時（例如安裝腳本用 root 裝在 `/usr/local/bin`），它會說明原因後停下來：請再跑一次安裝腳本，或用那個資料夾擁有者的身分執行 `ccdrawu update`。
+- 0.1.3 之前的版本沒有 `ccdrawu update`：先照你安裝的方式更新指令（`brew upgrade ccdrawu`、`scoop update ccdrawu`，或再跑一次安裝腳本），再執行 `ccdrawu install claude`，它會把外掛更新成跟指令同一版。
 
 ## 移除
 

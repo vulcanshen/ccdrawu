@@ -88,9 +88,10 @@ export type Snapshot = {
 
 export type Seg = { text: string; color: string; bold?: boolean }
 
-// What an item shows. Beside the transcript a meter draws a bar, `resets` takes a row of its own
-// and `cutStart` keeps the end of a value too long for the row; above the prompt all is text on one row
-export type View = { value: Seg[]; meter?: number; resets?: string; cutStart?: boolean }
+// What an item shows. Beside the transcript a meter draws a bar, `resets` and `below` take a row of
+// their own (so a long value wraps whole) and `cutStart` keeps the end of a value too long for the row;
+// above the prompt all is text on one row
+export type View = { value: Seg[]; meter?: number; resets?: string; below?: Seg[]; cutStart?: boolean }
 
 function limitView(limit: Limit | undefined, now: number): View | undefined {
   if (limit === undefined) return undefined
@@ -136,9 +137,9 @@ export function view(id: string, s: Snapshot): View | undefined {
     case 'git':
       if (!s.git) return text('not a repo')
       return {
-        value: [
-          { text: s.git.branch, color: C.text },
-          { text: '  +' + s.git.added, color: C.green },
+        value: [{ text: s.git.branch, color: C.text }],
+        below: [
+          { text: '+' + s.git.added, color: C.green },
           { text: ' -' + s.git.removed, color: C.red },
         ],
       }

@@ -4,9 +4,13 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strconv"
 	"time"
 
@@ -14,6 +18,7 @@ import (
 	"github.com/vulcanshen/ccdrawu/internal/config"
 	"github.com/vulcanshen/ccdrawu/internal/statusline"
 	"github.com/vulcanshen/ccdrawu/internal/ui"
+	"github.com/vulcanshen/ccdrawu/internal/update"
 	"github.com/vulcanshen/ccdrawu/internal/version"
 )
 
@@ -32,6 +37,12 @@ func main() {
 				os.Exit(2)
 			}
 			if err := integrate(os.Args[1] == "install"); err != nil {
+				fmt.Fprintln(os.Stderr, "ccdrawu:", err)
+				os.Exit(1)
+			}
+			return
+		case "update":
+			if err := selfUpdate(os.Stdout); err != nil {
 				fmt.Fprintln(os.Stderr, "ccdrawu:", err)
 				os.Exit(1)
 			}
@@ -97,6 +108,68 @@ func integrate(install bool) error {
 	return nil
 }
 
+// selfUpdate brings ccdrawu to its latest release the way it was installed,
+// then, where Claude Code has the plugin, the plugin to the same release: the
+// new ccdrawu runs its own install claude, which takes the plugin of its
+// version. It never asks for more rights: a folder it cannot write in, it says
+// so.
+func selfUpdate(out io.Writer) error {
+	if version.Version == "dev" {
+		return errors.New("this ccdrawu is built from source: update it there (git pull && make install), then run ccdrawu install claude")
+	}
+	exe, err := os.Executable()
+	if err == nil {
+		exe, err = filepath.EvalSymlinks(exe)
+	}
+	if err != nil {
+		return err
+	}
+	latest, err := update.GitHub.LatestVersion()
+	if err != nil {
+		return fmt.Errorf("looking up the latest release: %w", err)
+	}
+	next := exe // the ccdrawu that updates the plugin
+	if !update.Newer(latest, version.Version) {
+		fmt.Fprintf(out, "ccdrawu %s is the latest release.\n", version.Version)
+	} else {
+		switch update.How(exe) {
+		case update.Homebrew:
+			fmt.Fprintf(out, "Updating ccdrawu %s to %s with Homebrew...\n", version.Version, latest)
+			brew := exec.Command("brew", "upgrade", "vulcanshen/tap/ccdrawu")
+			brew.Stdout, brew.Stderr = out, os.Stderr
+			if err := brew.Run(); err != nil {
+				return fmt.Errorf("brew upgrade vulcanshen/tap/ccdrawu: %w", err)
+			}
+			next = update.BrewBin(exe)
+		case update.Scoop:
+			// Scoop refuses to update an app while it runs, and this is it
+			fmt.Fprintf(out, "ccdrawu %s is out. Scoop installed this one: close ccdrawu and run\n\n  scoop update ccdrawu\n  ccdrawu install claude\n", latest)
+			return nil
+		default:
+			fmt.Fprintf(out, "Updating ccdrawu %s to %s...\n", version.Version, latest)
+			if err := update.GitHub.Replace(exe, latest, runtime.GOOS, runtime.GOARCH); err != nil {
+				if errors.Is(err, os.ErrPermission) {
+					return fmt.Errorf("%w\nRun the install script again, or ccdrawu update as the folder's owner", err)
+				}
+				return err
+			}
+			fmt.Fprintf(out, "ccdrawu %s is in %s.\n", latest, exe)
+		}
+	}
+	// The plugin goes with the command, where Claude Code has it; one taken out stays out
+	id, _, err := claude.Installed(claude.Exec)
+	if err != nil {
+		return err
+	}
+	if id == "" {
+		fmt.Fprintln(out, "The ccdrawu plugin is not in Claude Code; ccdrawu install claude adds it.")
+		return nil
+	}
+	install := exec.Command(next, "install", "claude")
+	install.Stdout, install.Stderr = out, os.Stderr
+	return install.Run()
+}
+
 // putBack gives Claude Code the user's own theme and status line back where
 // ccdrawu's are set, or none where the user had none, and says so on out.
 func putBack(loc config.Locations, out io.Writer) error {
@@ -132,6 +205,8 @@ Usage:
   ccdrawu install claude      add the drawer to Claude Code (its ccdrawu plugin),
                               or update it there
   ccdrawu uninstall claude    take it out again
+  ccdrawu update              update ccdrawu to its latest release, the way it
+                              was installed, and the plugin in Claude Code with it
   ccdrawu statusline          Claude Code's status line, as set in ccdrawu
                               (Claude Code runs it; the session on stdin)
   ccdrawu version             print the version (also --version, -v)

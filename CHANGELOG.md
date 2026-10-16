@@ -1,6 +1,13 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- `ccdrawu update`: updates ccdrawu to its latest release the way it was installed, through Homebrew, or, from the install script, in place, checked against the release's checksums; then the plugin in Claude Code to the same release, where Claude Code has it. Installed with Scoop, it says what to run, since Scoop does not update ccdrawu while it runs. A folder it cannot write in, it says so, and never asks for more rights.
+### Changed
+- `/ccdrawu` turns the drawer on or off for the whole session, wherever it sits, over **Drawer**. Opened where **Drawer** is off, it stays as the terminal widens and narrows, where it used to go once it moved; closed, it stays closed through `/reload-plugins` too. Changing **Drawer** in `ccdrawu` takes over again.
+### Fixed
+- Context reads 0% as soon as a compaction ends, in the drawer and the status line, until the next reply measures it; it kept the fill from before the compaction until then.
+- Git in the sidebar shows the added and removed lines on a row of their own under the branch, as Session and Weekly show their resets, so a branch too long for its row wraps whole; they were cut apart across the wrap. Above the prompt and in the status line Git stays on one row.
 
 ## [0.1.2] - 2026-10-16
 ### Added

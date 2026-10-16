@@ -83,13 +83,13 @@ ccdrawu install claude
 
 It installs the ccdrawu plugin released with this `ccdrawu`, for your user, so every session has the drawer. Sessions already open take it with `/reload-plugins`. Then run `ccdrawu` to pick what the drawer shows, or to turn on the status line.
 
-Install and update the plugin with `ccdrawu install claude` only, not with `/plugin` in Claude Code or `claude plugin marketplace`. Added from the marketplace by hand, the plugin is whatever the repository's main branch holds, which can be ahead of your `ccdrawu` and read its settings differently; `ccdrawu install claude` takes the plugin of the same version as the command.
+Install and update the plugin with `ccdrawu install claude`, or `ccdrawu update`, which runs it, only, not with `/plugin` in Claude Code or `claude plugin marketplace`. Added from the marketplace by hand, the plugin is whatever the repository's main branch holds, which can be ahead of your `ccdrawu` and read its settings differently; `ccdrawu install claude` takes the plugin of the same version as the command.
 
 ## Usage
 
 - The drawer opens by itself when a session starts.
 - **Drawer**, atop the sidebar page and the inline page in `ccdrawu`, turns it off in that place alone. Off on the inline page, a terminal narrowed below the sidebar's width hides the drawer instead of moving it above the prompt, and widening it again brings the drawer back beside the transcript. Turned back on while the terminal is narrow, the drawer does not come back above the prompt by itself: see [Limitations](#limitations). Off on both, sessions start without it. Open sessions follow within a second.
-- `/ccdrawu` opens or closes it, even while Claude is working, and even where **Drawer** is off: it stays where it opens until it moves.
+- `/ccdrawu` opens or closes it for the session you type it in, even while Claude is working. Opened, it shows beside the transcript and above the prompt alike, even where **Drawer** is off; closed, it stays closed as the terminal widens or narrows. Changing **Drawer** in `ccdrawu` afterwards takes over again, and new sessions start as **Drawer** has it.
 - Click the `×` at its top right to close it, or press `Ctrl+X Tab` to focus it and then `Ctrl+X X`.
 - `Ctrl+X ←` and `Ctrl+X →` make it wider or narrower while it has focus.
 
@@ -207,17 +207,15 @@ The ccdrawu plugin is not running in that session, so the status line shows what
 
 ## Update
 
-The `ccdrawu` command and the plugin in Claude Code update apart, and go together: a newer command with an older plugin can leave a setting without effect.
+```sh
+ccdrawu update
+```
 
-1. Update the command the way you installed it: `brew upgrade ccdrawu`, `scoop update ccdrawu`, or the install script again.
-2. Update the plugin:
+It looks up the latest release and updates the `ccdrawu` command the way you installed it: through Homebrew, or, installed with the install script, by putting the release's executable in place of its own, checked against the release's checksums. Then it updates the plugin in Claude Code to the same release, where Claude Code has it; the command and the plugin go together, and Claude Code does not update the plugin by itself. In sessions already open, run `/reload-plugins`. New sessions have the new plugin from the start.
 
-   ```sh
-   ccdrawu install claude
-   ```
-
-   With the plugin there already, this updates it to the version of the command. Claude Code does not update it by itself.
-3. In sessions already open, run `/reload-plugins`. New sessions have the new plugin from the start.
+- Installed with Scoop, it tells you to run `scoop update ccdrawu`, then `ccdrawu install claude`: Scoop does not update ccdrawu while it runs.
+- Where it cannot write in the folder `ccdrawu` is in, such as `/usr/local/bin` after the install script ran as root, it says so and stops: run the install script again, or `ccdrawu update` as the folder's owner.
+- Before 0.1.3 there is no `ccdrawu update`: update the command the way you installed it (`brew upgrade ccdrawu`, `scoop update ccdrawu`, or the install script again), then run `ccdrawu install claude`, which updates the plugin to the version of the command.
 
 ## Uninstall
 
