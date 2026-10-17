@@ -36,6 +36,8 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 | Repo | `git remote get-url origin` 解析成 owner/repo（`$.session.repo().name` 只有內部 repo 才有）；`--git-dir` 跟 `--git-common-dir` 不同就是 linked worktree，取 toplevel 的資料夾名；工作目錄沒變就不重查 | 工作目錄改變時 |
 | Status | `https://status.claude.com/api/v2/status.json` 的 `status.indicator`／`description`；只在勾了 Status 時查（預設關，沒勾的人不該有這個連線；2026-10-15 user 定的） | 讀到設定時剛打開就查一次，之後每 5 分鐘 |
 
+`/clear` 之後 process 用新的 session id 繼續跑，`$.state` 換成新 session 的、全部回到初始值（config、寵物、版本都在裡面），`session.start` 卻不會再來（引擎型別這樣寫，2.1.302 實測：Model、Session、Cost、版本變 `-`，drawer 回到預設的項目，寵物睡著）。所以 session 開始時讀的那些（`startSession`）在 `classic.SessionStart` 的 `source: 'clear'` 再跑一次；config 檔沒變也整份重讀（先清掉 `configStamp`）。計時器、註冊過的指令、module 的變數都還在，不用重來。新 session 的寵物重抽花色，照 README 說的「每個 session」。
+
 ### 狀態列
 
 - Claude Code 的 `statusLine` 設成 `{"type":"command","command":"ccdrawu statusline","refreshInterval":N}`：Claude Code 在對話有進展時、以及沒有動靜時每 N 秒跑一次，stdin 給一份 JSON（`session_id`、`model`、`context_window`、`cost`…），stdout 的第一行就是狀態列。

@@ -743,3 +743,24 @@ test('a compaction empties the context, though the engine answers the fill befor
   await drawn(ui, '3%')
   await ui.unmount()
 })
+
+test('after /clear the drawer reads the new session again, as it did when the first one started', async ($, on) => {
+  let claude = '2.1.300'
+  on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('clock.now', () => ({ value: 0 }))
+  // No timers: what reads the version again is the clear alone
+  on('clock.every', () => ({ deny: 'no timers here' }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.version', () => ({ value: { version: claude, base: claude } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  on('classic.SessionStart', () => ({}))
+  const ui = await $.ui.mount(MOUNT)
+  await $.session.start({ cwd: '/x', surface: 'terminal', isInteractive: true })
+  await drawn(ui, '2.1.300')
+  // The process goes on under a new session, which holds none of the old one's values, and no
+  // session.start comes for it (Claude Code 2.1.302)
+  claude = '2.1.302'
+  await $.classic.SessionStart({ source: 'clear' })
+  await drawn(ui, '2.1.302')
+  await ui.unmount()
+})

@@ -415,33 +415,43 @@ function quietly(work: Promise<unknown>) {
   void work.catch(() => undefined)
 }
 
+// What a session holds from its start. After /clear the process goes on under a new session, which
+// holds none of the old one's values, the config's among them, and no session.start comes for it: this
+// runs again then
+async function startSession($: Engine) {
+  await tick($)
+  // The pet's coat, once a session (a reload keeps it), and it starts awake. A reload keeps the state
+  // an older module wrote too: fields it did not have yet take their defaults
+  const started = await $.clock.now()
+  await update($, pet, p => ({
+    ...PET_START,
+    ...p,
+    coat: p.coat < 0 ? Math.floor(Math.random() * 1000) : p.coat,
+    active: started,
+  }))
+  // Read before the drawer opens, which it does only while the config has it on. Read whole, though the
+  // file has not changed: the session holds what it read from it
+  configStamp = undefined
+  statusWasShown = false
+  await refreshConfig($).catch(() => undefined)
+  quietly(refreshUsage($))
+  quietly(refreshModelName($))
+  quietly(refreshGit($))
+  quietly(refreshAgents($))
+  quietly(refreshVersion($))
+  quietly(refreshDrawer($))
+  quietly(refreshTurns($))
+  quietly(refreshSession($))
+}
+
 export const register: Register = on => {
   on('session.start', async ($, e, next) => {
     // The alias follows once the config is read
     await registerCommands(spec => $.command.register(spec), commands, undefined)
 
-    await tick($)
-    // The pet's coat, once a session (a reload keeps it), and it starts awake. A reload keeps the state
-    // an older module wrote too: fields it did not have yet take their defaults
-    const started = await $.clock.now()
-    await update($, pet, p => ({
-      ...PET_START,
-      ...p,
-      coat: p.coat < 0 ? Math.floor(Math.random() * 1000) : p.coat,
-      active: started,
-    }))
     await locateFiles($).catch(() => undefined)
     quietly(installCatalog($))
-    // Read before the drawer opens, which it does only while the config has it on
-    await refreshConfig($).catch(() => undefined)
-    quietly(refreshUsage($))
-    quietly(refreshModelName($))
-    quietly(refreshGit($))
-    quietly(refreshAgents($))
-    quietly(refreshVersion($))
-    quietly(refreshDrawer($))
-    quietly(refreshTurns($))
-    quietly(refreshSession($))
+    await startSession($)
 
     // Countdowns and uptime every 30 seconds; git, path and subagents every 5; Claude's status every 5
     // minutes while its row shows (first when the config turns it on); the latest version every 6 hours;
@@ -582,8 +592,10 @@ export const register: Register = on => {
     return result
   }).catch(($, e, next) => next(e))
 
+  // A /clear starts a new session: what it holds from its start, read again
   on('classic.SessionStart', async ($, e, next) => {
     const result = await next(e)
+    if (e.source === 'clear') quietly(startSession($))
     quietly(rememberMode($, e))
     return result
   }).catch(($, e, next) => next(e))
