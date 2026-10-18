@@ -8,7 +8,11 @@ Each release names the version of terminu design (tdp) it follows.
 - The repo, from the tdp v0.7.4 project templates: `family.mk`, the release workflow, goreleaser, `install.sh` and `uninstall.sh`, `internal/version`. `uninstall.sh` also offers to remove a cache folder, where there is one.
 - **Drawer background** reads as a swatch of the color and its hex, where it read the hex alone.
 - **Claude theme** reads the theme picked; `Enter` opens the list to pick from, where all seven were drawn on the page (tdp: more than five is a select).
-- **Refresh** takes digits only, and says the range, 1-60, before you type.
+- **Refresh** takes digits only, and says the range, 1-60, before you type; on the page it reads the seconds alone, `10`, where it read `every 10 seconds`.
+- A value set by hand in `config.json` that ccdrawu does not take, an alias, a background, a refresh or a separator, turns its label red; a control character in it reads as `\x1b`, where it went to the terminal as it was. **Plugin** turns red too where ccdrawu can't tell whether Claude Code has the plugin.
+- A change that can't be saved, or a theme that can't be set, is not shown as if it were: the page goes back to what is saved.
+- An install or uninstall that fails says which in its title, `INSTALL FAILED` or `UNINSTALL FAILED`, where both read `CLAUDE CODE SAID NO`; the alias's errors name the alias.
+- Before ccdrawu has run in Claude Code, the empty pages name the key that installs the plugin: `[Enter]` on **Plugin** in preferences.
 - After `/clear` the drawer and the status line keep their values, and the drawer the rows you picked in `ccdrawu`. Model, Session, Weekly and Cost read `-` until the next reply, the versions until Claude Code started again, the drawer went back to its default rows, and the pet fell asleep.
 
 ## [0.1.4] - 2026-10-16

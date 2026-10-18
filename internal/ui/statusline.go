@@ -3,7 +3,6 @@ package ui
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -31,7 +30,8 @@ func (d *drawer) statuslineFields() []*terminu.Field {
 // the terminal is too narrow for the sidebar. It is drawn in place. Turned on over a status
 // line of the user's own, it asks first and keeps that one to put back.
 func (d *drawer) statusOnField() *terminu.Field {
-	f := &terminu.Field{Label: "Statusline", Options: []string{"off", "on", "on when narrow"}, Selected: d.statusSelected()}
+	f := &terminu.Field{Label: "Statusline", Options: []string{"off", "on", "on when narrow"}}
+	d.radio(f, d.statusSelected)
 	f.OnChange = func() tea.Cmd {
 		if f.Selected == 0 {
 			return d.statuslineOff()
@@ -48,7 +48,8 @@ func (d *drawer) statusOnField() *terminu.Field {
 		command, ours, err := claude.CurrentStatusline(d.loc.Claude)
 		if err != nil {
 			f.Selected = 0
-			return d.app.Error("Can't read Claude Code's settings", err.Error())
+			// No name in the title, upper case throughout (tdp components, capitals)
+			return d.app.Error("Can't read the settings", err.Error())
 		}
 		if command == "" || ours {
 			return d.statuslineOn(when)
@@ -115,65 +116,81 @@ func (d *drawer) statuslineOff() tea.Cmd {
 // itself.
 func (d *drawer) formatField() *terminu.Field {
 	options := []string{"label  Context 42%", "short  ctx 42%", "value  42%"}
-	f := &terminu.Field{Label: "Format", Options: options, Selected: max(0, slices.Index(config.Formats, d.cfg.Statusline.Format))}
+	f := &terminu.Field{Label: "Format", Options: options}
 	f.OnChange = func() tea.Cmd {
 		d.cfg.Statusline.Format = config.Formats[f.Selected]
 		return d.save()
 	}
-	return f
+	return d.radio(f, func() int { return max(0, slices.Index(config.Formats, d.cfg.Statusline.Format)) })
 }
 
 // colorField picks how the statusline is colored, drawn in place: in the
 // drawer's colors, or all in Claude Code's dim color.
 func (d *drawer) colorField() *terminu.Field {
-	f := &terminu.Field{Label: "Color", Options: config.Colors, Selected: max(0, slices.Index(config.Colors, d.cfg.Statusline.Color))}
+	f := &terminu.Field{Label: "Color", Options: config.Colors}
 	f.OnChange = func() tea.Cmd {
 		d.cfg.Statusline.Color = config.Colors[f.Selected]
 		return d.save()
 	}
-	return f
+	return d.radio(f, func() int { return max(0, slices.Index(config.Colors, d.cfg.Statusline.Color)) })
 }
 
 // separatorField is what stands between the items, | when none is set.
 func (d *drawer) separatorField() *terminu.Field {
-	return &terminu.Field{Label: "Separator", Value: func() string { return d.cfg.Statusline.Separator }, Empty: "|", Edit: func() tea.Cmd {
-		return d.app.Text(terminu.TextInput{
-			Title: "Separator", Glyph: glyphPencil, Prompt: "What stands between the items, such as | or ·; empty for |",
-			Verb: "save", Old: d.cfg.Statusline.Separator, MaxLen: 3,
-			Check: func(v string) error {
-				if strings.ContainsFunc(v, unicode.IsControl) {
-					return errors.New("No control characters")
-				}
-				return nil
-			},
-			Done: func(v string) tea.Cmd {
-				d.cfg.Statusline.Separator = strings.TrimSpace(v)
-				return d.save()
-			},
-		})
-	}}
+	return &terminu.Field{Label: "Separator", Value: func() string { return shown(d.cfg.Statusline.Separator) }, Empty: "|",
+		// Control characters set by hand in config.json
+		Err: func() bool { return strings.ContainsFunc(d.cfg.Statusline.Separator, unicode.IsControl) },
+		Edit: func() tea.Cmd {
+			return d.app.Text(terminu.TextInput{
+				Title: "Separator", Glyph: glyphPencil, Prompt: "What stands between the items, such as | or ·; empty for |",
+				Verb: "save", Old: d.cfg.Statusline.Separator, MaxLen: 3,
+				Check: func(v string) error {
+					if strings.ContainsFunc(v, unicode.IsControl) {
+						return errors.New("No control characters")
+					}
+					return nil
+				},
+				Done: func(v string) tea.Cmd {
+					// TODO(lib CD18): the value it opened on writes nothing, as in the alias
+					if strings.TrimSpace(v) == d.cfg.Statusline.Separator {
+						return nil
+					}
+					d.cfg.Statusline.Separator = strings.TrimSpace(v)
+					return d.save()
+				},
+			})
+		}}
 }
 
 // refreshField is how many seconds Claude Code waits to run the statusline
 // again while nothing happens, a number (tdp components/input/number) written
 // into its settings at once while the statusline is on.
 func (d *drawer) refreshField() *terminu.Field {
-	return &terminu.Field{Label: "Refresh", Value: func() string { return fmt.Sprintf("every %d seconds", refresh(d.cfg.Statusline)) }, Edit: func() tea.Cmd {
-		return d.app.Number(terminu.NumberInput{
-			Title: "Refresh", Glyph: glyphPencil, Prompt: "Seconds between runs while nothing happens, 1-60",
-			Verb: "save", Old: strconv.Itoa(refresh(d.cfg.Statusline)), Min: 1, Max: 60,
-			Done: func(v string) tea.Cmd {
-				d.cfg.Statusline.Refresh, _ = strconv.Atoi(strings.TrimSpace(v))
-				// Into Claude Code's settings while ccdrawu's is the status line set there
-				if _, ours, _ := claude.CurrentStatusline(d.loc.Claude); ours && d.cfg.Statusline.On {
-					if _, _, err := claude.ApplyStatusline(d.loc.Claude, d.cfg.Statusline.Refresh); err != nil {
-						return d.app.Error("Can't set the status line", err.Error())
+	// The value itself, the seconds on its prompt row (tdp components/input/README)
+	return &terminu.Field{Label: "Refresh", Value: func() string { return strconv.Itoa(refresh(d.cfg.Statusline)) },
+		// Past 60, set by hand in config.json
+		Err: func() bool { return refresh(d.cfg.Statusline) > 60 },
+		Edit: func() tea.Cmd {
+			return d.app.Number(terminu.NumberInput{
+				Title: "Refresh", Glyph: glyphPencil, Prompt: "Seconds between runs while nothing happens, 1-60",
+				Verb: "save", Old: strconv.Itoa(refresh(d.cfg.Statusline)), Min: 1, Max: 60,
+				Done: func(v string) tea.Cmd {
+					n, _ := strconv.Atoi(strings.TrimSpace(v))
+					// TODO(lib CD18): the value it opened on writes nothing, as in the alias
+					if n == refresh(d.cfg.Statusline) {
+						return nil
 					}
-				}
-				return d.save()
-			},
-		})
-	}}
+					d.cfg.Statusline.Refresh = n
+					// Into Claude Code's settings while ccdrawu's is the status line set there
+					if _, ours, _ := claude.CurrentStatusline(d.loc.Claude); ours && d.cfg.Statusline.On {
+						if _, _, err := claude.ApplyStatusline(d.loc.Claude, d.cfg.Statusline.Refresh); err != nil {
+							return d.app.Error("Can't set the status line", err.Error())
+						}
+					}
+					return d.save()
+				},
+			})
+		}}
 }
 
 // refresh is the statusline's refresh in seconds, the default when none is

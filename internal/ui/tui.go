@@ -7,6 +7,7 @@ import (
 	"slices"
 	"strings"
 	"time"
+	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/ccdrawu/internal/claude"
@@ -34,7 +35,11 @@ type drawer struct {
 	run        claude.Run                // what runs `claude plugin ...`
 	plugin     string                    // the plugin row's value; "" while it is being found
 	pluginID   string                    // the plugin's id in Claude Code, "" when not there
+	pluginErr  bool                      // the plugin row's value says why it can't tell
 	busy       bool                      // an install or uninstall under way
+	// radios are the fields drawn in place, each with its option as d.cfg has
+	// it: a change that could not be saved puts them back with d.cfg
+	radios map[*terminu.Field]func() int
 }
 
 // The rows of [1]: the drawer beside the transcript and above the prompt, the
@@ -86,10 +91,13 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 			rowInline:     {Header: [2]string{"Setting", "Value"}},
 			rowStatusline: {Header: [2]string{"Setting", "Value"}},
 		},
+		// TODO(lib CD23): an empty page, not a failure, but a Values has no
+		// empty state of its own, and a Failure's fact is Red
 		fail: &terminu.Failure{
 			Fact: "Nothing to list until ccdrawu runs in Claude Code",
-			Hint: "Run ccdrawu install claude, then start Claude Code",
+			Hint: "Press [Enter] on Plugin in preferences, then start Claude Code",
 		},
+		radios: map[*terminu.Field]func() int{},
 	}
 	a := terminu.New("ccdrawu")
 	a.Splash = splash()
@@ -117,7 +125,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	d.detail = &terminu.Panel{Actions: []terminu.Action{d.editItems(), d.resetBackground()}}
 	d.show(rowSidebar)
 	// Enter goes into the row's page in [2]: the one change of panels Enter
-	// makes (tdp v0.6.3 K3, details). Every row has a page.
+	// makes (tdp K3, details, since tdp v0.6.3). Every row has a page.
 	prefs := &terminu.Panel{Label: "Preferences", Body: list, Details: d.detail, Actions: []terminu.Action{
 		{Key: "Enter", Label: "Edit", Desc: "go into it", Scope: terminu.ItemScope, Hint: "edit",
 			ToDetails: func() bool { return true }},
@@ -175,15 +183,28 @@ func (d *drawer) load() {
 // or above the prompt, as off says (config.Drawer), drawn in place. Off there,
 // open sessions take it out of that place within a second; off in both,
 // sessions start without it. /ccdrawu still opens and closes it.
+//
+// TODO(tdp CD13): a radio of off and on, as the statusline's off, on and on
+// when narrow (the user's), where tdp has a checkbox for a switch.
 func (d *drawer) drawerOnField(off *bool) *terminu.Field {
 	f := &terminu.Field{Label: "Drawer", Options: []string{"off", "on"}}
-	if !*off {
-		f.Selected = 1
-	}
 	f.OnChange = func() tea.Cmd {
 		*off = f.Selected == 0
 		return d.save()
 	}
+	return d.radio(f, func() int {
+		if *off {
+			return 0
+		}
+		return 1
+	})
+}
+
+// radio sets f on its option as d.cfg has it, and keeps it so for when a
+// change can't be saved.
+func (d *drawer) radio(f *terminu.Field, selected func() int) *terminu.Field {
+	d.radios[f] = selected
+	f.Selected = selected()
 	return f
 }
 
@@ -315,20 +336,33 @@ func (d *drawer) choices(p config.Placement) []config.Item {
 // aliasField is the alias row: one more name for /ccdrawu, set in an input
 // popup and checked as the mod reads it.
 func (d *drawer) aliasField() *terminu.Field {
-	return &terminu.Field{Label: "Alias", Value: func() string { return d.cfg.Alias }, Empty: "none", Edit: func() tea.Cmd {
-		return d.app.Text(terminu.TextInput{
-			Title: "Alias", Glyph: glyphPencil, Prompt: "One more name for /ccdrawu, such as ccd; empty for none",
-			Verb: "save", Old: d.cfg.Alias, MaxLen: 64,
-			Check: func(v string) error {
-				_, err := config.CleanAlias(v)
-				return err
-			},
-			Done: func(v string) tea.Cmd {
-				d.cfg.Alias, _ = config.CleanAlias(v)
-				return d.save()
-			},
-		})
-	}}
+	return &terminu.Field{Label: "Alias", Value: func() string { return shown(d.cfg.Alias) }, Empty: "none",
+		// One set by hand in config.json that the mod does not take (tdp
+		// components/layout/panel: its label is Red)
+		Err: func() bool {
+			_, err := config.CleanAlias(d.cfg.Alias)
+			return err != nil
+		},
+		Edit: func() tea.Cmd {
+			return d.app.Text(terminu.TextInput{
+				Title: "Alias", Glyph: glyphPencil, Prompt: "One more name for /ccdrawu, such as ccd; empty for none",
+				Verb: "save", Old: d.cfg.Alias, MaxLen: 64,
+				Check: func(v string) error {
+					_, err := config.CleanAlias(v)
+					return err
+				},
+				Done: func(v string) tea.Cmd {
+					alias, _ := config.CleanAlias(v)
+					// TODO(lib CD18): terminu-go calls Done with the value it opened
+					// on once something was typed and taken back; that writes nothing
+					if alias == d.cfg.Alias {
+						return nil
+					}
+					d.cfg.Alias = alias
+					return d.save()
+				},
+			})
+		}}
 }
 
 // rows writes each item as its group, its key in the drawer and, where that
@@ -349,23 +383,57 @@ func (d *drawer) rows(items []config.Item) []string {
 	return rows
 }
 
+// save writes the config, or says why it can't.
 func (d *drawer) save() tea.Cmd {
 	if err := config.WriteConfig(d.loc.ConfigFile, d.cfg); err != nil {
+		d.revert()
 		return d.app.Error("Can't save", err.Error())
 	}
 	return nil
 }
 
+// revert puts d.cfg, and the radios with it, back to the file as it is: a
+// change that could not be made is not shown as if it were.
+//
+// TODO(lib CD24): the input the change came from is closed by now; tdp has
+// the error popup over it, the value kept
+func (d *drawer) revert() {
+	if c, err := config.ReadConfig(d.loc.ConfigFile); err == nil {
+		d.cfg = c
+		for f, selected := range d.radios {
+			f.Selected = selected()
+		}
+	}
+}
+
 // status says where the choice goes and that open sessions take it: the
-// drawer within a second, the statusline when Claude Code runs it next.
+// drawer within a second, the statusline when Claude Code runs it next. It is
+// one sentence, not two items side by side (tdp components, spacing).
 func (d *drawer) status(w int) string {
 	grey := terminu.Fg(terminu.Overlay0)
-	follow := " · open Claude Code sessions follow within a second"
+	follow := "; open Claude Code sessions follow within a second"
 	if d.detail.Label == rowStatusline {
-		follow = fmt.Sprintf(" · the statusline follows within %d seconds", refresh(d.cfg.Statusline))
+		follow = fmt.Sprintf("; the statusline follows within %d seconds", refresh(d.cfg.Statusline))
 	}
 	text := grey.Render("Saved to ") + terminu.Fg(terminu.Lavender).Render(shortHome(d.loc.ConfigFile)) + grey.Render(follow)
 	return terminu.Truncate(text, w)
+}
+
+// shown is a value set by hand in config.json as it can be drawn: a control
+// character written out, \x1b, where the terminal would run it.
+//
+// TODO(lib CD25): terminu-go draws a field's value as it is, and tdp has not
+// said how a control character in one reads
+func shown(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if unicode.IsControl(r) {
+			fmt.Fprintf(&b, `\x%02x`, r)
+		} else {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
 }
 
 func shortHome(path string) string {

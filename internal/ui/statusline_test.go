@@ -48,7 +48,7 @@ func TestStatuslineReplacesTheUsersOnlyAfterAsking(t *testing.T) {
 	setClaudeSettings(t, loc, mine)
 	toStatusline(t, d)
 	text := frameText(d)
-	for _, want := range []string{"[2] STATUSLINE", "ITEMS", "ORDER", "FORMAT", "ctx 42%", "SEPARATOR", "REFRESH", "every 10 seconds"} {
+	for _, want := range []string{"[2] STATUSLINE", "ITEMS", "ORDER", "FORMAT", "ctx 42%", "SEPARATOR", "REFRESH     10"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("no %q on the statusline page:\n%s", want, text)
 		}

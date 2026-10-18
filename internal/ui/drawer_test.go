@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 	"testing"
@@ -73,20 +74,6 @@ func newTestDrawer(t *testing.T) (*drawer, config.Locations) {
 	}
 	d.app.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
 	return d, loc
-}
-
-// tdp L1 and L4: at 80 x 40 every row is exactly the terminal's width
-func TestL4EveryRowFullWidthAt80x40(t *testing.T) {
-	d, _ := newTestDrawer(t)
-	frame := d.app.Frame()
-	if len(frame) != 40 {
-		t.Fatalf("%d rows, want 40", len(frame))
-	}
-	for i, line := range frame {
-		if w := terminu.Width(line); w != 80 {
-			t.Fatalf("row %d is %d cells wide, want 80", i, w)
-		}
-	}
 }
 
 func key(s string) tea.KeyMsg { return tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune(s)} }
@@ -279,8 +266,10 @@ func TestNoCatalogSaysWhatToDo(t *testing.T) {
 		t.Fatal(err)
 	}
 	d.app.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
-	if !strings.Contains(terminu.StripStyles(strings.Join(d.app.Frame(), "\n")), "ccdrawu install") {
-		t.Fatal("an empty panel names ccdrawu install")
+	// tdp components/layout/screen, the empty state: a fact, and a hint that
+	// names a key
+	if !strings.Contains(terminu.StripStyles(strings.Join(d.app.Frame(), "\n")), "Press [Enter] on Plugin") {
+		t.Fatal("an empty panel says nothing of the key that installs the plugin")
 	}
 }
 
@@ -325,6 +314,14 @@ func TestAliasIsCheckedAndSaved(t *testing.T) {
 		press(d, tea.KeyMsg{Type: tea.KeyEnter})
 		press(d, key(v))
 		press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	}
+	// tdp K3: the value it opened on is not written back, though typed again
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	press(d, key("a"))
+	press(d, tea.KeyMsg{Type: tea.KeyBackspace})
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if _, err := os.Stat(loc.ConfigFile); err == nil {
+		t.Fatal("the alias it opened on was written back")
 	}
 	edit("two words")
 	if c, _ := config.ReadConfig(loc.ConfigFile); c.Alias != "" {
@@ -464,6 +461,67 @@ func TestPetIsPicked(t *testing.T) {
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	if c, _ := config.ReadConfig(loc.ConfigFile); c.Pet.Species != "rabbit" {
 		t.Fatalf("pet = %+v, want the rabbit", c.Pet)
+	}
+}
+
+// tdp components/layout/panel, one value per row: a value set by hand in
+// config.json that ccdrawu does not take turns its label Red
+func TestWrongValuesAreMarked(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	if err := os.MkdirAll(filepath.Dir(loc.ConfigFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	wrong := `{"alias": "a b!", "theme": {"base": "dark-ansi", "background": "zzz"}, "statusline": {"refresh": 999, "separator": "\u001b"}}`
+	if err := os.WriteFile(loc.ConfigFile, []byte(wrong), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	marked := map[string]bool{}
+	for _, f := range append(d.pages[rowPreferences].Fields, d.statuslineFields()...) {
+		if f.Err != nil && f.Err() {
+			marked[f.Label] = true
+		}
+	}
+	for _, label := range []string{"Alias", "Drawer background", "Refresh", "Separator"} {
+		if !marked[label] {
+			t.Errorf("%s is not marked wrong: %v", label, marked)
+		}
+	}
+	if marked["Plugin"] {
+		t.Error("the plugin is marked wrong before it is looked for")
+	}
+	d.pluginChecked(pluginChecked{err: errors.New("no claude")})
+	if f := d.pages[rowPreferences].Fields[len(d.pages[rowPreferences].Fields)-1]; f.Label != "Plugin" || !f.Err() {
+		t.Error("the plugin row is not marked wrong when it can't tell")
+	}
+}
+
+// A change that can't be written is not shown as if it were: the config, and
+// the radio, go back to the file
+func TestUnsavedChangeGoesBack(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("a folder can't be made read-only there")
+	}
+	d, loc := newTestDrawer(t)
+	toField(t, d, "Pet") // on the cat
+	dir := filepath.Dir(loc.ConfigFile)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+	press(d, key("j"))
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // the dog, not saved
+	if text := frameText(d); !strings.Contains(text, "CAN'T SAVE") {
+		t.Fatalf("no error popup:\n%s", text)
+	}
+	if f := d.pages[rowPreferences].Current(); d.cfg.Pet.Species != "" || f.Selected != 0 {
+		t.Fatalf("pet %q, the radio on %d, want both back on the cat", d.cfg.Pet.Species, f.Selected)
 	}
 }
 

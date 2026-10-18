@@ -49,12 +49,15 @@ func (d *drawer) backgroundField() *terminu.Field {
 		Label: "Drawer background", Empty: "the theme's own",
 		Value: func() string {
 			if !hexColor.MatchString(d.cfg.Theme.Background) {
-				return d.cfg.Theme.Background
+				return shown(d.cfg.Theme.Background)
 			}
 			return terminu.ColorText(terminu.Hex(d.cfg.Theme.Background))
 		},
 		Disabled: func() bool { return d.cfg.Theme.Base == "" },
+		// Not a color: set by hand in config.json
+		Err: func() bool { return d.cfg.Theme.Background != "" && !hexColor.MatchString(d.cfg.Theme.Background) },
 		Edit: func() tea.Cmd {
+			// TODO(tdp CD12): with none set, the picker's old reads NONE
 			var old terminu.Color
 			if hexColor.MatchString(d.cfg.Theme.Background) {
 				old = terminu.Hex(d.cfg.Theme.Background)
@@ -96,12 +99,14 @@ func (d *drawer) applyTheme() tea.Cmd {
 	note := "Claude Code has its own theme back"
 	if t.Base == "" {
 		if err := claude.RestoreTheme(d.loc.Claude, t.Before); err != nil {
+			d.revert()
 			return d.app.Error("Can't put the theme back", err.Error())
 		}
 		t.Before = ""
 	} else {
 		before, switched, err := claude.ApplyTheme(d.loc.Claude, t.Base, t.Background)
 		if err != nil {
+			d.revert()
 			return d.app.Error("Can't set the theme", err.Error())
 		}
 		if switched {
@@ -124,24 +129,24 @@ func (d *drawer) barField() *terminu.Field {
 		"squares  " + strings.Repeat("\uF445", 4) + strings.Repeat("\uF51D", 4),
 		"line     " + strings.Repeat("━", 8),
 	}
-	f := &terminu.Field{Label: "Bar", Options: options, Selected: max(0, slices.Index(config.BarStyles, d.cfg.Bar))}
+	f := &terminu.Field{Label: "Bar", Options: options}
 	f.OnChange = func() tea.Cmd {
 		d.cfg.Bar = config.BarStyles[f.Selected]
 		return d.save()
 	}
-	return f
+	return d.radio(f, func() int { return max(0, slices.Index(config.BarStyles, d.cfg.Bar)) })
 }
 
 // petField picks the animal the drawer's pet is, drawn in place; open sessions
 // draw the new one within a second.
 func (d *drawer) petField() *terminu.Field {
 	options := config.PetSpecies
-	f := &terminu.Field{Label: "Pet", Options: options, Selected: max(0, slices.Index(options, d.cfg.Pet.Species))}
+	f := &terminu.Field{Label: "Pet", Options: options}
 	f.OnChange = func() tea.Cmd {
 		d.cfg.Pet.Species = options[f.Selected]
 		return d.save()
 	}
-	return f
+	return d.radio(f, func() int { return max(0, slices.Index(options, d.cfg.Pet.Species)) })
 }
 
 // The plugin row: whether Claude Code has the ccdrawu plugin, found with
@@ -161,8 +166,9 @@ type pluginDone struct {
 
 func (d *drawer) pluginField() *terminu.Field {
 	return &terminu.Field{
-		Label: "Plugin", Value: func() string { return d.plugin }, Empty: "checking…",
+		Label: "Plugin", Value: func() string { return shown(d.plugin) }, Empty: "checking…",
 		Disabled: func() bool { return d.plugin == "" || d.busy },
+		Err:      func() bool { return d.pluginErr },
 		Edit:     d.pluginAction,
 	}
 }
@@ -176,7 +182,7 @@ func (d *drawer) checkPlugin() tea.Cmd {
 }
 
 func (d *drawer) pluginChecked(m pluginChecked) {
-	d.busy, d.pluginID = false, m.id
+	d.busy, d.pluginID, d.pluginErr = false, m.id, m.err != nil
 	switch {
 	case m.err != nil:
 		d.plugin = "can't tell: " + m.err.Error()
@@ -226,7 +232,13 @@ func (d *drawer) pluginAction() tea.Cmd {
 func (d *drawer) pluginDone(m pluginDone) tea.Cmd {
 	if m.err != nil {
 		d.busy = false
-		return tea.Batch(d.app.Error("Claude Code said no", m.err.Error()), d.checkPlugin())
+		// What failed, in the title; no name there, as a title is upper case
+		// throughout (tdp components, capitals)
+		title := "Install failed"
+		if m.uninstall {
+			title = "Uninstall failed"
+		}
+		return tea.Batch(d.app.Error(title, m.err.Error()), d.checkPlugin())
 	}
 	cmds := []tea.Cmd{d.app.Toast(terminu.Info, m.msg), d.checkPlugin()}
 	if m.uninstall && d.cfg.Theme.Base != "" {
