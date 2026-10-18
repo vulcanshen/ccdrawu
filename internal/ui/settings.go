@@ -37,10 +37,17 @@ func (d *drawer) themeField() *terminu.Field {
 }
 
 // backgroundField is the drawer's background over that theme, in a color
-// picker; none keeps the theme's own. Off with the theme.
+// picker; none keeps the theme's own. Off with the theme. Its value is a
+// swatch and the hex (tdp components/input/color-picker).
 func (d *drawer) backgroundField() *terminu.Field {
 	return &terminu.Field{
-		Label: "Drawer background", Value: func() string { return d.cfg.Theme.Background }, Empty: "the theme's own",
+		Label: "Drawer background", Empty: "the theme's own",
+		Value: func() string {
+			if !hexColor.MatchString(d.cfg.Theme.Background) {
+				return d.cfg.Theme.Background
+			}
+			return terminu.ColorText(terminu.Hex(d.cfg.Theme.Background))
+		},
 		Disabled: func() bool { return d.cfg.Theme.Base == "" },
 		Edit: func() tea.Cmd {
 			var old terminu.Color

@@ -397,6 +397,10 @@ func TestXResetsTheBackground(t *testing.T) {
 	if d.pages[rowPreferences].Current() != d.background {
 		t.Fatalf("the cursor is not on the background:\n%s", frameText(d))
 	}
+	// tdp components/input/color-picker: a swatch, then the hex
+	if text := frameText(d); !strings.Contains(text, "███ #FF0000") {
+		t.Fatalf("the background is not a swatch and its hex:\n%s", text)
+	}
 	press(d, key("x"))
 	if c, _ := config.ReadConfig(loc.ConfigFile); c.Theme.Background != "" || c.Theme.Base != "dark-ansi" {
 		t.Fatalf("theme kept as %+v, want dark-ansi with no background", c.Theme)

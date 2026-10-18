@@ -6,6 +6,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 - Built on terminu-go v0.1.13 (tdp v0.7.2): in the color picker for the drawer background `h|j|k|l` move among R, G and B only, and `Tab` goes to `Choose`; text in a confirm, a toast and an error popup wraps at spaces, and between wide characters; in the items popup a filter that matches nothing leaves `Space` out of the hint.
 - The repo, from the tdp v0.7.4 project templates: `family.mk`, the release workflow, goreleaser, `install.sh` and `uninstall.sh`, `internal/version`. `uninstall.sh` also offers to remove a cache folder, where there is one.
+- **Drawer background** reads as a swatch of the color and its hex, where it read the hex alone.
 - After `/clear` the drawer and the status line keep their values, and the drawer the rows you picked in `ccdrawu`. Model, Session, Weekly and Cost read `-` until the next reply, the versions until Claude Code started again, the drawer went back to its default rows, and the pet fell asleep.
 
 ## [0.1.4] - 2026-10-16
