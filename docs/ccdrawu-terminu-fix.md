@@ -8,7 +8,6 @@
 
 | 條目 | 在哪裡 | 現況 | 該怎麼改 |
 |---|---|---|---|
-| tdp M3、tdp K6（清單 M3-1、K6-5） | `[2]` 每一頁 | 每一列的 `Enter`（選、開 input、開 popup、開 confirm）不在 Space menu，`?` 裡也沒有；preferences 頁的 Space menu 只剩 Global operation | lib 的 `Values` 提供 `[Enter]` 的 item operation（CD19） |
 | tdp K7、tdp K12（清單 K7-1、K12-4） | Order 的 reorder popup | `h\|l`、`←\|→` 不動，同一個 app 的其他一維清單都會動 | lib 的 reorder 收 `h\|l`（CD20） |
 | tdp M6（清單 M6-6） | 沒有 catalog 時的 `[2]`、Install confirm | `?` 照常列出移動鍵、捲動鍵，其實沒東西可移、可捲 | lib 不列，或用停用色（CD21） |
 | tdp E5（清單 E5-10） | 任何 popup | 終端機 5 列以下打開 popup 會 panic | lib 的 draw 不讓高度變負（CD22） |

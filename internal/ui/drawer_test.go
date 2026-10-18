@@ -304,6 +304,33 @@ func TestDetailFollowsTheSidebar(t *testing.T) {
 	}
 }
 
+// tdp M3 and tdp K6: what Enter does on [2]'s value is an item operation, in
+// the Space menu and in ?, named as the hint names it, and does the same
+func TestEnterOnAValueIsInTheMenu(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	toField(t, d, "Alias")
+	press(d, space)
+	if text := frameText(d); !strings.Contains(text, "[Enter] Edit") {
+		t.Fatalf("no [Enter] Edit in the Space menu on the alias:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEsc})
+	press(d, key("?"))
+	if text := frameText(d); !strings.Contains(text, "Edit — the value under the cursor") {
+		t.Fatalf("? does not list Enter:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEsc})
+	toField(t, d, "Pet") // on the cat
+	press(d, key("j"))   // the dog
+	press(d, space)
+	if text := frameText(d); !strings.Contains(text, "[Enter] Choose") {
+		t.Fatalf("no [Enter] Choose in the Space menu on a radio:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // runs it from the menu
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Pet.Species != "dog" {
+		t.Fatalf("pet = %q after Choose from the menu, want the dog", c.Pet.Species)
+	}
+}
+
 func TestAliasIsCheckedAndSaved(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	press(d, key("j"))

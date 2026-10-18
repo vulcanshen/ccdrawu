@@ -120,6 +120,9 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
     選哪一個）改回檔案裡的樣子，畫面不會假裝存好。input 已經關掉這件事等 lib（CD24）。
   - **error popup 的標題寫哪件事失敗，不放名稱**：lib 把整個標題轉大寫，`Claude Code` 會變成 `CLAUDE CODE`（tdp components 的
     「大寫」：名稱照原樣）。Install failed、Uninstall failed、Can't read the settings。Alias 的錯誤點名 Alias（tdp components/input/README）。
+  - **`[2]` 的 Enter 是 item operation**（tdp M3、tdp K6）：terminu-go 的 `Values` 自己處理 Enter，但不列進 Space menu 與 `?`（CD19）。
+    `enterField` 把它登記成 `[2]` 的 `Enter` 動作，`Do` 轉給 `Values.Key("Enter")`，做的事跟直接按一樣；`Hint` 留空，下框照樣用
+    `Values.EnterHint`；名稱在游標移動時（`OnMove`）跟著改成 Edit、Choose 或 Toggle。lib 補上之後拿掉。
   - **Refresh 在 panel 上只寫值**（`10`），單位寫在 input 的說明列（tdp components/input/README 的顯示表：number 寫值本身）。
   - **畫面測試**：`TestL4EveryRowFullWidth`（`internal/ui/screen_test.go`）在三種 icon 與 powerline 寬度下，開 ccdrawu 的每一種
     popup，在 200x50 與 40x15 各開一次，200x50 開的再拉到比它窄、矮的尺寸，每一列都要剛好等於終端機寬（tdp L4、tdp E5、tdp E6）。

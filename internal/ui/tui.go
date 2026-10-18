@@ -122,7 +122,10 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 		d.show(r.ID)
 		return nil
 	}
-	d.detail = &terminu.Panel{Actions: []terminu.Action{d.editItems(), d.resetBackground()}}
+	d.detail = &terminu.Panel{Actions: []terminu.Action{d.enterField(), d.editItems(), d.resetBackground()}}
+	for _, page := range d.pages {
+		page.OnMove = d.nameEnter
+	}
 	d.show(rowSidebar)
 	// Enter goes into the row's page in [2]: the one change of panels Enter
 	// makes (tdp K3, details, since tdp v0.6.3). Every row has a page.
@@ -145,6 +148,40 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 func sidebar(w, h int) []terminu.Rect {
 	left := min(24, w/2)
 	return []terminu.Rect{{X: 0, Y: 0, W: left, H: h}, {X: left, Y: 0, W: w - left, H: h}}
+}
+
+// enterField is Enter on the value under [2]'s cursor as an item operation,
+// so it is in the Space menu and in ? as well as in the hint (tdp M3, tdp K6).
+// It does what Enter does there; its Hint is left empty, so the hint keeps
+// the page's own word for it (edit, choose, toggle).
+//
+// TODO(lib CD19): terminu-go's Values does not list its own Enter
+func (d *drawer) enterField() terminu.Action {
+	return terminu.Action{
+		Key: "Enter", Label: "Edit", Desc: "the value under the cursor", Scope: terminu.ItemScope,
+		Disabled: func() bool {
+			f := d.pages[d.detail.Label].Current()
+			return f == nil || f.Disabled != nil && f.Disabled()
+		},
+		Do: func() tea.Cmd {
+			_, cmd := d.pages[d.detail.Label].Key("Enter", tea.KeyMsg{Type: tea.KeyEnter})
+			return cmd
+		},
+	}
+}
+
+// nameEnter names Enter's item operation after what it does on the value
+// the cursor came to, as the hint does.
+func (d *drawer) nameEnter(*terminu.Field, int) tea.Cmd {
+	switch d.pages[d.detail.Label].EnterHint() {
+	case "choose":
+		d.detail.Actions[0].Label = "Choose"
+	case "toggle":
+		d.detail.Actions[0].Label = "Toggle"
+	case "edit":
+		d.detail.Actions[0].Label = "Edit"
+	}
+	return nil
 }
 
 // show puts the page of row id in [2], named after it.
