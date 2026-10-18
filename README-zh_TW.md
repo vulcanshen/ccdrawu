@@ -47,16 +47,19 @@
 
 狀態列可以顯示上面除了寵物以外的任何一項，見[狀態列](#狀態列)。
 
-## 需求
+## 安裝
+
+### 需求
 
 - Claude Code 2.1.287 以上
 - fullscreen 渲染模式（側邊欄才需要）：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊（見[疑難排解](#疑難排解)）。狀態列不需要這一項，也不需要終端機夠寬
 - 終端機要夠寬：自動開啟的面板會等終端機寬到大約 110～144 欄才出現
-- 終端機的字型要設成 [Nerd Font](https://www.nerdfonts.com)：側邊欄的 bar，以及 `ccdrawu` 指令裡的標記（選了哪個、勾了哪些），都是它的圖示。沒有的話，見[疑難排解](#疑難排解)
+- 終端機的字型要設成 [Nerd Font](https://www.nerdfonts.com)：側邊欄的 bar，以及 `ccdrawu` 指令裡的標記（選了哪個、勾了哪些），都是它的圖示。沒有的話，見[疑難排解](#疑難排解)。圖示在你的終端機佔兩格、`ccdrawu` 的框線歪掉時，設 `CCDRAWU__ICON_WIDTH` 與 `CCDRAWU__POWERLINE_WIDTH`（`1` 或 `2`）只給 ccdrawu 用，或設 `TERMINU__ICON_WIDTH` 與 `TERMINU__POWERLINE_WIDTH` 給整個 terminu 家族：設一次，家族每個 app 都讀得到。家族裡會在自己的終端機跑程式的 app，會替那個程式設好這兩個 `TERMINU__` 變數
+- 終端機要支援 truecolor（24-bit 色），給 `ccdrawu` 指令用：它的配色是 Catppuccin，深淺之間的差別 256 色分不出來
 - `ccdrawu` 指令，用來挑側邊欄和狀態列顯示的項目。狀態列是 Claude Code 去執行它，所以它要在你的 `PATH` 上
 - macOS、Linux 或 Windows（Windows 上在 Windows Terminal 試過，見[限制](#限制)）
 
-## 安裝
+### 安裝 ccdrawu
 
 先安裝 `ccdrawu` 指令：
 
@@ -87,13 +90,65 @@ ccdrawu install claude
 
 外掛請只用 `ccdrawu install claude`，或會幫你執行它的 `ccdrawu update`，來安裝和更新，不要在 Claude Code 裡用 `/plugin`，也不要用 `claude plugin marketplace`。自己從 marketplace 裝的外掛，是 repo main 分支上當下的版本，可能比你的 `ccdrawu` 新，讀設定的方式也可能不一樣；`ccdrawu install claude` 會裝跟指令同一版的外掛。
 
+### 第一次執行
+
+下一個 Claude Code 的 session 會自己打開側邊欄：Claude Code 是 fullscreen 渲染、終端機也夠寬時放在對話旁邊，其他時候放在輸入框上方。外掛第一次跑的時候，會寫出 `ccdrawu` 列出的項目清單；在那之前，`ccdrawu` 的頁面會寫還沒有東西可以列，並提示在 **preferences** 的 **Plugin** 上按 `Enter` 安裝外掛。
+
+### 更新
+
+```sh
+ccdrawu update
+```
+
+它會查最新的 release，照你安裝的方式更新 `ccdrawu` 指令：用 Homebrew 裝的交給 Homebrew；用安裝腳本裝的，就下載 release 的執行檔，用 release 的 checksum 驗證後換掉自己。接著，如果 Claude Code 裡有 ccdrawu 外掛，就把它更新成同一版；指令和外掛要搭配，而 Claude Code 不會自己更新這個外掛。已經開著的 session 跑一次 `/reload-plugins`，新開的 session 直接就是新版。
+
+- 用 Scoop 裝的：它會告訴你先跑 `scoop update ccdrawu`，再跑 `ccdrawu install claude`。Scoop 不會在 ccdrawu 執行中更新它。
+- `ccdrawu` 所在的資料夾不能寫入時（例如安裝腳本用 root 裝在 `/usr/local/bin`），它會說明原因後停下來：請再跑一次安裝腳本，或用那個資料夾擁有者的身分執行 `ccdrawu update`。
+- 0.1.3 之前的版本沒有 `ccdrawu update`：先照你安裝的方式更新指令（`brew upgrade ccdrawu`、`scoop update ccdrawu`，或再跑一次安裝腳本），再執行 `ccdrawu install claude`，它會把外掛更新成跟指令同一版。
+
+### 移除
+
+先把側邊欄從 Claude Code 拿掉：
+
+```sh
+ccdrawu uninstall claude
+```
+
+這也會換回 ccdrawu 之前你用的主題和狀態列。
+
+再移除 `ccdrawu` 指令：
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.sh | sh
+```
+
+```powershell
+# Windows PowerShell
+irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | iex
+```
+
+兩者都會先問過你，才刪 `~/.config/ccdrawu/` 和 `~/.ccdrawu/`。用 Homebrew 或 Scoop 裝的，用 `brew uninstall ccdrawu` 或 `scoop uninstall ccdrawu`。
+
+## 快速開始
+
+```sh
+brew install vulcanshen/tap/ccdrawu   # 或「安裝」裡的其他方式
+ccdrawu install claude
+claude
+```
+
+- 側邊欄在對話旁邊。如果在輸入框上方，執行一次 `/tui fullscreen`。
+- `/ccdrawu pat` 摸摸寵物；`/ccdrawu` 關掉側邊欄，再打一次打開。
+- 在另一個終端機執行 `ccdrawu` 挑側邊欄顯示的項目：`j`、`k` 移動，`Enter` 進去、選定，`Space` 看能做什麼，`?` 列出按鍵，`q` 離開。
+
 ## 使用方式
 
 - session 開始時會自動打開。
 - `ccdrawu` 裡 sidebar 頁和 inline 頁最上面的 **Drawer**，各自只關掉那個位置。inline 頁設成 `off` 的話，終端機縮到放不下側邊欄時，側邊欄會收起來，不會跑到輸入框上方；拉寬之後再回到對話旁邊。終端機窄的時候把 inline 設回 `on`，側邊欄不會自己回到輸入框上方，見[限制](#限制)。兩頁都設成 `off`，session 開始時就不會打開。開著的 session 會在一秒內跟著換。
 - `/ccdrawu` 開關「輸入它的這個 session」的側邊欄，Claude 回覆到一半也能用。打開後，不管在對話旁邊還是輸入框上方都會顯示，**Drawer** 設成 `off` 的位置也一樣；關掉後，終端機拉寬或縮窄都不會再出現。之後在 `ccdrawu` 改了 **Drawer**，就改回照設定走；新的 session 一律照 **Drawer** 的設定開始。
-- 點右上角的 `×` 關閉，或按 `Ctrl+X Tab` 移過去再按 `Ctrl+X X`。
-- 焦點在側邊欄上時，`Ctrl+X ←`、`Ctrl+X →` 可以調寬或調窄。
+- 點右上角的 `×` 關閉，或按 `ctrl+x tab` 移過去再按 `ctrl+x x`。
+- 焦點在側邊欄上時，`ctrl+x left`、`ctrl+x right` 可以調寬或調窄。
 
 ### 挑要顯示的項目
 
@@ -208,44 +263,24 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 - Claude Code 的 mod 介面還在搶先體驗階段，版本更新時可能會變動。
 - Windows 上在 Windows Terminal 試過。Termius 的本機終端會把畫面畫亂（見[疑難排解](#疑難排解)），其他 Windows 終端機還沒試過，歡迎回報。
 
-## 更新
-
-```sh
-ccdrawu update
-```
-
-它會查最新的 release，照你安裝的方式更新 `ccdrawu` 指令：用 Homebrew 裝的交給 Homebrew；用安裝腳本裝的，就下載 release 的執行檔，用 release 的 checksum 驗證後換掉自己。接著，如果 Claude Code 裡有 ccdrawu 外掛，就把它更新成同一版；指令和外掛要搭配，而 Claude Code 不會自己更新這個外掛。已經開著的 session 跑一次 `/reload-plugins`，新開的 session 直接就是新版。
-
-- 用 Scoop 裝的：它會告訴你先跑 `scoop update ccdrawu`，再跑 `ccdrawu install claude`。Scoop 不會在 ccdrawu 執行中更新它。
-- `ccdrawu` 所在的資料夾不能寫入時（例如安裝腳本用 root 裝在 `/usr/local/bin`），它會說明原因後停下來：請再跑一次安裝腳本，或用那個資料夾擁有者的身分執行 `ccdrawu update`。
-- 0.1.3 之前的版本沒有 `ccdrawu update`：先照你安裝的方式更新指令（`brew upgrade ccdrawu`、`scoop update ccdrawu`，或再跑一次安裝腳本），再執行 `ccdrawu install claude`，它會把外掛更新成跟指令同一版。
-
-## 移除
-
-先把側邊欄從 Claude Code 拿掉：
-
-```sh
-ccdrawu uninstall claude
-```
-
-這也會換回 ccdrawu 之前你用的主題和狀態列。
-
-再移除 `ccdrawu` 指令：
-
-```sh
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.sh | sh
-```
-
-```powershell
-# Windows PowerShell
-irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | iex
-```
-
-兩者都會先問過你，才刪 `~/.config/ccdrawu/` 和 `~/.ccdrawu/`。用 Homebrew 或 Scoop 裝的，用 `brew uninstall ccdrawu` 或 `scoop uninstall ccdrawu`。
-
 ## 更多
 
 - [更新紀錄](CHANGELOG.md)
 - [開發者備忘](docs/dev-remarks.md)
-- [授權：GPL-3.0](LICENSE)
+
+## terminu 家族
+
+`ccdrawu` 指令遵循 [terminu design](https://github.com/vulcanshen/terminu)，用 [terminu-go](https://github.com/vulcanshen/terminu-go) 寫成。家族的其他成員：
+
+| App | 是什麼 |
+|---|---|
+| [kbu](https://github.com/vulcanshen/kbu) | Kubernetes 的 TUI 儀表板 |
+| [filu](https://github.com/vulcanshen/filu) | 不用學就會用的終端機檔案管理器 |
+| [sshu](https://github.com/vulcanshen/sshu) | ssh 與 sftp 的終端機介面 |
+| [webu](https://github.com/vulcanshen/webu) | 把網頁當成文件來讀的終端機瀏覽器 |
+| [locku](https://github.com/vulcanshen/locku) | 終端機的螢幕保護程式，加上 PIN 鎖 |
+| [kamonu](https://github.com/vulcanshen/kamonu) | 一個字一個字畫出家族 mark（家紋）的終端機編輯器 |
+
+## 授權
+
+[GPL-3.0](LICENSE)

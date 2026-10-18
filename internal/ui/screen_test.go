@@ -30,7 +30,7 @@ func run(d *drawer, cmd tea.Cmd) {
 	}
 }
 
-// tdp L4, E5 and E6: at every size, with a Nerd Font icon and a powerline
+// tdp L4, tdp E5 and tdp E6: at every size, with a Nerd Font icon and a powerline
 // symbol one or two cells wide, every row is exactly the terminal's width and
 // there are as many rows as it is tall, with each popup ccdrawu opens on top;
 // opened, then the terminal made narrower, lower, or both, than the popup.

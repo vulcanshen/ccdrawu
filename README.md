@@ -47,16 +47,19 @@ A row you turned on is always there: it reads `-` until its value comes, or wher
 
 The status line can show any of them but the pet: see [The status line](#the-status-line).
 
-## Requirements
+## Install
+
+### Requirements
 
 - Claude Code 2.1.287 or later
 - Fullscreen rendering, for the drawer: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript (see [Troubleshooting](#troubleshooting)). The status line needs neither this nor a wide terminal
 - A terminal wide enough for a sidebar: a pane opened on its own waits until the terminal is about 110–144 columns wide
-- A [Nerd Font](https://www.nerdfonts.com) as your terminal's font: the drawer's bars and the marks in the `ccdrawu` command (which choice is picked, which items are ticked) are its icons. Without one, see [Troubleshooting](#troubleshooting)
+- A [Nerd Font](https://www.nerdfonts.com) as your terminal's font: the drawer's bars and the marks in the `ccdrawu` command (which choice is picked, which items are ticked) are its icons. Without one, see [Troubleshooting](#troubleshooting). Where an icon takes two cells in your terminal and the frames of `ccdrawu` come out crooked, set `CCDRAWU__ICON_WIDTH` and `CCDRAWU__POWERLINE_WIDTH` (`1` or `2`) for ccdrawu alone, or `TERMINU__ICON_WIDTH` and `TERMINU__POWERLINE_WIDTH` for the whole terminu family: set them once and every app of the family reads them. A family app that runs a program in its own terminal sets the two `TERMINU__` variables for it
+- A terminal with truecolor (24-bit color), for the `ccdrawu` command: its colors are Catppuccin's, whose shades 256 colors can't tell apart
 - The `ccdrawu` command, to pick what the drawer and the status line show. Claude Code runs it for the status line, so it has to be on your `PATH`
 - macOS, Linux or Windows (on Windows, tried in Windows Terminal: see [Limitations](#limitations))
 
-## Install
+### Install ccdrawu
 
 First the `ccdrawu` command:
 
@@ -87,13 +90,65 @@ It installs the ccdrawu plugin released with this `ccdrawu`, for your user, so e
 
 Install and update the plugin with `ccdrawu install claude`, or `ccdrawu update`, which runs it, only, not with `/plugin` in Claude Code or `claude plugin marketplace`. Added from the marketplace by hand, the plugin is whatever the repository's main branch holds, which can be ahead of your `ccdrawu` and read its settings differently; `ccdrawu install claude` takes the plugin of the same version as the command.
 
+### The first run
+
+The next Claude Code session opens the drawer by itself, beside the transcript where Claude Code renders fullscreen in a terminal wide enough, above the prompt otherwise. The plugin writes the list of items `ccdrawu` offers the first time it runs; until then the pages of `ccdrawu` say there is nothing to list yet, and that `Enter` on **Plugin** in **preferences** installs the plugin.
+
+### Update
+
+```sh
+ccdrawu update
+```
+
+It looks up the latest release and updates the `ccdrawu` command the way you installed it: through Homebrew, or, installed with the install script, by putting the release's executable in place of its own, checked against the release's checksums. Then it updates the plugin in Claude Code to the same release, where Claude Code has it; the command and the plugin go together, and Claude Code does not update the plugin by itself. In sessions already open, run `/reload-plugins`. New sessions have the new plugin from the start.
+
+- Installed with Scoop, it tells you to run `scoop update ccdrawu`, then `ccdrawu install claude`: Scoop does not update ccdrawu while it runs.
+- Where it cannot write in the folder `ccdrawu` is in, such as `/usr/local/bin` after the install script ran as root, it says so and stops: run the install script again, or `ccdrawu update` as the folder's owner.
+- Before 0.1.3 there is no `ccdrawu update`: update the command the way you installed it (`brew upgrade ccdrawu`, `scoop update ccdrawu`, or the install script again), then run `ccdrawu install claude`, which updates the plugin to the version of the command.
+
+### Uninstall
+
+First take the drawer out of Claude Code:
+
+```sh
+ccdrawu uninstall claude
+```
+
+This also puts back the theme and the status line you had before ccdrawu's.
+
+Then remove the `ccdrawu` command:
+
+```sh
+# macOS / Linux
+curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.sh | sh
+```
+
+```powershell
+# Windows PowerShell
+irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | iex
+```
+
+Both ask before removing `~/.config/ccdrawu/` and `~/.ccdrawu/`. With Homebrew or Scoop, `brew uninstall ccdrawu` or `scoop uninstall ccdrawu`.
+
+## Quick start
+
+```sh
+brew install vulcanshen/tap/ccdrawu   # or another way, under Install
+ccdrawu install claude
+claude
+```
+
+- The drawer sits beside the transcript. If it sits above the prompt, run `/tui fullscreen` once.
+- `/ccdrawu pat` pats the pet; `/ccdrawu` closes the drawer, and opens it again.
+- In another terminal, run `ccdrawu` to pick what the drawer shows: `j` and `k` move, `Enter` goes in and picks, `Space` shows what you can do, `?` lists the keys, `q` quits.
+
 ## Usage
 
 - The drawer opens by itself when a session starts.
 - **Drawer**, atop the sidebar page and the inline page in `ccdrawu`, turns it off in that place alone. Off on the inline page, a terminal narrowed below the sidebar's width hides the drawer instead of moving it above the prompt, and widening it again brings the drawer back beside the transcript. Turned back on while the terminal is narrow, the drawer does not come back above the prompt by itself: see [Limitations](#limitations). Off on both, sessions start without it. Open sessions follow within a second.
 - `/ccdrawu` opens or closes it for the session you type it in, even while Claude is working. Opened, it shows beside the transcript and above the prompt alike, even where **Drawer** is off; closed, it stays closed as the terminal widens or narrows. Changing **Drawer** in `ccdrawu` afterwards takes over again, and new sessions start as **Drawer** has it.
-- Click the `×` at its top right to close it, or press `Ctrl+X Tab` to focus it and then `Ctrl+X X`.
-- `Ctrl+X ←` and `Ctrl+X →` make it wider or narrower while it has focus.
+- Click the `×` at its top right to close it, or press `ctrl+x tab` to focus it and then `ctrl+x x`.
+- `ctrl+x left` and `ctrl+x right` make it wider or narrower while it has focus.
 
 ### Pick what it shows
 
@@ -208,44 +263,24 @@ The ccdrawu plugin is not running in that session, so the status line shows what
 - Claude Code's mod interface is in early access and may change between releases.
 - On Windows, ccdrawu has been tried in Windows Terminal. Termius's local terminal draws it out of place (see [Troubleshooting](#troubleshooting)), and other Windows terminals have not been tried yet; reports are welcome.
 
-## Update
-
-```sh
-ccdrawu update
-```
-
-It looks up the latest release and updates the `ccdrawu` command the way you installed it: through Homebrew, or, installed with the install script, by putting the release's executable in place of its own, checked against the release's checksums. Then it updates the plugin in Claude Code to the same release, where Claude Code has it; the command and the plugin go together, and Claude Code does not update the plugin by itself. In sessions already open, run `/reload-plugins`. New sessions have the new plugin from the start.
-
-- Installed with Scoop, it tells you to run `scoop update ccdrawu`, then `ccdrawu install claude`: Scoop does not update ccdrawu while it runs.
-- Where it cannot write in the folder `ccdrawu` is in, such as `/usr/local/bin` after the install script ran as root, it says so and stops: run the install script again, or `ccdrawu update` as the folder's owner.
-- Before 0.1.3 there is no `ccdrawu update`: update the command the way you installed it (`brew upgrade ccdrawu`, `scoop update ccdrawu`, or the install script again), then run `ccdrawu install claude`, which updates the plugin to the version of the command.
-
-## Uninstall
-
-First take the drawer out of Claude Code:
-
-```sh
-ccdrawu uninstall claude
-```
-
-This also puts back the theme and the status line you had before ccdrawu's.
-
-Then remove the `ccdrawu` command:
-
-```sh
-# macOS / Linux
-curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.sh | sh
-```
-
-```powershell
-# Windows PowerShell
-irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | iex
-```
-
-Both ask before removing `~/.config/ccdrawu/` and `~/.ccdrawu/`. With Homebrew or Scoop, `brew uninstall ccdrawu` or `scoop uninstall ccdrawu`.
-
 ## More
 
 - [Changelog](CHANGELOG.md)
 - [Developer notes](docs/dev-remarks.md)
-- [License: GPL-3.0](LICENSE)
+
+## The terminu family
+
+The `ccdrawu` command follows [terminu design](https://github.com/vulcanshen/terminu) and is built with [terminu-go](https://github.com/vulcanshen/terminu-go). The other apps in the family:
+
+| App | What it is |
+|---|---|
+| [kbu](https://github.com/vulcanshen/kbu) | A Kubernetes TUI dashboard |
+| [filu](https://github.com/vulcanshen/filu) | A terminal file manager you don't have to learn |
+| [sshu](https://github.com/vulcanshen/sshu) | A terminal front end for ssh and sftp |
+| [webu](https://github.com/vulcanshen/webu) | A terminal browser that reads a web page as a document |
+| [locku](https://github.com/vulcanshen/locku) | A screensaver with a PIN lock, for the terminal |
+| [kamonu](https://github.com/vulcanshen/kamonu) | A terminal editor for the family's marks (kamon), drawn letter by letter |
+
+## License
+
+[GPL-3.0](LICENSE)

@@ -13,6 +13,7 @@ Each release names the version of terminu design (tdp) it follows.
 - A change that can't be saved, or a theme that can't be set, is not shown as if it were: the page goes back to what is saved.
 - An install or uninstall that fails says which in its title, `INSTALL FAILED` or `UNINSTALL FAILED`, where both read `CLAUDE CODE SAID NO`; the alias's errors name the alias.
 - Before ccdrawu has run in Claude Code, the empty pages name the key that installs the plugin: `[Enter]` on **Plugin** in preferences.
+- The README runs in the family's order: requirements, the first run, updating and removing under Install, then a quick start. It says the terminal needs truecolor, and names the variables for an icon two cells wide, `CCDRAWU__ICON_WIDTH`, `CCDRAWU__POWERLINE_WIDTH` and the family's `TERMINU__` ones; Claude Code's keys read as Claude Code writes them, `ctrl+x tab`.
 - After `/clear` the drawer and the status line keep their values, and the drawer the rows you picked in `ccdrawu`. Model, Session, Weekly and Cost read `-` until the next reply, the versions until Claude Code started again, the drawer went back to its default rows, and the pet fell asleep.
 
 ## [0.1.4] - 2026-10-16

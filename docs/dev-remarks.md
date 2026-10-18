@@ -1,6 +1,8 @@
 # ccdrawu 開發者備忘
 
-開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。
+開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.7.4；drawer 本身是 Claude Code 的 mod，
+畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
 
@@ -50,9 +52,9 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - **改名 ccdrawu，加入 terminu 家族（2026-10-14）。** 原名 statusdrawer、指令 `/sdrawer`。設定介面改用 terminu-go 做成獨立執行檔，由它安裝、設定 mod，入口本身就是 terminu app，所以照家族慣例取 `*u` 的名字。`cc` 點出是給 Claude Code 用的，又不把「Claude」放進產品名；repo 不加 `claude-code-` 前綴，跟家族其他 repo 一致。執行檔、外掛、斜線指令都叫 ccdrawu。
 - **指令叫 `/ccdrawu`，別名交給使用者（2026-10-14）。** 要開源，所以選不容易跟內建指令或其他外掛撞名的名字。嫌長的人自己設別名，例如 `ccd`。`command.run` 因此是不帶 matcher 的 hook，每個斜線指令都會經過，所以加了 `.catch`：出錯時不是自己的指令就照常放行。
 - **別名存在 config.json 的 `alias`，不用 `userConfig`（2026-10-14）。** 跟項目開關放同一個檔、由 TUI 設定，開著的 session 1 秒內讀到新名字就 `$.command.register`（`hooks/commands.ts`）。mod API 沒有移除指令的方法，所以一個名字註冊過就留到 session 結束：改掉或清空的別名在那之前照樣能用、也還列在選單裡。否決：TUI 改 Claude Code 的 `settings.json` 的 `pluginConfigs`（跟 `/config` 那一列同步）——要動別人的設定檔，開著的 session 也不確定會不會跟著換。
-- **設定 TUI 是側欄＋明細（2026-10-14）。** `[1] PREFERENCES` 分組：DRAWER（sidebar、inline）、SETTINGS（preferences：所有設定放在同一頁——Alias、Claude theme、Drawer background、Plugin，user 要的，跟 locku 的 Settings › preference 一樣）；`[2]` 是游標那一項，即時換內容與 label（tdp v0.6.2 `components/layout/panel` 的「分組」「明細」，terminu-go v0.1.2 的 `Row.Group`、`List.OnMove`）。側欄寬 24，跟 locku、webu 一樣。在 `[1]` 按 `Enter` 進 `[2]`（tdp v0.6.3 給 K3 開的明細例外，terminu-go v0.1.3 的 `Panel.Details`、`Action.ToDetails`），`Tab`、`2` 也行；每一項都有明細，所以都進得去。別名的檢查（`config.CleanAlias`）照 mod 的 `commandNames`，mod 不收的名字在輸入框就擋下。
+- **設定 TUI 是側欄＋明細（2026-10-14）。** `[1] PREFERENCES` 分組：DRAWER（sidebar、inline）、SETTINGS（preferences：所有設定放在同一頁——Alias、Claude theme、Drawer background、Plugin，user 要的，跟 locku 的 Settings › preference 一樣）；`[2]` 是游標那一項，即時換內容與 label（tdp v0.6.2 `components/layout/panel` 的「分組」「明細」，terminu-go v0.1.2 的 `Row.Group`、`List.OnMove`）。側欄寬 24，跟 locku、webu 一樣。在 `[1]` 按 `Enter` 進 `[2]`（tdp K3 的明細例外，tdp v0.6.3 開的；terminu-go v0.1.3 的 `Panel.Details`、`Action.ToDetails`），`Tab`、`2` 也行；每一項都有明細，所以都進得去。別名的檢查（`config.CleanAlias`）照 mod 的 `commandNames`，mod 不收的名字在輸入框就擋下。
 - **sidebar、inline 的 `[2]` 每組一列，`Enter` 開一個全部項目的 checkbox popup（2026-10-14）。** 原本每一組是畫在 panel 上的 checkbox，照 tdp `components/input/checkbox` 在 panel 上要按 `Enter` 翻（`Space` 開 Space menu），user 覺得不好用；照規範「五個以內畫在原地、超過五個開 popup」改成混著用，同一頁又會有兩種操作。user 定的做法：`[2]` 每組一列、列出勾了哪些（用 drawer 上的 key，跟側邊欄看到的同一個字），panel operation `e` Edit 開一個 popup 列出全部項目（一定超過五個，照規範就是 popup），`Space` 勾、`Enter` 一次套用、`Esc` 不改。popup 每列是「組名、key、名稱」對齊成三欄（名稱跟 key 一樣就省掉），`/` 篩選打組名也篩得到。這兩頁的 Space menu 只有這一項。之後 user 要每一列的 `Enter` 也開同一個 popup：每組的值本來就只在這個 popup 裡改，跟 Alias 那種「值不畫在原地的欄位，`Enter` 開它的 input popup」是同一套（terminu-go 的 `Field.Edit`），不違反規範；`e` 留在 Space menu，但不寫進 hint，免得 hint 變成 `Enter:edit e:edit`。從哪一列打開，cursor 就停在那一組的第一項（`e` 從第一項開始）：terminu-go v0.1.5 的 `Checks.Cursor`，ccdrawu 提的 CD8，規範沒缺、只補 lib。
-- **`[2]` 改成 Items、Order 兩列（2026-10-15）。** user 要能調整 drawer 的顯示順序，`[2]` 不再每組一列：兩列的值照 tdp components/input 的顯示方式，用 `, ` 接起來、太長由 lib 截斷加 `…`：Items 是勾了的 key（照 catalog 的順序），`Enter`（或 `e`）開原本那個全部項目的 checkbox popup，從第一項開始（CD8 的 `Checks.Cursor` 因此不再用到）；Order 列出勾了的 key，照 drawer 畫的順序，不含 pet（mod 把 pet 另外畫在最上面或最左邊，在陣列哪裡都一樣）。排順序的 popup 叫 reorder（user 定的名字：sort 是照規則排出來的順序，reorder 是使用者自己改的），是 user 要的獨立元件，等於把 panel 的 Drag mode 放進 dialog；terminu-go 沒有，請它新增（CD9）。terminu 寫進 tdp v0.6.6 的 components/input/reorder（user 在 terminu 的 session 定的）：`D` 拿起（不用 `Space`：K5 規定 popup 上 `Space` 不作用、只有 checkbox 例外），`j|k` 跟上下一項交換、到頭尾繞回，拿著時 `Enter` 放下、`Esc` 放回原位；沒拿東西時 `Enter` 寫回整個順序，`Esc` 在改過時先問要不要放棄；不做 `/` 篩選；不叫 sort，因為 tdp 已有依欄位排序的「排序選擇器」。terminu-go v0.1.6 的 `App.Reorder`（2026-10-15 升上）。popup 列出勾了的項目（不含 pet），跟 checkbox popup 一樣寫成組名、key、名稱三欄；寫回時（`Config.Reorder`）把新順序放進那些項目在陣列裡原本的位置，pet 與 catalog 不認得的 id 留在原位；勾了不到兩項時 Order 停用。順序就是 config.json 的 `dock`／`inline` 陣列：mod 照陣列順序畫（`enabledItems`），TUI 打勾不再排回 catalog 的順序（`Config.Set`），新勾的放在 catalog 裡它前面最近一個有勾的後面，沒排過的清單因此維持 catalog 的順序。否決：照 kbu 把順序清單放在 panel 上、用 panel 的 Drag mode 拖（user 要的是 dialog）。
+- **`[2]` 改成 Items、Order 兩列（2026-10-15）。** user 要能調整 drawer 的顯示順序，`[2]` 不再每組一列：兩列的值照 tdp components/input 的顯示方式，用 `, ` 接起來、太長由 lib 截斷加 `…`：Items 是勾了的 key（照 catalog 的順序），`Enter`（或 `e`）開原本那個全部項目的 checkbox popup，從第一項開始（CD8 的 `Checks.Cursor` 因此不再用到）；Order 列出勾了的 key，照 drawer 畫的順序，不含 pet（mod 把 pet 另外畫在最上面或最左邊，在陣列哪裡都一樣）。排順序的 popup 叫 reorder（user 定的名字：sort 是照規則排出來的順序，reorder 是使用者自己改的），是 user 要的獨立元件，等於把 panel 的 Drag mode 放進 dialog；terminu-go 沒有，請它新增（CD9）。terminu 寫進 tdp v0.6.6 的 components/input/reorder（user 在 terminu 的 session 定的）：`D` 拿起（不用 `Space`：tdp K5 規定 popup 上 `Space` 不作用、只有 checkbox 例外），`j|k` 跟上下一項交換、到頭尾繞回，拿著時 `Enter` 放下、`Esc` 放回原位；沒拿東西時 `Enter` 寫回整個順序，`Esc` 在改過時先問要不要放棄；不做 `/` 篩選；不叫 sort，因為 tdp 已有依欄位排序的「排序選擇器」。terminu-go v0.1.6 的 `App.Reorder`（2026-10-15 升上）。popup 列出勾了的項目（不含 pet），跟 checkbox popup 一樣寫成組名、key、名稱三欄；寫回時（`Config.Reorder`）把新順序放進那些項目在陣列裡原本的位置，pet 與 catalog 不認得的 id 留在原位；勾了不到兩項時 Order 停用。順序就是 config.json 的 `dock`／`inline` 陣列：mod 照陣列順序畫（`enabledItems`），TUI 打勾不再排回 catalog 的順序（`Config.Set`），新勾的放在 catalog 裡它前面最近一個有勾的後面，沒排過的清單因此維持 catalog 的順序。否決：照 kbu 把順序清單放在 panel 上、用 panel 的 Drag mode 拖（user 要的是 dialog）。
 - **狀態列（2026-10-15）。** 有些人就是要狀態列，user 要 ccdrawu 也能當狀態列，挑項目、順序與寫法（狀態列很擠，原本要解決的就是這個問題，所以有只寫值的 Format）。跟 drawer 是兩件事、各自開關（user 定的）。
   - **用 Claude Code 原生的 `statusLine` 呼叫子指令**（user 定的，跟 ccstatusline 一樣）。否決 `$.ui.status`：2026-10-15 實測，它被畫成亮黃色、前面加上 `⚠ <外掛名>: `，ESC 會變成 `�`，只有一列、換行也變 `�`。
   - **打開時換掉使用者原本的狀態列**：原本有的話先跳 confirm（寫出原本的指令），原本的整段 JSON 記在 config 的 `statusline.before`（沒有就是 `null`），關掉或 `uninstall claude` 時原樣放回。`before` 在 config.json 裡存成字串（`config.Kept`）：存成 JSON 的話，`WriteConfig` 會把它重新排版，重開 TUI 或 `uninstall claude` 從檔案讀回來時縮排就變了（0.1.1 的寫法，0.1.2 修掉；0.1.1 存的物件照樣讀得到，壓成一行）；跟主題一樣只動最外層那個 key、其他位元組不變（`internal/claude/statusline.go`，測試守著換過去再換回來一模一樣）。使用者之後自己換掉的就不動；TUI 開啟時發現 config 是開、但 `statusLine` 已經不是我們的，就把 config 改成關。terminu-go 的 `Confirm` 沒有取消的 callback，所以 radio 先退回 off，按了確定才設成 on。
@@ -71,7 +73,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - `/ccdrawu` 遇到開著但還沒畫出來（等變寬）的 pane 當作關著：再要求一次 open 就畫出來。原本要按兩次，第一次是把等著的 pane 關掉。
   - **`/ccdrawu` 是這個 session 的手動開關（2026-10-16，user 定）。** 原本只在打開的那個位置有效（`asked`），位置一變就照設定走；關掉則是整個 pane 關掉、哪裡都不回來。user 回報：inline 開著時用 `/ccdrawu` 關掉，拉寬後 sidebar 也不出現。討論了兩種：①`/ccdrawu` 只切當下這個位置，位置一變就回到設定；②`/ccdrawu` 設定整個 session 的開或關，蓋過設定。選②：①在「sidebar 關掉後縮窄、照設定要出現在輸入框上方」這條路做不到（引擎不把沒人要求的 pane 放進 inline），規則會有例外；②每一條路都做得到。手動狀態存在 `$.state` 的 `manual`（`'on' | 'off' | null`，reload 後還在、新 session 是 null），`drawerWanted(config, place, manual)` 有手動狀態就照它；session.start、`keepPlace` 都看它。TUI 改了 Drawer（`refreshConfig` 讀到開關變了）就清回 null，以最後一個動作為準（user 定）。沙盒實測：兩邊都開，窄時 `/ccdrawu` 關→拉寬、再縮窄都不出現→`/ccdrawu` 開→寬在 dock、窄在 inline；inline 關，窄時 `/ccdrawu` 開→寬 dock→窄仍在 inline→關了拉寬也不出現→config 改 inline 開→寬 dock、窄 inline。
 - **`[2]` 的欄位標題（2026-10-15）。** user 要每頁都有：drawer 與 statusline 的頁是 SETTING／VALUE，preferences 是 KEY／VALUE（terminu-go 的 `Values.Header`）。user 要標題用 Overlay0，但 tdp v0.6.11 規定標題是 Blue，跟 label 同色，表單上看不出是標題：寫成 CD10 交給 terminu，定成 tdp v0.6.12（一列一個值的 panel 表頭用 Overlay0，清單維持 Blue），terminu-go v0.1.11 照做，ccdrawu 從 v0.1.7 直接升上去，沒改程式。
-- **也給 Windows 用，建置照 kbu（2026-10-14）。** Claude Code 三個平台都有，家族其他 app 是 unix-first，只有 kbu 出 Windows 版。goreleaser 多出 windows 的 amd64、arm64（zip）、發到 Scoop（`vulcanshen/scoop-bucket`），`install.ps1`／`uninstall.ps1` 照 kbu（裝到 `%LOCALAPPDATA%\ccdrawu`、加進使用者的 PATH）；release 的測試也在 windows-latest 跑（那邊沒有 cgo，不加 `-race`）。位置照 E3：Windows 上 `~` 就是 `%USERPROFILE%`，不用 `%APPDATA%`（tdp v0.6.4，ccdrawu 提的 CD4，user 選的）。mod 先讀 `USERPROFILE` 再讀 `HOME`，跟 Go 的 `os.UserHomeDir` 同一個順序，兩邊才會算出同一個資料夾。
+- **也給 Windows 用，建置照 kbu（2026-10-14）。** Claude Code 三個平台都有，家族其他 app 是 unix-first，只有 kbu 出 Windows 版。goreleaser 多出 windows 的 amd64、arm64（zip）、發到 Scoop（`vulcanshen/scoop-bucket`），`install.ps1`／`uninstall.ps1` 照 kbu（裝到 `%LOCALAPPDATA%\ccdrawu`、加進使用者的 PATH）；release 的測試也在 windows-latest 跑（那邊沒有 cgo，不加 `-race`）。位置照 tdp E3：Windows 上 `~` 就是 `%USERPROFILE%`，不用 `%APPDATA%`（tdp v0.6.4，ccdrawu 提的 CD4，user 選的）。mod 先讀 `USERPROFILE` 再讀 `HOME`，跟 Go 的 `os.UserHomeDir` 同一個順序，兩邊才會算出同一個資料夾。
 - **先裝 ccdrawu，再 `ccdrawu install claude`（2026-10-14）。** 入口是這支程式，外掛由它裝（user 定的）：`claude plugin install ccdrawu --marketplace <來源> --json`（user scope；市集還沒加會先加）；已經裝了就改成更新：`claude plugin marketplace update ccdrawu`，再 `claude plugin update ccdrawu@ccdrawu`（0.1.2 起；原本是沒變化，`brew upgrade` 後外掛停在舊版，新 TUI 寫的設定舊 mod 不認得）。2026-10-16 看 user 的 `known_marketplaces.json`：官方 marketplace 的 `lastUpdated` 是當天，第三方（GitHub、git）的都停在幾週到幾個月前，Claude Code 不會自己更新它們。外掛固定在執行檔自己的 release tag（`SourceFrom`：`https://github.com/vulcanshen/ccdrawu.git#v<版本>`，dev build 取 main）：原本用 `vulcanshen/ccdrawu`，裝到的是 main 當下的內容，push 到 main 的 mod 改動使用者馬上拿到、跟執行檔不同步（0.1.1 發版後 main 上就已經是還沒發的 0.1.2 mod）。`owner/repo#ref` 也行，但它走 SSH clone，沒有 GitHub SSH key 的人會失敗，所以用 HTTPS 的 git URL。已裝的來源跟要的不一樣（舊版的 tag、main）就 `marketplace remove`（Claude Code 會連外掛一起移除）再 `install`：同名、不同來源的 marketplace 加不進去（它記在 settings.json 的 `extraKnownMarketplaces`）。README 寫明外掛只用 `ccdrawu install claude` 裝與更新，不要手動從 marketplace 裝。開發時用 `make plugin`（`CCDRAWU__MARKETPLACE` 指著 repo 資料夾），否則 dev build 的 `install claude` 會把外掛換成 GitHub main 的。用沙盒（`CLAUDE_CONFIG_DIR`）實際跑過：0.1.1 的執行檔全新安裝→外掛 0.1.1（`#v0.1.1`）；換 0.1.2 的執行檔→移到 `#v0.1.2`、外掛 0.1.2；再跑一次→`up_to_date`；原本從 main 裝的→移到 `#v0.1.2`，來源預設 `vulcanshen/ccdrawu`，`CCDRAWU__MARKETPLACE` 改指別處（開發時指本機資料夾）。`uninstall claude` 先 `plugin uninstall <id>` 再 `marketplace remove <市集名>`（市集只有 ccdrawu），設定與資料留著、告訴使用者在哪；狀態列是 ccdrawu 的就換回原本的（主題也是），外掛已經不在 Claude Code 裡時也一樣（0.1.1 在這裡直接結束，留下指著 ccdrawu 的 `statusLine`，0.1.2 修掉）。移除腳本刪執行檔前先跑一次 `uninstall claude`，`statusLine` 才不會指著刪掉的執行檔。`claude` 這個目標先佔著位置，之後要裝到別的地方再加。
 - **`ccdrawu update`（2026-10-16，0.1.3）。** user 要能一個指令更新：照安裝方式更新執行檔，再讓外掛跟上。家族沒有先例、tdp 沒有規範。`internal/update`：先查 GitHub API 的 latest（跟安裝腳本同一個來源），不比目前新就不動執行檔；方式由執行檔的實際路徑（`os.Executable`＋`EvalSymlinks`）判斷（`How`）：在 `Cellar/ccdrawu` 底下是 Homebrew，跑 `brew upgrade vulcanshen/tap/ccdrawu`，新版是 prefix 的 `bin/ccdrawu`（`BrewBin`；Cellar 路徑是舊版的）；在 `scoop/apps/ccdrawu` 底下是 Scoop，只印出要跑的 `scoop update ccdrawu` 與 `ccdrawu install claude`：Scoop 更新前會檢查 app 有沒有在執行（它的 `test_running_process`），而這時執行中的正是 ccdrawu 自己（依 Scoop 原始碼的行為，沒在 Windows 實測）；其他（安裝腳本或手動下載）就自己換：下載 release 的 archive 與 `checksums.txt`、比 sha256、取出執行檔、寫在同一個資料夾的暫存檔再 rename 蓋過去（`Replace`）；Windows 不能覆蓋執行中的 exe 但能改名，所以先把它改成 `.old`、新的再放上去，`.old` 下次 update 時刪（rename 流程有單元測試，在 CI 的 Windows 上也會跑，但沒在 Windows 上實際換過執行中的 exe）。資料夾不能寫入時在下載前就停、說明原因，不自己 sudo（user 定的）。dev build 不更新，請它在原處 `git pull && make install`。執行檔換好後，只有 Claude Code 已經有這個外掛時，才用**新的**執行檔跑 `install claude`（新版決定外掛釘在哪個 tag）；外掛被拿掉的不會被裝回去。實測（scratchpad 沙盒、`CLAUDE_CONFIG_DIR` 指到別處）：標成 0.1.1 的執行檔裝好 0.1.1 外掛→`update` 下載真正的 v0.1.2、驗證後換掉自己、外掛移到 0.1.2；已是最新→不動執行檔、外掛 up to date；Claude Code 沒有外掛→只提示；資料夾 555→下載前停下；dev build→提示；Homebrew 用假的 `brew` 與假的 Cellar 驗了判斷、參數、`BrewBin` 與用新版裝外掛（沒動 user 真正的 Homebrew）。0.1.2 以前沒有這個指令，README 的 Update 留了手動的步驟。
 - **不顯示 vim 的 INSERT／NORMAL（2026-10-14）。** mod API 拿不到 vim 的即時狀態，唯一的來源是 Claude Code 跑 `statusLine` 指令時給的 JSON：先做過外掛附的 sh 轉接（要 sh 與 jq），再改成 `ccdrawu bridge` 子指令（Windows 也能用）。但 `statusLine` 只能填一個指令，佔用它就會跟使用者自己的狀態列（例如 ccstatusline）互相蓋掉；而 Claude Code 輸入框下方本來就顯示 vim 模式。所以整列（原本叫 Editor，後來叫 Vim）連同轉接一起拿掉。後來狀態列做成使用者自己打開、先問過才換掉的功能（下一條），vim 模式仍然不顯示。
@@ -105,8 +107,40 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - **設定了的項目一定列出，沒有值時顯示 `-`（2026-10-16，user 定）。** 原本沒有值的項目整列不畫（`view` 回 undefined）。新 session 的 Mode 要到第一個 prompt 才拿到 permission mode，那時這列才冒出來，下面的列被往下推。user 定的規則：設定裡有的項目一律列出，值拿到以前顯示 `-`。現在 `view` 只有 pet（pane 自己畫）和 catalog 沒有的 id 會回 undefined；sidebar、輸入框上方、狀態列都照這個規則，狀態列包括 `ccdrawu statusline` 的 `Line`，session 檔還沒寫出來時的 fallback 也一樣。Model、Uptime 拿到值以前原本顯示 `…`，也改成 `-`。否決：`…`，user 覺得意思不清楚。不用 `N/A`：字面意思是「不適用」，但大多數情況其實是「還沒拿到」。Session、Weekly、Spend 的 resets 列在 sidebar 上一樣先留著，顯示 `resets -`（user 定）。用量上限要等第一個 API 回應才有，型別檔寫 rateLimits 是「上一個 API 回應報的」。拿到上限但沒有重置時間時也顯示 `-`；輸入框上方和狀態列只有一列，不用預留位置，所以那裡不顯示 `· -`。Git 的增減行數還是拿到值才出現。
 - **拿掉 Account（2026-10-16，user 定）。** Account 原本讀 `$.session.identity()` 的 `email`。2.1.300 的型別檔寫明，identity 只回答組織 managed settings 裝的 mod，其他 mod 收到 `{ deny: 原因 }`；`SessionIdentity` 是 union，不是 reject。一開始以為會 reject，判斷錯了，所以 user 的 session 一直顯示 `-`。ccdrawu 只用 `ccdrawu install claude` 自己裝，所以每個人都拿不到。中間試過兩種做法：拿不到時顯示 `api unavailable`；在 TUI 的項目選單把它停用（CD11，tdp v0.6.13 定了停用選項的樣子，terminu-go 在 v0.1.12 加 `Checks.Disabled`）。結果卡住：照 v0.6.13，勾著的停用選項 cursor 碰不到，已經勾的人取消不了。user 認為拿不到值的項目不該出現，所以整個拿掉，等 API 開放再加回來。config 裡還列著 `account` 的照舊讀得進來，mod（`enabledItems`）與狀態列都略過 catalog 沒有的 id。
 - **會擋住引擎動作的 hook 都有 `.catch`。** `agent.spawn`、`session.compact`、`classic.*` 事件都是 gating hook；側邊欄出錯時 `.catch(($, e, next) => next(e))` 讓引擎照常進行（`next` 已呼叫過就沿用那次結果，不會重跑）。
+- **跟上 tdp v0.7.4 與 terminu-go v0.1.13（2026-10-18）。** 照 terminu 的交代整理，用 tdp 的 checklist 對過一遍：
+  - repo 照 tdp project 的範本（`family.mk`、release、goreleaser、install／uninstall、`internal/version`、`.gitignore`），出 Windows 版的段落打開。
+  - **Claude theme 改成 select**：off 加 6 個內建主題共 7 個，tdp components/input/radio 規定五個以內才畫在原地，超過用 select。
+    值寫選中的那一個（`off` 也是選項）。
+  - **Refresh 改成 number**（tdp components/input/number：秒數用 number，說明列寫範圍 `1-60`，只收得進數字）；原本是 text 加檢查。
+  - **Drawer background 寫成色塊加 hex**（tdp components/input/color-picker 的「值」，`terminu.ColorText`）。
+  - **值出錯時 label 轉 Red**（tdp components/layout/panel，`Field.Err`）：手改 config.json 留下 mod 不收的 alias、不是 hex 的
+    background、超過 60 的 refresh、有控制字元的 separator，以及 Plugin 查不出來時。值裡的控制字元寫成 `\x1b`（`shown`），不讓它
+    進終端機（CD25）。
+  - **存不進去就改回去**（`revert`）：寫檔或套用主題失敗時，`d.cfg` 與畫在原地的 radio（`d.radios`，每個記著怎麼從 `d.cfg` 算出
+    選哪一個）改回檔案裡的樣子，畫面不會假裝存好。input 已經關掉這件事等 lib（CD24）。
+  - **error popup 的標題寫哪件事失敗，不放名稱**：lib 把整個標題轉大寫，`Claude Code` 會變成 `CLAUDE CODE`（tdp components 的
+    「大寫」：名稱照原樣）。Install failed、Uninstall failed、Can't read the settings。Alias 的錯誤點名 Alias（tdp components/input/README）。
+  - **Refresh 在 panel 上只寫值**（`10`），單位寫在 input 的說明列（tdp components/input/README 的顯示表：number 寫值本身）。
+  - **畫面測試**：`TestL4EveryRowFullWidth`（`internal/ui/screen_test.go`）在三種 icon 與 powerline 寬度下，開 ccdrawu 的每一種
+    popup，在 200x50 與 40x15 各開一次，200x50 開的再拉到比它窄、矮的尺寸，每一列都要剛好等於終端機寬（tdp L4、tdp E5、tdp E6）。
+    popup 的動畫是真的時間，整個跑完約 30 秒。
 
-## 已知的牆
+## 已否決，不要重提
+
+理由寫在上面的設計決定，這裡只列出來。
+
+- 狀態列用 `$.ui.status`：畫成亮黃色、加上外掛名，ESC 與換行變 `�`。用 Claude Code 的 `statusLine` 呼叫 `ccdrawu statusline`。
+- 順序清單放在 panel 上、用 panel 的 Drag mode：user 要的是 dialog，做成 reorder popup。
+- 沒有值時顯示 `…` 或 `N/A`：用 `-`。
+- 顯示 vim 的 INSERT／NORMAL：要佔用 `statusLine`，Claude Code 輸入框下方本來就有。
+- drawer 自己畫底色：蓋不到引擎畫的外框，交給主題。
+- 寵物：ASCII、另外畫的跳格、爬牆、只有揮爪時才換色的手、從毛色算四肢色、Raster＋blit；取名（花色每個 session 換，之後的版本再看）。
+- bar 用 `▰▱`（很多程式字型沒有）、`█░`（上下兩列黏在一起）、請使用者把 `▰▱` 指定給 Menlo（只有 macOS）。
+- Account 項目：自己裝的外掛拿不到 `$.session.identity()`；停用選項的做法（CD11）也一起拿掉，等 API 開放再加回來。
+
+## 已知的牆與未做
+
+### 已知的牆
 
 - **權限模式有延遲。** 沒有「權限模式改變」的事件。Claude 工作中按 `shift+tab`，等目前這一步的工具跑完才更新；閒置時要等下一個 prompt。mod API 沒有讀目前模式的方法；`statusLine` 指令收到的 JSON 也沒有：2026-10-14 在 Claude Code 2.1.299 把它錄下來看過，按 `shift+tab` 時狀態列馬上重跑，但前後只差 `cost.total_duration_ms`，沒切換時它也會這樣重跑，連「重跑了」都不能當成模式變了的訊號。
 - **tmux 256 色。** Claude Code 偵測到 `$TMUX` 就把顏色限制在 256 色，hex 色會被換成最接近的 256 色（`#11111b` 會變成第 17 號深藍）。要全彩得設 `CLAUDE_CODE_TMUX_TRUECOLOR=1`。
@@ -116,15 +150,56 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - **Windows 的終端機（2026-10-15 user 的同事試裝）。** Windows Terminal：TUI、inline、sidebar 排版都對；沒有 Nerd Font 時缺的字畫成 `�`，仍佔一格；powerline 與框線字元由 Windows Terminal 自己畫，不靠字型。Termius 的本機終端：bar 的方塊在終端機佔兩格（從截圖量的：13 個方塊加右邊一段深色剛好 26 格碰到右邊界，剩下 6 個方塊和百分比折到下一行最左邊），sidebar 整個錯位；TUI 也留殘影，radio 標記（U+F0000 以上的 Material Design 圖示）畫成 `�`；sidebar 的淺色底只塗在有字的格子上。terminu-go 量圖示寬度（CPR）只在 unix 上做，Windows 預設一格，可以用 `CCDRAWU__ICON_WIDTH`／`TERMINU__ICON_WIDTH` 指定，沒在 Termius 試過。不另外處理，README 寫改用 Windows Terminal。同事後來在 Windows Terminal 換成 Maple Mono NF CN，只剩沒選中的 radio 是 `�`：Maple 7.0 缺 U+F043D（nf-md-radiobox_blank），是 ccdrawu 與 terminu-go v0.1.7 用到的 39 個圖示裡唯一缺的（`fc-list ":family=…:charset=…"` 逐一查；zsh 裡變數要寫 `${f}`，`$f:charset` 的 `:c` 會被當成修飾符）。JetBrains Mono、Hack、FiraCode 的 Nerd Font 都不缺，同事換 JetBrains Mono Nerd Font 後就正常。user 定：字型問題，不是規範問題，不請 tdp 換圖示（Maple 用的人少）。
 - **淺色主題。** sidebar 的底色是 Claude Code 主題的 `composerSidebarBackground`（內建淺色主題是 `rgb(235, 235, 235)` 或 `rgb(245, 245, 245)`，`light-ansi` 是 `ansi:white`），配色寫死 Catppuccin Mocha，在淺色底上看不清（同事的 Claude Code 是淺色主題）。mod 的顏色可以用主題鍵（`text`、`subtle`、`success`…，跟著使用者的主題變），之後要支援淺色主題可以從這裡改。
 
-## 未做
+### 未做
 
 - 配色可設定（目前寫死 Catppuccin Mocha）
-- README 的截圖或 demo
 - 寵物取名（做過又拿掉，見設計決定的寵物 pet；之後的版本再看）
-- CHANGELOG：release workflow 從它取 release notes，第一次發布前要有
 - Windows 還沒驗到的：rename 蓋過 mod 正在讀的檔會不會失敗（TUI 存設定靠 rename；同事試裝時 TUI 存檔成功，但沒刻意在 mod 讀檔時存）、`.ps1` 的語法（不知道同事用哪種方式裝的，這台 Mac 沒有 PowerShell）。mod 的 `$.fs` 寫 Windows 路徑已驗到：TUI 列得出 mod 寫的 catalog
 
-## 開發
+## 偏離 tdp
+
+照 tdp v0.7.4 與它的 checklist 對過（2026-10-18）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code
+畫的（mod 的 pane、`statusLine` 指令的一列），不是 terminu 的畫面，不套用。還沒做到、要等 lib 或規範的，逐條寫在
+[`ccdrawu-terminu-fix.md`](ccdrawu-terminu-fix.md)。
+
+- **README 有兩張 gif（tdp E7 第 3 段：一張）。暫定。** `docs/demo.gif` 是 Claude Code 裡的 drawer 與狀態列，`docs/settings.gif` 是
+  設定 TUI。ccdrawu 是兩個東西：畫在 Claude Code 裡的 drawer，加上挑它顯示什麼的 TUI，一張 gif 只拍得到其中一個。settings.gif
+  放在「挑要顯示的項目」那一段，不在開頭。回報給 terminu（CD50），等 user 定。
+- **Drawer 的開關是 off／on 兩個選項的 radio（tdp components/input/checkbox：一個開關用 checkbox）。暫定。** user 2026-10-15 要
+  sidebar、inline 頁最上面的 Drawer 跟 statusline 頁的 Statusline（off／on／on when narrow）排法一樣。規範沒說兩個選項的 radio
+  算不算違反，清單也沒有這一條（CD13）。程式標 `TODO(tdp CD13)`。
+- **`ccdrawu statusline` 用 `ansi.Truncate` 截斷（tdp E5：所有量寬度的地方走同一個函式）。** 它印給 Claude Code 的狀態列，那一列是
+  Claude Code 畫的，不是 terminu 的畫面；寬度是 Claude Code 給的 `COLUMNS`，不經過 terminu 的 icon 探測。
+- **每個 session 的狀態列值放在資料目錄（`~/.ccdrawu/sessions/`）。暫定。** tdp E3 沒定資料、狀態、快取的界線；這些檔一秒寫一次、
+  一週沒寫就刪，也可以算快取（CD28）。搬的話 mod 與 `ccdrawu statusline` 兩邊一起改，舊位置的檔一週內就清掉。
+- **README 的段落順序（tdp E7）。暫定。** tdp E7 沒列的兩段：Update、Uninstall 放進「安裝」底下當小節（跟需求、第一次執行一起）；
+  Troubleshooting 自己一段，放在「資料存放位置」與「限制」之間（CD29）。
+- **sidebar、inline、statusline 頁的表頭 SETTING 比最長的 label（DRAWER）寬（tdp components/layout/panel：label 欄寬取最長的
+  label）。** 照 terminu-go，label 欄取 label 與表頭第一欄裡最寬的，表頭才跟值欄對齊；兩條不能同時成立，回報 CD26。表頭的字是
+  user 2026-10-15 定的。
+
+## 設計文件導讀
+
+ccdrawu 沒有另外的設計文件。
+
+- 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
+- drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.7.4）；ccdrawu 提過的盲點與定案（CD 編號）記在
+  terminu 的 session 那邊。還沒做到的逐條在 [`ccdrawu-terminu-fix.md`](ccdrawu-terminu-fix.md)，程式裡標 `TODO(tdp CDn)`、
+  `TODO(lib CDn)`。
+- 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
+
+## 建置與開發
+
+目錄照 tdp project（`cmd/ccdrawu`、`internal/`、`docs/`、`family.mk`……）。ccdrawu 另有：
+
+- `hooks/`：Claude Code 的 mod（TypeScript，hooks module 是 `hooks/register.tsx`，`hooks/hooks.json` 指向它）。
+- `tests/`：mod 的測試（`claude plugin test .` 跑 `tests/*.test.ts`）。
+- `types/`：mod 的 `$.state` 型別合約（`.claude-plugin/plugin.json` 的 `types`）。
+- `.claude-plugin/`：外掛的 `plugin.json` 與市集的 `marketplace.json`；Claude Code 載入時在裡面寫 `types/`（git 不收）。
+- `tsconfig.json`：Claude Code 載入外掛時寫的（git 不收），`tsc -p .` 用。
+- `install.ps1`、`uninstall.ps1`：Windows 的安裝與移除（tdp project 沒有範本，照 kbu）。
+- `.claude/`：social preview 的指令與 agent（見下面）。
 
 ### 載入
 
@@ -133,7 +208,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 ### 設定程式（Go）
 
-- 跟家族其他 app 同一套建置：`cmd/ccdrawu`（命令列）、`internal/config`（E3 位置、catalog 與設定檔）、`internal/ui`（TUI 與 splash）、`internal/claude`（`ccdrawu install`／`uninstall claude`）、`internal/version`（release 時由 goreleaser 的 ldflags 注入）。`make` 列出所有指令；`make run` 跑 TUI，`make build` 編出 `./ccdrawu`。
+- 跟家族其他 app 同一套建置：`cmd/ccdrawu`（命令列）、`internal/config`（tdp E3 的位置、catalog 與設定檔）、`internal/ui`（TUI 與 splash）、`internal/claude`（`ccdrawu install`／`uninstall claude`）、`internal/version`（release 時由 goreleaser 的 ldflags 注入）。`make` 列出所有指令；`make run` 跑 TUI，`make build` 編出 `./ccdrawu`。
 - Windows 版編不編得過：`GOOS=windows GOARCH=amd64 go build ./cmd/ccdrawu`（arm64 同），或 `make snapshot` 一次打六個平台的包到 `dist/`。`make release-check`（`goreleaser check`）要有 GitHub remote 才過。
 - 本機同時改 terminu-go 時用 `go work init . ../terminu-go`（`go.work` 不進版控）。
 - `internal/ui/icon.svg` 是 `docs/icon.svg` 的複本：splash 用 `go:embed` 讀 icon，讀不到上層目錄。換 icon 時兩個一起換，`TestSplashIconIsDocsIcon` 會抓不一致。
@@ -144,7 +219,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - demo 的狀態列：`setup.sh demo` 在沙盒的 config 打開 `statusline.on`，另寫一份 `~/demo-settings.json`（`statusLine` 指向 repo 剛 build 的 `./ccdrawu statusline`），tape 用 `claude --settings` 帶進去。這樣錄出來的狀態列不受真正的 `~/.claude/settings.json` 和 `PATH` 上是哪一版 ccdrawu 影響。
 - settings.gif 不按 Statusline 的開關、Refresh、Claude theme、Plugin：它們寫的是 Claude Code 的設定，沙盒裡 `~/.claude` 是接到真的那一份。改了 TUI 的游標路徑就先在 tmux（獨立的 server，見「在真的 Claude Code 裡試」）用 `CLAUDE_CONFIG_DIR` 指到別處、照 tape 的按鍵走一遍，確認每次 `Enter` 落在哪裡再錄。
 - 沙盒照 sshu：`.local/demos/setup.sh` 每次重做 `.local/demos/home`（全新的 ccdrawu 設定、從 `~/.ccdrawu` 複製的 catalog、重建的 `my-app`：一個 commit 加一處沒 commit 的改動），tape 再 `export HOME` 過去，畫面上的路徑就是 `~/my-app`、`~/.config/ccdrawu/config.json`，真正的設定不會被碰。Claude Code 的設定、外掛與登入用 symlink 接真的：`~/.claude`、`~/.claude.json`，還有 `~/Library`（登入在 keychain，macOS 從 `$HOME/Library` 找；沒接會是 Not logged in，而且沙盒裡會長出一個真的 `Library`，setup.sh 會換回 symlink）。
-- tape 要先 unset `XDG_CONFIG_HOME`／`XDG_DATA_HOME`／`XDG_STATE_HOME`（user 的環境有設，ccdrawu 照 E3 先讀它，就會讀到真正的設定），以及從 Claude Code 裡跑 vhs 時繼承來的 `TMUX*`、`TERM_PROGRAM*`、`CLAUDECODE`、`CLAUDE_CODE_*`（留 `CLAUDE_CODE_NO_FLICKER`），否則畫面上有 tmux focus-events 與「Transcript saving is off」的提示。
+- tape 要先 unset `XDG_CONFIG_HOME`／`XDG_DATA_HOME`／`XDG_STATE_HOME`（user 的環境有設，ccdrawu 照 tdp E3 先讀它，就會讀到真正的設定），以及從 Claude Code 裡跑 vhs 時繼承來的 `TMUX*`、`TERM_PROGRAM*`、`CLAUDECODE`、`CLAUDE_CODE_*`（留 `CLAUDE_CODE_NO_FLICKER`），否則畫面上有 tmux focus-events 與「Transcript saving is off」的提示。
 - `export HOME` 之後要 `cd $HOME/my-app`：這台的 bash 5.3 換了 `HOME` 之後 `~` 還是原本的家目錄。vhs 的 `Type` 字串不收 `\"`。
 - demo 會開真的 Claude Code（要 fullscreen、ccdrawu 外掛），送一個 prompt，花一點 token；問句要指定英文回答，否則照 user 的 CLAUDE.md 回繁中。`~/my-app` 第一次要先信任：`vhs .local/demos/trust.tape`（信任對話框預設是 No，要 `↓` 再 `Enter`）。
 - splash 不錄進 gif：它是彩蛋，`V` 才開，tdp S2 不寫進 README。
@@ -166,3 +241,13 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 - 沙盒：`CCDRAWU__CONFIG`、`CCDRAWU__DATA` 指到暫存資料夾（config 寫好要試的設定），`claude --plugin-dir <repo> --settings '{"enabledPlugins":{"ccdrawu@ccdrawu":false},"statusLine":…}'`，裝好的那份關掉、狀態列只對這個 session。寬窄用 tmux 的 `resize-window` 換，畫面用 `capture-pane -p` 讀。
 - **tmux 一律開獨立的 server**：`tmux -L ccdrawu-test new-session -d -s <名字> -x 200 -y 50 …`，之後的 `send-keys`、`capture-pane`、`resize-window`、`kill-session` 都帶 `-L ccdrawu-test`，用完 `tmux -L ccdrawu-test kill-server`；要完全乾淨的設定再加 `-f /dev/null`。user 的 tmux.conf 有全域的 `session-closed` hook，預設 server 上任何 session 關掉、剩下超過一個就彈出 session picker：在預設 server 開關暫存 session，user 的畫面就一直跳 popup（2026-10-16 另一個 session 回報、重現過）。獨立 server 也碰不到 user 的 locku 自動鎖定、hook 與狀態列設定。
+
+## 發布
+
+照 tdp project 的「發布」：`make check` 通過，CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C`，commit，打 tag `vX.Y.Z`，
+push commit 與 tag，`release.yml` 接著測試（含 windows-latest，不帶 `-race`）、goreleaser 發 GitHub release、推 Homebrew tap 與
+Scoop bucket，再用 CHANGELOG 那一段蓋過 release 的內文。ccdrawu 多一步：
+
+- **外掛的版本**：`.claude-plugin/plugin.json` 的 `version` 改成同一個版號，跟 CHANGELOG 同一個 commit。`ccdrawu install claude`
+  裝的是跟執行檔同一版的 tag 上的外掛，drawer 的 ccdrawu 列讀的也是它。
+- `v0.1.4` 以前的標題是 `## [0.1.x] - 日期`（tdp v0.7.0 以前的寫法），照 tdp 不改。
