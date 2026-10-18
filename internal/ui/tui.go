@@ -95,7 +95,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 		// empty state of its own, and a Failure's fact is Red
 		fail: &terminu.Failure{
 			Fact: "Nothing to list until ccdrawu runs in Claude Code",
-			Hint: "Press [Enter] on Plugin in preferences, then start Claude Code",
+			Hint: "Press [Enter] on Plugin in preferences",
 		},
 		radios: map[*terminu.Field]func() int{},
 	}
