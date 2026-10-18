@@ -28,7 +28,6 @@ type drawer struct {
 	pages  map[string]*terminu.Values // [2]'s body for each row of [1]
 	fail   *terminu.Failure           // what an empty page of items says
 
-	theme      *terminu.Field            // the theme's radio, set back to off by an uninstall
 	background *terminu.Field            // the drawer background, which x resets
 	drawerOn   map[string]*terminu.Field // the drawer's on and off atop sidebar and inline, each its own
 	statusOn   *terminu.Field            // the statusline's on and off, set back to off by an uninstall
@@ -98,10 +97,10 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	a.OnMsg = d.onMsg
 	a.Start = func() tea.Cmd { return tea.Batch(d.reload(), d.checkPlugin()) }
 	d.app = a
-	d.theme, d.background, d.statusOn = d.themeField(), d.backgroundField(), d.statusOnField()
+	d.background, d.statusOn = d.backgroundField(), d.statusOnField()
 	d.drawerOn = map[string]*terminu.Field{rowSidebar: d.drawerOnField(&d.cfg.Drawer.SidebarOff), rowInline: d.drawerOnField(&d.cfg.Drawer.InlineOff)}
 	d.pages[rowPreferences] = &terminu.Values{Header: [2]string{"Key", "Value"}, Fields: []*terminu.Field{
-		d.aliasField(), d.theme, d.background, d.barField(), d.petField(), d.pluginField(),
+		d.aliasField(), d.themeField(), d.background, d.barField(), d.petField(), d.pluginField(),
 	}}
 
 	list := &terminu.List{}

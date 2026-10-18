@@ -155,19 +155,13 @@ func (d *drawer) separatorField() *terminu.Field {
 }
 
 // refreshField is how many seconds Claude Code waits to run the statusline
-// again while nothing happens, written into its settings at once while the
-// statusline is on.
+// again while nothing happens, a number (tdp components/input/number) written
+// into its settings at once while the statusline is on.
 func (d *drawer) refreshField() *terminu.Field {
 	return &terminu.Field{Label: "Refresh", Value: func() string { return fmt.Sprintf("every %d seconds", refresh(d.cfg.Statusline)) }, Edit: func() tea.Cmd {
-		return d.app.Text(terminu.TextInput{
-			Title: "Refresh", Glyph: glyphPencil, Prompt: "Seconds between runs while nothing happens, 1 to 60",
-			Verb: "save", Old: strconv.Itoa(refresh(d.cfg.Statusline)), MaxLen: 2,
-			Check: func(v string) error {
-				if n, err := strconv.Atoi(strings.TrimSpace(v)); err != nil || n < 1 || n > 60 {
-					return errors.New("A whole number of seconds, 1 to 60")
-				}
-				return nil
-			},
+		return d.app.Number(terminu.NumberInput{
+			Title: "Refresh", Glyph: glyphPencil, Prompt: "Seconds between runs while nothing happens, 1-60",
+			Verb: "save", Old: strconv.Itoa(refresh(d.cfg.Statusline)), Min: 1, Max: 60,
 			Done: func(v string) tea.Cmd {
 				d.cfg.Statusline.Refresh, _ = strconv.Atoi(strings.TrimSpace(v))
 				// Into Claude Code's settings while ccdrawu's is the status line set there

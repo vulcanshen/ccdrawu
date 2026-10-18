@@ -359,7 +359,13 @@ func TestThemeGoesIntoClaudeCodeAndBack(t *testing.T) {
 		t.Fatalf("[2] is %q, want preferences", d.detail.Label)
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
-	for range 6 { // alias, then the theme's off, dark, light, dark-daltonized, light-daltonized, dark-ansi
+	press(d, key("j")) // past the alias
+	// More than five themes: a select (tdp components/input/radio), on off
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if text := frameText(d); !strings.Contains(text, "CLAUDE THEME") || !strings.Contains(text, "light-ansi") {
+		t.Fatalf("Enter on the theme did not open a select of them:\n%s", text)
+	}
+	for range 5 { // dark, light, dark-daltonized, light-daltonized, dark-ansi
 		press(d, key("j"))
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
@@ -374,6 +380,10 @@ func TestThemeGoesIntoClaudeCodeAndBack(t *testing.T) {
 		t.Fatal("no themes/ccdrawu.json:", err)
 	}
 
+	if text := frameText(d); !strings.Contains(text, "dark-ansi") {
+		t.Fatalf("the theme row does not read dark-ansi:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // the select again, on dark-ansi
 	for range 5 {
 		press(d, key("k"))
 	}
@@ -391,7 +401,7 @@ func TestXResetsTheBackground(t *testing.T) {
 		press(d, key("j"))
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
-	for range 8 { // past the alias and the theme's 7 options
+	for range 2 { // past the alias and the theme
 		press(d, key("j"))
 	}
 	if d.pages[rowPreferences].Current() != d.background {

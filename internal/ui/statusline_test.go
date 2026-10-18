@@ -103,14 +103,20 @@ func TestStatuslineOnWithoutAskingWhereThereWasNone(t *testing.T) {
 	if !strings.Contains(claudeSettings(t, loc), `"refreshInterval":10`) {
 		t.Fatalf("no refresh:\n%s", claudeSettings(t, loc))
 	}
-	// The refresh goes into Claude Code's settings at once
+	// The refresh goes into Claude Code's settings at once. It is a number
+	// (tdp components/input/number): x does not go in, and 99 is out of range
 	toStatusField(t, d, "Refresh")
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
-	press(d, key("x"))
+	press(d, key("x9"))
+	press(d, key("9"))
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	if c, _ := config.ReadConfig(loc.ConfigFile); c.Statusline.Refresh != 0 {
-		t.Fatalf("refresh %d saved from x", c.Statusline.Refresh)
+		t.Fatalf("refresh %d saved out of range", c.Statusline.Refresh)
 	}
+	if text := frameText(d); !strings.Contains(text, "Refresh must be 1-60") || !strings.Contains(text, "happens, 1-60") {
+		t.Fatalf("the input says nothing of the range:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyBackspace})
 	press(d, tea.KeyMsg{Type: tea.KeyBackspace})
 	press(d, key("30"))
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})

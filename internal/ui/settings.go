@@ -1,6 +1,7 @@
 package ui
 
 import (
+	"cmp"
 	"os"
 	"regexp"
 	"slices"
@@ -22,18 +23,22 @@ const glyphPalette = "\U000F03D8" // nf-md-palette, the background picker's titl
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
 // themeField picks the built-in theme ccdrawu's stands on, or off: the user's
-// own theme as it was. It is drawn in place and takes effect when picked.
+// own theme as it was. More than five to pick from, so a select (tdp
+// components/input/radio); it takes effect when picked.
 func (d *drawer) themeField() *terminu.Field {
 	options := append([]string{"off"}, claude.Themes...)
-	f := &terminu.Field{Label: "Claude theme", Options: options, Selected: max(0, slices.Index(options, d.cfg.Theme.Base))}
-	f.OnChange = func() tea.Cmd {
-		d.cfg.Theme.Base = ""
-		if f.Selected > 0 {
-			d.cfg.Theme.Base = options[f.Selected]
-		}
-		return d.applyTheme()
-	}
-	return f
+	return &terminu.Field{Label: "Claude theme", Value: func() string { return cmp.Or(d.cfg.Theme.Base, "off") }, Edit: func() tea.Cmd {
+		return d.app.Select(terminu.Select{
+			Title: "Claude theme", Glyph: glyphPalette, Options: options, Selected: max(0, slices.Index(options, d.cfg.Theme.Base)),
+			Done: func(i int) tea.Cmd {
+				d.cfg.Theme.Base = ""
+				if i > 0 {
+					d.cfg.Theme.Base = options[i]
+				}
+				return d.applyTheme()
+			},
+		})
+	}}
 }
 
 // backgroundField is the drawer's background over that theme, in a color
@@ -226,7 +231,6 @@ func (d *drawer) pluginDone(m pluginDone) tea.Cmd {
 	cmds := []tea.Cmd{d.app.Toast(terminu.Info, m.msg), d.checkPlugin()}
 	if m.uninstall && d.cfg.Theme.Base != "" {
 		d.cfg.Theme.Base = ""
-		d.theme.Selected = 0
 		cmds = append(cmds, d.applyTheme())
 	}
 	if m.uninstall && d.cfg.Statusline.On {
