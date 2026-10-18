@@ -157,7 +157,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 ### 檢查
 
-- `make check`：gofmt、`go vet`、`go test` 加上 `make mod-check`（下面兩個 plugin 指令），commit 前跑。有 `go.work` 時另外跑 `GOWORK=off make check`，確認對 go.mod 裡的 terminu-go 版本也過。
+- `make check`：gofmt、`go vet`、`go test -race`；有 `go.work` 時加 `check-lib`（關掉 `go.work`，照 go.mod 裡的 terminu-go 版本編譯、測試）；最後是 `make mod-check`（下面兩個 plugin 指令，Makefile 的 `CHECK`）。commit 前跑。家族共用的 target 在 `family.mk`（tdp project 的範本，照原樣複製、不在這裡改），`Makefile` 只設變數，ccdrawu 自己的 `plugin`、`mod-check` 放在最後一段。
 - `claude plugin validate .`：讀 manifest、市集檔和 hooks module，列出 hook、呼叫的 API 和引擎會拒絕的地方。
 - `claude plugin test .`：跑 `tests/*.test.ts`。
 - 型別檢查：Claude Code 載入外掛後會在 `.claude-plugin/types/` 放型別檔、在根目錄放 `tsconfig.json`（兩者都在 `.gitignore`），之後 `tsc -p .` 即可。

@@ -1,15 +1,18 @@
-# Written by Claude Code each time it loads the plugin from this folder
-.claude-plugin/types/
-tsconfig.json
-
+# terminu family template (tdp project/gitignore), copied to an app's
+# .gitignore; replace ccdrawu. The app's own lines go below the last one.
 /ccdrawu
 /dist/
-.DS_Store
 .local/
 .idea/
 .vscode/
+.DS_Store
 *.test
 *.out
 go.work
 go.work.sum
 .claude/settings.local.json
+.claude/worktrees/
+
+# Written by Claude Code each time it loads the plugin from this folder
+.claude-plugin/types/
+tsconfig.json

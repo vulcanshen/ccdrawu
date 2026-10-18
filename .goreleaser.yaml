@@ -1,3 +1,7 @@
+# terminu family template (tdp project/goreleaser.yaml), copied to an app's
+# .goreleaser.yaml. Replace ccdrawu with the app's name and fill the lines
+# marked "app:". An app with a Windows build uncomments the lines marked
+# "Windows"; nothing else changes.
 version: 2
 
 project_name: ccdrawu
@@ -10,13 +14,14 @@ builds:
     flags:
       - -trimpath
     ldflags:
+      # internal/version.Version takes the tag without its v; the app prints
+      # it with the v (internal/version.Display).
       - -s -w -X github.com/vulcanshen/ccdrawu/internal/version.Version={{.Version}}
     goos:
-      # Claude Code runs on all three, so ccdrawu does too: a windows build,
-      # as kbu has, where the rest of the u-family is unix-first.
+      # unix-first: no Windows build unless the app needs one.
       - linux
       - darwin
-      - windows
+      - windows   # Windows
     goarch:
       - amd64
       - arm64
@@ -24,7 +29,7 @@ builds:
 archives:
   - formats:
       - tar.gz
-    format_overrides:
+    format_overrides:   # Windows
       - goos: windows
         formats:
           - zip
@@ -33,23 +38,26 @@ archives:
 checksum:
   name_template: "checksums.txt"
 
+# The release notes come from CHANGELOG.md (.github/workflows/release.yml).
 changelog:
   disable: true
 
-# A formula, not a cask, like kbu / filu / sshu / webu / locku: a formula
-# binary is never stamped com.apple.quarantine, so an unsigned binary runs
-# clean.
+# A formula, not a cask: a formula binary is never stamped
+# com.apple.quarantine, so an unsigned binary runs clean.
 brews:
   - repository:
       owner: vulcanshen
       name: homebrew-tap
-      # One token for everything, GITHUB_TOKEN (user, 2026-09-25): a
-      # release run by hand takes the shell's; the workflow hands it a
-      # PAT when one is set, since the built-in token cannot write to the
-      # tap repository.
+      # One token for everything, GITHUB_TOKEN (user, 2026-09-25): a release
+      # run by hand takes the shell's; the workflow hands it the PAT in
+      # ACTION_TOKEN when one is set, since the built-in token cannot write
+      # to the tap repository.
       token: "{{ .Env.GITHUB_TOKEN }}"
     homepage: "https://github.com/vulcanshen/ccdrawu"
-    description: "status drawer for Claude Code (u-family) — usage limits, context, model, cost and git beside the transcript; ccdrawu picks what it shows"
+    # app: one line, what the app is, ending in (u-family).
+    description: "ccdrawu: a status drawer for Claude Code — usage limits, context, model, cost and git beside the transcript (u-family)"
+    # app: what to run first, where the settings and data live, the Nerd
+    # Font requirement, the platforms.
     caveats: |
       `ccdrawu install claude` adds the drawer to Claude Code (its ccdrawu
       plugin); `ccdrawu` then picks what it shows, and every open session
@@ -58,14 +66,16 @@ brews:
 
       Settings live in ~/.config/ccdrawu, what the drawer and ccdrawu
       share in ~/.ccdrawu. A Nerd Font terminal profile is required.
+      macOS and Linux (WSL too); on Windows, Scoop.
+    # app: dependencies, when the app calls other programs.
     test: |
       system "#{bin}/ccdrawu", "version"
 
-# Scoop for Windows, as kbu has.
-scoops:
+scoops:   # Windows
   - repository:
       owner: vulcanshen
       name: scoop-bucket
       token: "{{ .Env.GITHUB_TOKEN }}"
     homepage: "https://github.com/vulcanshen/ccdrawu"
-    description: "status drawer for Claude Code (u-family) — usage limits, context, model, cost and git beside the transcript; ccdrawu picks what it shows"
+    # app: the same line as the brews description above.
+    description: "ccdrawu: a status drawer for Claude Code — usage limits, context, model, cost and git beside the transcript (u-family)"
