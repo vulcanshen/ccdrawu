@@ -81,8 +81,8 @@ func Move(loc Locations) ([]Moved, error) {
 			moved = append(moved, Moved{old, loc.ConfigFile})
 		}
 	}
-	// Each thing in it on its own: on Windows the cache folder is where
-	// install.ps1 puts ccdrawu.exe, so it is there already
+	// Each thing in it on its own: the mod writes the catalog to the cache
+	// folder as a session starts, often before ccdrawu first runs
 	if entries, err := os.ReadDir(loc.OldData); err == nil {
 		var failed error
 		took := false

@@ -36,7 +36,7 @@ func TestLocateFollowsE3(t *testing.T) {
 	if got = locate(env(map[string]string{"XDG_CACHE_HOME": "rel"}), "/h", "linux"); got.Cache != j("/h", ".cache", "ccdrawu") {
 		t.Fatalf("relative XDG_CACHE_HOME: %+v", got)
 	}
-	if got = locate(env(map[string]string{"LOCALAPPDATA": `C:\U\AppData\Local`}), `C:\U`, "windows"); got.Cache != j(`C:\U\AppData\Local`, "ccdrawu") {
+	if got = locate(env(map[string]string{"LOCALAPPDATA": `C:\U\AppData\Local`}), `C:\U`, "windows"); got.Cache != j(`C:\U\AppData\Local`, "ccdrawu", "cache") {
 		t.Fatalf("Windows: %+v", got)
 	}
 	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "CCDRAWU__CONFIG": "/c", "CCDRAWU__CACHE": "/k", "CCDRAWU__DATA": "/d"}), "/h", "linux")
@@ -119,8 +119,8 @@ func TestMoveTakesTheOldPlaces(t *testing.T) {
 		t.Fatalf("moved again: %+v, %v", moved, err)
 	}
 
-	// On Windows the cache folder is ccdrawu.exe's, there already, and the mod
-	// may have written the catalog anew before ccdrawu ran: the sessions move,
+	// The mod writes the catalog to the cache folder as a session starts,
+	// often before ccdrawu first runs: the sessions move,
 	// the stale catalog goes, and so does ~/.ccdrawu
 	if err := os.MkdirAll(filepath.Join(loc.OldData, "sessions"), 0o755); err != nil {
 		t.Fatal(err)

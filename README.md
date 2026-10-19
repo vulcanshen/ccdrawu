@@ -247,7 +247,7 @@ The ccdrawu plugin is not running in that session, so the status line shows what
 ## Where it keeps things
 
 - `~/.config/ccdrawu/config.yaml`: what you picked in `ccdrawu`: the items, the alias, the bar, the pet, whether the drawer opens by itself, and the status line's settings. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
-- `ccdrawu` in your system's cache folder (`~/Library/Caches/ccdrawu` on macOS, `~/.cache/ccdrawu` on Linux, `%LOCALAPPDATA%\ccdrawu` on Windows): what the plugin writes for `ccdrawu`, the list of items it offers (`catalog.json`) and, while the status line is on, each session's values for it (`sessions/`; a session's file is removed after a week without use). The plugin writes it all again, so removing it loses nothing. `CCDRAWU__CACHE` names another folder for it.
+- `ccdrawu` in your system's cache folder (`~/Library/Caches/ccdrawu` on macOS, `~/.cache/ccdrawu` on Linux, `%LOCALAPPDATA%\ccdrawu\cache` on Windows, beside `ccdrawu.exe`): what the plugin writes for `ccdrawu`, the list of items it offers (`catalog.json`) and, while the status line is on, each session's values for it (`sessions/`; a session's file is removed after a week without use). The plugin writes it all again, so removing it loses nothing. `CCDRAWU__CACHE` names another folder for it.
 
 On Windows, `~` is your user folder (`%USERPROFILE%`).
 

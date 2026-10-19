@@ -247,7 +247,7 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 ## 資料存放位置
 
 - `~/.config/ccdrawu/config.yaml`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
-- 系統快取資料夾裡的 `ccdrawu`（macOS 是 `~/Library/Caches/ccdrawu`，Linux 是 `~/.cache/ccdrawu`，Windows 是 `%LOCALAPPDATA%\ccdrawu`）：外掛寫給 `ccdrawu` 的東西，也就是它列出的項目清單（`catalog.json`），以及狀態列打開時、每個 session 給它的值（`sessions/`；一週沒用到的 session 檔會刪掉）。外掛會再寫一次，刪掉也不會少什麼。`CCDRAWU__CACHE` 可以改放別的資料夾。
+- 系統快取資料夾裡的 `ccdrawu`（macOS 是 `~/Library/Caches/ccdrawu`，Linux 是 `~/.cache/ccdrawu`，Windows 是 `%LOCALAPPDATA%\ccdrawu\cache`，在 `ccdrawu.exe` 旁邊）：外掛寫給 `ccdrawu` 的東西，也就是它列出的項目清單（`catalog.json`），以及狀態列打開時、每個 session 給它的值（`sessions/`；一週沒用到的 session 檔會刪掉）。外掛會再寫一次，刪掉也不會少什麼。`CCDRAWU__CACHE` 可以改放別的資料夾。
 
 在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
 

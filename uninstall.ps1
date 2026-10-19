@@ -47,8 +47,8 @@ if ($env:CCDRAWU__CONFIG) {
 }
 Ask-Remove $configDir "ccdrawu settings (the drawer's items and the alias)"
 
-# What the plugin writes for ccdrawu, a cache (terminu design E3): in %LOCALAPPDATA%\ccdrawu, the folder
-# removed above with ccdrawu.exe, unless CCDRAWU__CACHE names another
+# What the plugin writes for ccdrawu, a cache (terminu design E3): in %LOCALAPPDATA%\ccdrawu\cache, gone above
+# with the folder ccdrawu.exe is in, unless CCDRAWU__CACHE names another
 if ($env:CCDRAWU__CACHE) {
     Ask-Remove $env:CCDRAWU__CACHE "ccdrawu cache (the catalog, the status line's values)"
 }

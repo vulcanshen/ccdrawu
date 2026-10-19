@@ -615,7 +615,7 @@ test('files sit where terminu design E3 puts them, unless CCDRAWU__ variables sa
   })
   // A relative XDG_CACHE_HOME is not taken, as Go's os.UserCacheDir does not
   expect(locations({ home: '/h', os: 'linux', xdgCache: 'rel' }).cache).toBe('/h/.cache/ccdrawu')
-  expect(locations({ home: 'C:\\U', os: 'windows', localAppData: 'C:\\U\\AppData\\Local' }).cache).toBe('C:\\U\\AppData\\Local/ccdrawu')
+  expect(locations({ home: 'C:\\U', os: 'windows', localAppData: 'C:\\U\\AppData\\Local' }).cache).toBe('C:\\U\\AppData\\Local/ccdrawu/cache')
   expect(locations({ home: '/h', os: 'linux', xdgConfig: '/x', config: '/c', cache: '/k' })).toEqual({ ...config('/c'), cache: '/k' })
 })
 

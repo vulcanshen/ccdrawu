@@ -46,19 +46,22 @@ func locate(getenv func(string) string, home, goos string) Locations {
 	}
 }
 
-// cacheDir is the system's cache folder's ccdrawu (tdp E3), as os.UserCacheDir
-// has it: %LOCALAPPDATA% on Windows, ~/Library/Caches on macOS, else
-// $XDG_CACHE_HOME when it is an absolute path, else ~/.cache.
+// cacheDir is ccdrawu's cache folder (tdp E3): in the system's cache folder,
+// as os.UserCacheDir has it, ~/Library/Caches on macOS, else $XDG_CACHE_HOME
+// when it is an absolute path, else ~/.cache; on Windows the cache folder in
+// %LOCALAPPDATA%\ccdrawu, where install.ps1 puts ccdrawu.exe, so removing the
+// cache leaves the program (the user's choice, CD52).
 func cacheDir(getenv func(string) string, home, goos string) string {
 	if dir := getenv("CCDRAWU__CACHE"); dir != "" {
 		return dir
 	}
 	switch goos {
 	case "windows":
-		if dir := getenv("LOCALAPPDATA"); dir != "" {
-			return filepath.Join(dir, "ccdrawu")
+		local := getenv("LOCALAPPDATA")
+		if local == "" {
+			local = filepath.Join(home, "AppData", "Local")
 		}
-		return filepath.Join(home, "AppData", "Local", "ccdrawu")
+		return filepath.Join(local, "ccdrawu", "cache")
 	case "darwin":
 		return filepath.Join(home, "Library", "Caches", "ccdrawu")
 	}

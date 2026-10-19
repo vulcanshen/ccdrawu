@@ -144,16 +144,19 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **catalog 與 sessions 是快取**（tdp E3：刪了 app 會自己重建的是快取，定案 S2；sessions 是推得出來的，catalog 也照同一條
     規則）：mod 每次開始都重寫 catalog，sessions 每秒寫，刪了都會回來，所以 `~/.ccdrawu` 整個不用了，`CCDRAWU__DATA` 換成
     `CCDRAWU__CACHE`。位置照 Go 的 `os.UserCacheDir`（macOS `~/Library/Caches`、Linux 絕對路徑的 `$XDG_CACHE_HOME` 或
-    `~/.cache`、Windows `%LOCALAPPDATA%`）；mod 沒有平台資訊，有 `LOCALAPPDATA` 就是 Windows，其他跑一次 `uname -s`，`darwin`
+    `~/.cache`；Windows 見下面）；mod 沒有平台資訊，有 `LOCALAPPDATA` 就是 Windows，其他跑一次 `uname -s`，`darwin`
     就是 macOS，兩邊才會算出同一個資料夾。
   - **搬法**（tdp E3 的「換了位置時」，定案 S1）：`config.Move` 在 TUI 開始時跑，新位置沒有時把 `config.json` 寫成
     `config.yaml`、把 `~/.ccdrawu` 裡的東西搬進快取目錄，跳一個 Info toast；搬不動開 error popup 寫兩個路徑。在那之前（或搬不動時）
     都照舊讀舊的：Go 的 `ReadConfig`、`Locations.Catalog`，`ccdrawu statusline` 找不到新的 session 檔時也看舊的，mod 沒有
     config.yaml 時讀 config.json。`WriteConfig` 寫好 config.yaml 就刪掉旁邊的 config.json（`install`／`uninstall claude` 寫設定時
     也算搬完）。
-  - **Windows 的快取目錄就是 install.ps1 放 ccdrawu.exe 的地方**（`%LOCALAPPDATA%\ccdrawu`）：資料夾一定在，所以 `Move` 不看資料夾
-    在不在，逐項搬；新位置已經有的（mod 先寫了新的 catalog）就把舊的刪掉，那是舊的快取。uninstall.ps1 移除 ccdrawu.exe 的資料夾時
-    快取一起走。回報 terminu（CD52）。
+  - **Windows 的快取放在 `%LOCALAPPDATA%\ccdrawu\cache`**（user 定的，CD52）：照 os.UserCacheDir 是
+    `%LOCALAPPDATA%\ccdrawu`，那正是 install.ps1 放 ccdrawu.exe 的資料夾，刪快取會刪到程式；改放它底下的 `cache`，
+    uninstall.ps1 刪整個資料夾時一起走。
+  - **`Move` 逐項搬**：mod 在 session 開始時就寫新的 catalog，常常比使用者第一次開 TUI 還早，那時新位置已經在，照「整個目錄搬」
+    就搬不了，`~/.ccdrawu` 會一直留著。所以一項一項看：新位置沒有的搬過去，已經有的（mod 寫的新 catalog）把舊的刪掉，那是舊的
+    快取；搬完把空的 `~/.ccdrawu` 拿掉。
 
 ## 已否決，不要重提
 
