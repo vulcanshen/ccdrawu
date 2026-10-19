@@ -61,9 +61,10 @@ func TestL4EveryRowFullWidth(t *testing.T) {
 			return d.app.Toast(terminu.Info, "a toast long enough to wrap on a narrow terminal, and then some more words")
 		},
 	}
-	// Each popup opens wide and narrow; the one opened wide is then drawn at
-	// each size after, the last three smaller than it one way or both
-	opened := [][2]int{{200, 50}, {40, 15}}
+	// Each popup opens wide and at the minimum size, 40x12 (tdp L1); the one
+	// opened wide is then drawn at each size after, the last three smaller
+	// than it one way or both
+	opened := [][2]int{{200, 50}, {40, 12}}
 	sizes := [][2]int{{120, 40}, {100, 30}, {80, 24}, {60, 20}, {30, 12}, {24, 40}, {120, 7}, {24, 7}}
 	check := func(d *drawer, label string, w, h int) {
 		t.Helper()
