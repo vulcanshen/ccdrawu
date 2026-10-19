@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.8.0；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.8.2；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -127,7 +127,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **畫面測試**：`TestL4EveryRowFullWidth`（`internal/ui/screen_test.go`）在三種 icon 與 powerline 寬度下，開 ccdrawu 的每一種
     popup，在 200x50 與最低尺寸 40x12 各開一次，200x50 開的再拉到比它窄、矮的尺寸，每一列都要剛好等於終端機寬（tdp L4、tdp E5、tdp E6）。
     popup 的動畫是真的時間，整個跑完約 30 秒。
-- **跟上 terminu-go v0.2.0（tdp v0.8.1，2026-10-19）。** 等 lib 的定案都做完：input 的 `Commit`（CD24）、`Values` 的空狀態
+- **跟上 terminu-go v0.2.0（tdp v0.8.1，2026-10-19），之後是 v0.2.1（tdp v0.8.2，ccdrawu 不用改）。** 等 lib 的定案都做完：input 的 `Commit`（CD24）、`Values` 的空狀態
   （CD23：沒有 catalog 的頁用 Overlay0 的事實與提示，`Failure` 只留給讀不了 catalog）、`NumberInput.Unit`、Success toast（套用
   主題、打開或關掉狀態列、安裝或移除外掛；搬家照 tdp E3 用 Info）、最低尺寸；值沒變不寫回（CD18）、Enter 列進 Space menu（CD19）、
   控制字元（CD25）改由 lib 做，ccdrawu 的暫時做法拿掉。reorder 的 `h|l`、`?` 只列動得了的鍵、color picker 的空值、捲動位置、
@@ -197,7 +197,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 ## 偏離 tdp
 
-照 tdp v0.8.0 對過（2026-10-19）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
+照 tdp v0.8.2 對過（2026-10-19）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
 `statusLine` 指令的一列），不是 terminu 的畫面，不套用。跟 tdp 對不上、要修的，tdp E7 寫在
 `docs/ccdrawu-terminu-fix.md`；現在都修完了，沒有這個檔。
 
@@ -214,7 +214,7 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.8.0）；ccdrawu 提過的盲點與定案（CD 編號）記在
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.8.2）；ccdrawu 提過的盲點與定案（CD 編號）記在
   terminu 的 session 那邊。還沒做到的會逐條寫在 `docs/ccdrawu-terminu-fix.md`，程式裡標 `TODO(tdp CDn)`、
   `TODO(lib CDn)`；現在沒有。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
