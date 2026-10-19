@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.7.4；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.8.0；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -128,18 +128,18 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
     popup，在 200x50 與 40x15 各開一次，200x50 開的再拉到比它窄、矮的尺寸，每一列都要剛好等於終端機寬（tdp L4、tdp E5、tdp E6）。
     popup 的動畫是真的時間，整個跑完約 30 秒。
 
-- **設定檔是 config.yaml，catalog 與 sessions 是快取（2026-10-19，tdp v0.8.0 的 E3）。**
-  - **config.yaml**（tdp E3：設定目錄裡的 `config.yaml`，user 定的 S3）：Go 照舊用 JSON 的欄位與規則（`omitempty`、沒設的清單寫
+- **設定檔是 config.yaml，catalog 與 sessions 是快取（2026-10-19，tdp E3，tdp v0.8.0）。**
+  - **config.yaml**（tdp E3：設定目錄裡的 `config.yaml`，定案 S3）：Go 照舊用 JSON 的欄位與規則（`omitempty`、沒設的清單寫
     `null`、`Kept` 存成字串），寫的時候 JSON 經過 gopkg.in/yaml.v3 的 Node 轉成 block 的 YAML（`config.WriteConfig`），讀的時候
     反過來（`jsonFromYAML`），欄位順序跟著 struct。mod 沒有 YAML 的套件，`hooks/yaml.ts` 是一個小的讀取器：ccdrawu 寫的樣子
     （block、需要時才加引號、多列的 `|-`）加上手寫常見的寫法（flow 的 `[..]`、`{..}`，所以 JSON 也讀得了、註解、兩種引號、
     `|`、`>`）；anchor、tag、第二份文件不讀，跟讀不懂一樣當作還沒寫好、下一秒再讀。
-  - **catalog 與 sessions 是快取**（tdp E3：刪了 app 會自己重建的是快取，user 定的 S2；sessions 是推得出來的，catalog 也照同一條
+  - **catalog 與 sessions 是快取**（tdp E3：刪了 app 會自己重建的是快取，定案 S2；sessions 是推得出來的，catalog 也照同一條
     規則）：mod 每次開始都重寫 catalog，sessions 每秒寫，刪了都會回來，所以 `~/.ccdrawu` 整個不用了，`CCDRAWU__DATA` 換成
     `CCDRAWU__CACHE`。位置照 Go 的 `os.UserCacheDir`（macOS `~/Library/Caches`、Linux 絕對路徑的 `$XDG_CACHE_HOME` 或
     `~/.cache`、Windows `%LOCALAPPDATA%`）；mod 沒有平台資訊，有 `LOCALAPPDATA` 就是 Windows，其他跑一次 `uname -s`，`darwin`
     就是 macOS，兩邊才會算出同一個資料夾。
-  - **搬法**（tdp E3 的「換了位置時」，user 定的 S1）：`config.Move` 在 TUI 開始時跑，新位置沒有時把 `config.json` 寫成
+  - **搬法**（tdp E3 的「換了位置時」，定案 S1）：`config.Move` 在 TUI 開始時跑，新位置沒有時把 `config.json` 寫成
     `config.yaml`、把 `~/.ccdrawu` 裡的東西搬進快取目錄，跳一個 Info toast；搬不動開 error popup 寫兩個路徑。在那之前（或搬不動時）
     都照舊讀舊的：Go 的 `ReadConfig`、`Locations.Catalog`，`ccdrawu statusline` 找不到新的 session 檔時也看舊的，mod 沒有
     config.yaml 時讀 config.json。`WriteConfig` 寫好 config.yaml 就刪掉旁邊的 config.json（`install`／`uninstall claude` 寫設定時
@@ -198,7 +198,7 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.7.4）；ccdrawu 提過的盲點與定案（CD 編號）記在
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.8.0）；ccdrawu 提過的盲點與定案（CD 編號）記在
   terminu 的 session 那邊。還沒做到的逐條在 [`ccdrawu-terminu-fix.md`](ccdrawu-terminu-fix.md)，程式裡標 `TODO(tdp CDn)`、
   `TODO(lib CDn)`。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
