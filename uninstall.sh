@@ -60,10 +60,13 @@ env_of() {
   eval "printf '%s' \"\${$1:-}\""
 }
 
-# Where tdp E3 puts the settings, the data and the cache; each is asked about
-# only when it is there.
+# Where tdp E3 puts the settings, the state, the data and the cache; each is
+# asked about only when it is there. The state lives in the settings directory
+# unless <APP>__STATE moved it elsewhere, so it is asked about on its own only
+# then.
 CONFIG_DIR=$(env_of "${APP_UPPER}__CONFIG")
 [ -n "$CONFIG_DIR" ] || CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/$APP"
+STATE_DIR=$(env_of "${APP_UPPER}__STATE")
 DATA_DIR=$(env_of "${APP_UPPER}__DATA")
 [ -n "$DATA_DIR" ] || DATA_DIR="$HOME/.$APP"
 CACHE_DIR=$(env_of "${APP_UPPER}__CACHE")
@@ -74,6 +77,9 @@ if [ -z "$CACHE_DIR" ]; then
   esac
 fi
 ask "$CONFIG_DIR" "$APP settings"
+if [ -n "$STATE_DIR" ] && [ "$STATE_DIR" != "$CONFIG_DIR" ]; then
+  ask "$STATE_DIR" "$APP state"
+fi
 ask "$DATA_DIR" "$APP data"
 ask "$CACHE_DIR" "$APP cache"
 
