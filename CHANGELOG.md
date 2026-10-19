@@ -65,4 +65,4 @@ Each release names the version of terminu design (tdp) it follows.
 - `ccdrawu install claude` and `ccdrawu uninstall claude`, putting the drawer into Claude Code for your user and taking it out again; uninstalling puts your own theme back. `CCDRAWU__MARKETPLACE` points the install at another marketplace.
 - Settings in `~/.config/ccdrawu/config.json` (`CCDRAWU__CONFIG`, or `XDG_CONFIG_HOME`), and what the plugin writes in `~/.ccdrawu/` (`CCDRAWU__DATA`); on Windows, `~` is your user folder.
 - macOS, Linux and Windows (not yet tried on a Windows machine), on amd64 and arm64: an install script for each (`install.sh`, `install.ps1`) and its uninstall script, Homebrew (`vulcanshen/tap/ccdrawu`) and Scoop (`vulcanshen/scoop-bucket`).
-- `docs/icon.svg`: the terminu family's mark, ccdrawu's own, which the settings screen's splash draws.
+- `docs/icon.svg`: the terminu family's mark, ccdrawu's own.
