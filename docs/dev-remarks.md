@@ -127,6 +127,13 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **畫面測試**：`TestL4EveryRowFullWidth`（`internal/ui/screen_test.go`）在三種 icon 與 powerline 寬度下，開 ccdrawu 的每一種
     popup，在 200x50 與 40x15 各開一次，200x50 開的再拉到比它窄、矮的尺寸，每一列都要剛好等於終端機寬（tdp L4、tdp E5、tdp E6）。
     popup 的動畫是真的時間，整個跑完約 30 秒。
+- **最低尺寸 40×12（2026-10-19，user 定，tdp L1）。** tdp L1 給每個 app 一個門檻，預設 80×40，比它小時只顯示 app 名稱與
+  `needs a terminal of at least W×H`；app 可以調低。ccdrawu 調到 40×12：
+  - 它是 Claude Code 旁邊的小工具，常開在 tmux 分割出來的窄窗格（YouTube 那幾章就是），80×40 會讓它在那裡打不開。
+  - 畫面只有一個側欄加一頁值，60 欄以下本來就只畫一個 panel（`NarrowBelow`）；40 欄還放得下最長的 label（DRAWER BACKGROUND，17 格）、
+    兩格、值的開頭，12 列放得下最上面一列、footer、框線與一頁的前幾欄，其他照常捲。
+  - popup 照 tdp F7 的寬度與高度，在 40×15 開過每一種（`TestL4EveryRowFullWidth`）。
+  - lib 的接口是 terminu-go v0.2.0 的 `App.MinWidth`、`App.MinHeight`，發版後跟著升級設定（`TODO` 在 fix.md）。
 
 - **設定檔是 config.yaml，catalog 與 sessions 是快取（2026-10-19，tdp E3，tdp v0.8.0）。**
   - **config.yaml**（tdp E3：設定目錄裡的 `config.yaml`，定案 S3）：Go 照舊用 JSON 的欄位與規則（`omitempty`、沒設的清單寫

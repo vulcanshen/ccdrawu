@@ -9,7 +9,7 @@
 | tdp K7、tdp K12、components/input/reorder（CD20，定案 S21） | Order 的 reorder popup | `h\|l`、`←\|→` 不動 | lib 的 reorder 收 `h\|l`，Drag 時也一樣；ccdrawu 不用改 |
 | tdp M6（CD21，定案 S20） | 沒有 catalog 時的 `[2]`、Install confirm | `?` 照常列出移動鍵、捲動鍵 | lib 照當下的狀態給；ccdrawu 不用改 |
 | tdp E5（CD22） | 任何 popup | 終端機 5 列以下打開 popup 會 panic | 第一批 #1 修好；`TestL4EveryRowFullWidth` 加 5 列以下的尺寸 |
-| tdp L1（定案 S53） | 整個 TUI | 沒有最小尺寸的門檻 | lib 的門檻（預設 80×40）；ccdrawu 在 80×24、60×20 都照常能用，門檻調低（暫定 40×12），測試加門檻以下到 1×1 |
+| tdp L1（定案 S53） | 整個 TUI | 沒有最小尺寸的門檻 | 設 `App.MinWidth = 40`、`App.MinHeight = 12`（terminu-go v0.2.0，user 定的，見 dev-remarks 的設計決定），測試加門檻以下到 1×1 |
 | components/layout/screen 空狀態（CD23） | 沒有 catalog 時的 sidebar、inline、statusline 頁 | 用 `Failure` 畫，事實那一句是 Red | 改用 lib 給 `Values` 的空狀態（第二批 #8），拿掉 `TODO(lib CD23)` |
 | components/layout/popup 錯誤列、dialog/note（CD24） | Alias、Separator、Refresh、Claude theme、Drawer background 的動作失敗時 | popup 已經關了，error popup 蓋在 panel 上；ccdrawu 把設定改回檔案裡的樣子 | 改用能回報失敗的 Done（第二批 #1），拿掉 `revert` 裡的 `TODO(lib CD24)` |
 | components/input/README 值裡的控制字元（CD25，定案 S22） | Alias、Separator、Drawer background、Plugin 的值 | ccdrawu 自己寫成 `\x1b`，沒上色（`shown()`） | lib 畫成紅色的轉義後拿掉 `shown()` 與 `TODO(lib CD25)` |
