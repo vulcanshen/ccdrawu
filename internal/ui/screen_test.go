@@ -2,6 +2,7 @@ package ui
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -27,6 +28,41 @@ func run(d *drawer, cmd tea.Cmd) {
 			press(d, m)
 		}
 	case <-time.After(100 * time.Millisecond):
+	}
+}
+
+// tdp L1: below its least size, 40 x 12, the TUI draws its name and what it
+// needs in the middle, full rows, down to 1 x 1, with a popup open or not
+func TestBelowTheLeastSize(t *testing.T) {
+	for _, open := range [][]tea.Msg{nil, {key("j"), key("j"), key("j"), tea.KeyMsg{Type: tea.KeyEnter}, tea.KeyMsg{Type: tea.KeyEnter}}} {
+		d, _ := newTestDrawer(t)
+		for _, k := range open {
+			press(d, k)
+		}
+		for _, sz := range [][2]int{{39, 12}, {40, 11}, {30, 8}, {20, 5}, {7, 1}, {1, 1}} {
+			d.app.Update(tea.WindowSizeMsg{Width: sz[0], Height: sz[1]})
+			lines := d.app.Frame()
+			if len(lines) != sz[1] {
+				t.Fatalf("%dx%d: %d rows", sz[0], sz[1], len(lines))
+			}
+			for i, l := range lines {
+				if w := terminu.Width(l); w != sz[0] {
+					t.Fatalf("%dx%d: row %d is %d wide", sz[0], sz[1], i, w)
+				}
+			}
+			text := frameText(d)
+			if sz[0] >= 7 && !strings.Contains(text, "ccdrawu") {
+				t.Fatalf("%dx%d: no name:\n%s", sz[0], sz[1], text)
+			}
+			if sz == [2]int{39, 12} && !strings.Contains(text, "40×12") {
+				t.Fatalf("39x12: no word of the least size:\n%s", text)
+			}
+		}
+		// As it grows again, all comes back
+		d.app.Update(tea.WindowSizeMsg{Width: 80, Height: 24})
+		if text := frameText(d); !strings.Contains(text, "[1] PREFERENCES") {
+			t.Fatalf("not back at 80x24:\n%s", text)
+		}
 	}
 }
 

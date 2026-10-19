@@ -7,7 +7,6 @@ import (
 	"slices"
 	"strings"
 	"time"
-	"unicode"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/ccdrawu/internal/claude"
@@ -27,7 +26,7 @@ type drawer struct {
 	cfg    config.Config
 	detail *terminu.Panel
 	pages  map[string]*terminu.Values // [2]'s body for each row of [1]
-	fail   *terminu.Failure           // what an empty page of items says
+	fail   *terminu.Failure           // what a page of items says when the catalog can't be read
 
 	background *terminu.Field            // the drawer background, which x resets
 	drawerOn   map[string]*terminu.Field // the drawer's on and off atop sidebar and inline, each its own
@@ -85,24 +84,23 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 			return nil, err
 		}
 	}
+	// A page of items before the mod has written the catalog: an empty state
+	// (tdp components/layout/screen), not a failure
+	page := func() *terminu.Values {
+		return &terminu.Values{Header: [2]string{"Setting", "Value"},
+			EmptyFact: "Nothing to list until ccdrawu runs in Claude Code", EmptyHint: "Press [Enter] on Plugin in preferences"}
+	}
 	d := &drawer{
-		loc: loc,
-		cfg: cfg,
-		run: run,
-		pages: map[string]*terminu.Values{
-			rowSidebar:    {Header: [2]string{"Setting", "Value"}},
-			rowInline:     {Header: [2]string{"Setting", "Value"}},
-			rowStatusline: {Header: [2]string{"Setting", "Value"}},
-		},
-		// TODO(lib CD23): an empty page, not a failure, but a Values has no
-		// empty state of its own, and a Failure's fact is Red
-		fail: &terminu.Failure{
-			Fact: "Nothing to list until ccdrawu runs in Claude Code",
-			Hint: "Press [Enter] on Plugin in preferences",
-		},
+		loc:    loc,
+		cfg:    cfg,
+		run:    run,
+		pages:  map[string]*terminu.Values{rowSidebar: page(), rowInline: page(), rowStatusline: page()},
 		radios: map[*terminu.Field]func() int{},
 	}
 	a := terminu.New("ccdrawu")
+	// It opens in a narrow pane beside Claude Code, and one panel and a page of
+	// values fit in 40 x 12 (tdp L1; the user's)
+	a.MinWidth, a.MinHeight = 40, 12
 	a.Splash = splash()
 	a.Status = d.status
 	a.OnMsg = d.onMsg
@@ -125,10 +123,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 		d.show(r.ID)
 		return nil
 	}
-	d.detail = &terminu.Panel{Actions: []terminu.Action{d.enterField(), d.editItems(), d.resetBackground()}}
-	for _, page := range d.pages {
-		page.OnMove = d.nameEnter
-	}
+	d.detail = &terminu.Panel{Actions: []terminu.Action{d.editItems(), d.resetBackground()}}
 	d.show(rowSidebar)
 	// Enter goes into the row's page in [2]: the one change of panels Enter
 	// makes (tdp K3, details, since tdp v0.6.3). Every row has a page.
@@ -167,40 +162,6 @@ func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
 func sidebar(w, h int) []terminu.Rect {
 	left := min(24, w/2)
 	return []terminu.Rect{{X: 0, Y: 0, W: left, H: h}, {X: left, Y: 0, W: w - left, H: h}}
-}
-
-// enterField is Enter on the value under [2]'s cursor as an item operation,
-// so it is in the Space menu and in ? as well as in the hint (tdp M3, tdp K6).
-// It does what Enter does there; its Hint is left empty, so the hint keeps
-// the page's own word for it (edit, choose, toggle).
-//
-// TODO(lib CD19): terminu-go's Values does not list its own Enter
-func (d *drawer) enterField() terminu.Action {
-	return terminu.Action{
-		Key: "Enter", Label: "Edit", Desc: "the value under the cursor", Scope: terminu.ItemScope,
-		Disabled: func() bool {
-			f := d.pages[d.detail.Label].Current()
-			return f == nil || f.Disabled != nil && f.Disabled()
-		},
-		Do: func() tea.Cmd {
-			_, cmd := d.pages[d.detail.Label].Key("Enter", tea.KeyMsg{Type: tea.KeyEnter})
-			return cmd
-		},
-	}
-}
-
-// nameEnter names Enter's item operation after what it does on the value
-// the cursor came to, as the hint does.
-func (d *drawer) nameEnter(*terminu.Field, int) tea.Cmd {
-	switch d.pages[d.detail.Label].EnterHint() {
-	case "choose":
-		d.detail.Actions[0].Label = "Choose"
-	case "toggle":
-		d.detail.Actions[0].Label = "Toggle"
-	case "edit":
-		d.detail.Actions[0].Label = "Edit"
-	}
-	return nil
 }
 
 // show puts the page of row id in [2], named after it.
@@ -329,13 +290,15 @@ func (d *drawer) reorder(id string) tea.Cmd {
 	items := d.ordered(p)
 	return d.app.Reorder(terminu.Reorder{
 		Title: "Order", Glyph: glyphPencil, Subject: id, Options: d.rows(items),
-		Done: func(order []int) tea.Cmd {
-			ids := make([]string, len(order))
-			for k, i := range order {
-				ids[k] = items[i].ID
-			}
-			d.cfg.Reorder(p, cat, ids)
-			return d.save()
+		Commit: func(order []int) error {
+			return d.commit(func() error {
+				ids := make([]string, len(order))
+				for k, i := range order {
+					ids[k] = items[i].ID
+				}
+				d.cfg.Reorder(p, cat, ids)
+				return nil
+			})
 		},
 	})
 }
@@ -368,13 +331,15 @@ func (d *drawer) pick(id string) tea.Cmd {
 	}
 	return d.app.Checks(terminu.Checks{
 		Title: "Edit", Glyph: glyphPencil, Subject: id, Options: d.rows(items), Checked: checked,
-		Done: func(on []bool) tea.Cmd {
-			for i, it := range items {
-				if on[i] != d.cfg.On(p, it) {
-					d.cfg.Set(p, cat, it.ID, on[i])
+		Commit: func(on []bool) error {
+			return d.commit(func() error {
+				for i, it := range items {
+					if on[i] != d.cfg.On(p, it) {
+						d.cfg.Set(p, cat, it.ID, on[i])
+					}
 				}
-			}
-			return d.save()
+				return nil
+			})
 		},
 	})
 }
@@ -391,7 +356,7 @@ func (d *drawer) choices(p config.Placement) []config.Item {
 // aliasField is the alias row: one more name for /ccdrawu, set in an input
 // popup and checked as the mod reads it.
 func (d *drawer) aliasField() *terminu.Field {
-	return &terminu.Field{Label: "Alias", Value: func() string { return shown(d.cfg.Alias) }, Empty: "none",
+	return &terminu.Field{Label: "Alias", Value: func() string { return d.cfg.Alias }, Empty: "none",
 		// One set by hand in config.yaml that the mod does not take (tdp
 		// components/layout/panel: its label is Red)
 		Err: func() bool {
@@ -406,15 +371,11 @@ func (d *drawer) aliasField() *terminu.Field {
 					_, err := config.CleanAlias(v)
 					return err
 				},
-				Done: func(v string) tea.Cmd {
-					alias, _ := config.CleanAlias(v)
-					// TODO(lib CD18): terminu-go calls Done with the value it opened
-					// on once something was typed and taken back; that writes nothing
-					if alias == d.cfg.Alias {
+				Commit: func(v string) error {
+					return d.commit(func() error {
+						d.cfg.Alias, _ = config.CleanAlias(v)
 						return nil
-					}
-					d.cfg.Alias = alias
-					return d.save()
+					})
 				},
 			})
 		}}
@@ -438,20 +399,30 @@ func (d *drawer) rows(items []config.Item) []string {
 	return rows
 }
 
-// save writes the config, or says why it can't.
+// save writes the config, or says why it can't: a change made in place.
 func (d *drawer) save() tea.Cmd {
-	if err := config.WriteConfig(d.loc.ConfigFile, d.cfg); err != nil {
-		d.revert()
+	if err := d.commit(func() error { return nil }); err != nil {
 		return d.app.Error("Can't save", err.Error())
 	}
 	return nil
 }
 
+// commit makes a change and writes the config, or puts it all back as saved
+// and says why: an input's Commit, which keeps the input open with its value
+// under the error (tdp components/layout/popup).
+func (d *drawer) commit(change func() error) error {
+	err := change()
+	if err == nil {
+		err = config.WriteConfig(d.loc.ConfigFile, d.cfg)
+	}
+	if err != nil {
+		d.revert()
+	}
+	return err
+}
+
 // revert puts d.cfg, and the radios with it, back to the file as it is: a
 // change that could not be made is not shown as if it were.
-//
-// TODO(lib CD24): the input the change came from is closed by now; tdp has
-// the error popup over it, the value kept
 func (d *drawer) revert() {
 	if c, err := config.ReadConfig(d.loc.ConfigFile); err == nil {
 		d.cfg = c
@@ -472,23 +443,6 @@ func (d *drawer) status(w int) string {
 	}
 	text := grey.Render("Saved to ") + terminu.Fg(terminu.Lavender).Render(shortHome(d.loc.ConfigFile)) + grey.Render(follow)
 	return terminu.Truncate(text, w)
-}
-
-// shown is a value set by hand in config.yaml as it can be drawn: a control
-// character written out, \x1b, where the terminal would run it.
-//
-// TODO(lib CD25): terminu-go draws a field's value as it is, and tdp has not
-// said how a control character in one reads
-func shown(s string) string {
-	var b strings.Builder
-	for _, r := range s {
-		if unicode.IsControl(r) {
-			fmt.Fprintf(&b, `\x%02x`, r)
-		} else {
-			b.WriteRune(r)
-		}
-	}
-	return b.String()
 }
 
 func shortHome(path string) string {

@@ -55,7 +55,7 @@ The status line can show any of them but the pet: see [The status line](#the-sta
 - Fullscreen rendering, for the drawer: run `/tui fullscreen` once. Without it the pane sits above the prompt instead of beside the transcript (see [Troubleshooting](#troubleshooting)). The status line needs neither this nor a wide terminal
 - A terminal wide enough for a sidebar: a pane opened on its own waits until the terminal is about 110–144 columns wide
 - A [Nerd Font](https://www.nerdfonts.com) as your terminal's font: the drawer's bars and the marks in the `ccdrawu` command (which choice is picked, which items are ticked) are its icons. Without one, see [Troubleshooting](#troubleshooting). Where an icon takes two cells in your terminal and the frames of `ccdrawu` come out crooked, set `CCDRAWU__ICON_WIDTH` and `CCDRAWU__POWERLINE_WIDTH` (`1` or `2`) for ccdrawu alone, or `TERMINU__ICON_WIDTH` and `TERMINU__POWERLINE_WIDTH` for the whole terminu family: set them once and every app of the family reads them. A family app that runs a program in its own terminal sets the two `TERMINU__` variables for it
-- A terminal with truecolor (24-bit color), for the `ccdrawu` command: its colors are Catppuccin's, whose shades 256 colors can't tell apart
+- A terminal at least 40 columns wide and 12 rows high for the `ccdrawu` command, with truecolor (24-bit color): its colors are Catppuccin's, whose shades 256 colors can't tell apart
 - The `ccdrawu` command, to pick what the drawer and the status line show. Claude Code runs it for the status line, so it has to be on your `PATH`
 - macOS, Linux or Windows (on Windows, tried in Windows Terminal: see [Limitations](#limitations))
 

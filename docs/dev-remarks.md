@@ -114,26 +114,32 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **Refresh 改成 number**（tdp components/input/number：秒數用 number，說明列寫範圍 `1-60`，只收得進數字）；原本是 text 加檢查。
   - **Drawer background 寫成色塊加 hex**（tdp components/input/color-picker 的「值」，`terminu.ColorText`）。
   - **值出錯時 label 轉 Red**（tdp components/layout/panel，`Field.Err`）：手改 config.yaml 留下 mod 不收的 alias、不是 hex 的
-    background、超過 60 的 refresh、有控制字元的 separator，以及 Plugin 查不出來時。值裡的控制字元寫成 `\x1b`（`shown`），不讓它
-    進終端機（CD25）。
-  - **存不進去就改回去**（`revert`）：寫檔或套用主題失敗時，`d.cfg` 與畫在原地的 radio（`d.radios`，每個記著怎麼從 `d.cfg` 算出
-    選哪一個）改回檔案裡的樣子，畫面不會假裝存好。input 已經關掉這件事等 lib（CD24）。
+    background、超過 60 的 refresh、有控制字元的 separator，以及 Plugin 查不出來時。值裡的控制字元，lib 畫成紅色的 `\x1b`，不會進終端機
+    （定案 S22，CD25；terminu-go v0.2.0 之前 ccdrawu 自己轉）。
+  - **存不進去就改回去**（`commit`、`revert`）：寫檔或套用主題失敗時，`d.cfg` 與畫在原地的 radio（`d.radios`，每個記著怎麼從
+    `d.cfg` 算出選哪一個）改回檔案裡的樣子，畫面不會假裝存好。從 input 改的走 lib 的 `Commit`（terminu-go v0.2.0，CD24）：
+    失敗時 input 留著、值還在，error popup 蓋在它上面；radio 這種畫在原地的照舊開 error popup。
   - **error popup 的標題寫哪件事失敗，不放名稱**：lib 把整個標題轉大寫，`Claude Code` 會變成 `CLAUDE CODE`（tdp components 的
     「大寫」：名稱照原樣）。Install failed、Uninstall failed、Can't read the settings。Alias 的錯誤點名 Alias（tdp components/input/README）。
-  - **`[2]` 的 Enter 是 item operation**（tdp M3、tdp K6）：terminu-go 的 `Values` 自己處理 Enter，但不列進 Space menu 與 `?`（CD19）。
-    `enterField` 把它登記成 `[2]` 的 `Enter` 動作，`Do` 轉給 `Values.Key("Enter")`，做的事跟直接按一樣；`Hint` 留空，下框照樣用
-    `Values.EnterHint`；名稱在游標移動時（`OnMove`）跟著改成 Edit、Choose 或 Toggle。lib 補上之後拿掉。
-  - **Refresh 在 panel 上只寫值**（`10`），單位寫在 input 的說明列（tdp components/input/README 的顯示表：number 寫值本身）。
+  - **`[2]` 的 Enter 是 item operation**（tdp M3、tdp K6）：terminu-go v0.2.0 起 `Values` 自己把 Enter 列進 Space menu 與 `?`
+    （CD19）；之前 ccdrawu 自己登記一個轉給 `Values.Key` 的動作，已經拿掉。
+  - **Refresh 帶單位**（定案 S47）：panel 上寫 `10 seconds`，input 的值下面一列灰字寫 `seconds`（`NumberInput.Unit`）。
   - **畫面測試**：`TestL4EveryRowFullWidth`（`internal/ui/screen_test.go`）在三種 icon 與 powerline 寬度下，開 ccdrawu 的每一種
     popup，在 200x50 與最低尺寸 40x12 各開一次，200x50 開的再拉到比它窄、矮的尺寸，每一列都要剛好等於終端機寬（tdp L4、tdp E5、tdp E6）。
     popup 的動畫是真的時間，整個跑完約 30 秒。
+- **跟上 terminu-go v0.2.0（tdp v0.8.1，2026-10-19）。** 等 lib 的定案都做完：input 的 `Commit`（CD24）、`Values` 的空狀態
+  （CD23：沒有 catalog 的頁用 Overlay0 的事實與提示，`Failure` 只留給讀不了 catalog）、`NumberInput.Unit`、Success toast（套用
+  主題、打開或關掉狀態列、安裝或移除外掛；搬家照 tdp E3 用 Info）、最低尺寸；值沒變不寫回（CD18）、Enter 列進 Space menu（CD19）、
+  控制字元（CD25）改由 lib 做，ccdrawu 的暫時做法拿掉。reorder 的 `h|l`、`?` 只列動得了的鍵、color picker 的空值、捲動位置、
+  窄的時候的收法都是 lib 做的，ccdrawu 不用改。
 - **最低尺寸 40×12（2026-10-19，user 定，tdp L1）。** tdp L1 給每個 app 一個門檻，預設 80×40，比它小時只顯示 app 名稱與
   `needs a terminal of at least W×H`；app 可以調低。ccdrawu 調到 40×12：
   - 它是 Claude Code 旁邊的小工具，常開在 tmux 分割出來的窄窗格（YouTube 那幾章就是），80×40 會讓它在那裡打不開。
   - 畫面只有一個側欄加一頁值，60 欄以下本來就只畫一個 panel（`NarrowBelow`）；40 欄還放得下最長的 label（DRAWER BACKGROUND，17 格）、
     兩格、值的開頭，12 列放得下最上面一列、footer、框線與一頁的前幾欄，其他照常捲。
   - popup 照 tdp F7 的寬度與高度，在最低尺寸 40×12 本身開過每一種（`TestL4EveryRowFullWidth`）。
-  - lib 的接口是 terminu-go v0.2.0 的 `App.MinWidth`、`App.MinHeight`，發版後跟著升級設定（`TODO` 在 fix.md）。
+  - 設在 `App.MinWidth`、`App.MinHeight`（terminu-go v0.2.0）；`TestBelowTheLeastSize` 量門檻以下到 1×1：滿寬、不當掉、畫出名稱，
+    拉大後回到原本的畫面。
 
 - **設定檔是 config.yaml，catalog 與 sessions 是快取（2026-10-19，tdp E3，tdp v0.8.0）。**
   - **config.yaml**（tdp E3：設定目錄裡的 `config.yaml`，定案 S3）：Go 照舊用 JSON 的欄位與規則（`omitempty`、沒設的清單寫
@@ -149,7 +155,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **搬法**（tdp E3 的「換了位置時」，定案 S1）：`config.Move` 在 TUI 開始時跑，新位置沒有時把 `config.json` 寫成
     `config.yaml`、把 `~/.ccdrawu` 裡的東西搬進快取目錄，跳一個 Info toast；搬不動開 error popup 寫兩個路徑。在那之前（或搬不動時）
     都照舊讀舊的：Go 的 `ReadConfig`、`Locations.Catalog`，`ccdrawu statusline` 找不到新的 session 檔時也看舊的，mod 沒有
-    config.yaml 時讀 config.json。`WriteConfig` 寫好 config.yaml 就刪掉旁邊的 config.json（`install`／`uninstall claude` 寫設定時
+    config.yaml 時讀 config.json。`WriteConfig` 第一次寫出 config.yaml 時刪掉旁邊的 config.json（已經有 config.yaml 時，舊的留著不刪，tdp E3）（`install`／`uninstall claude` 寫設定時
     也算搬完）。
   - **Windows 的快取放在 `%LOCALAPPDATA%\ccdrawu\cache`**（user 定的，CD52）：照 os.UserCacheDir 是
     `%LOCALAPPDATA%\ccdrawu`，那正是 install.ps1 放 ccdrawu.exe 的資料夾，刪快取會刪到程式；改放它底下的 `cache`，
@@ -192,8 +198,8 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 ## 偏離 tdp
 
 照 tdp v0.8.0 對過（2026-10-19）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
-`statusLine` 指令的一列），不是 terminu 的畫面，不套用。還沒做到、要等 lib 的，逐條寫在
-[`ccdrawu-terminu-fix.md`](ccdrawu-terminu-fix.md)。
+`statusLine` 指令的一列），不是 terminu 的畫面，不套用。跟 tdp 對不上、要修的，tdp E7 寫在
+`docs/ccdrawu-terminu-fix.md`；現在都修完了，沒有這個檔。
 
 - **`ccdrawu statusline` 用 `ansi.Truncate` 截斷（tdp E5：所有量寬度的地方走同一個函式）。** 它印給 Claude Code 的狀態列，那一列是
   Claude Code 畫的，不是 terminu 的畫面；寬度是 Claude Code 給的 `COLUMNS`，不經過 terminu 的 icon 探測。
@@ -209,8 +215,8 @@ ccdrawu 沒有另外的設計文件。
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
 - 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.8.0）；ccdrawu 提過的盲點與定案（CD 編號）記在
-  terminu 的 session 那邊。還沒做到的逐條在 [`ccdrawu-terminu-fix.md`](ccdrawu-terminu-fix.md)，程式裡標 `TODO(tdp CDn)`、
-  `TODO(lib CDn)`。
+  terminu 的 session 那邊。還沒做到的會逐條寫在 `docs/ccdrawu-terminu-fix.md`，程式裡標 `TODO(tdp CDn)`、
+  `TODO(lib CDn)`；現在沒有。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
 
 ## 建置與開發

@@ -352,7 +352,7 @@ func TestEnterOnAValueIsInTheMenu(t *testing.T) {
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEsc})
 	press(d, key("?"))
-	if text := frameText(d); !strings.Contains(text, "Edit — the value under the cursor") {
+	if text := frameText(d); !strings.Contains(text, "Edit — this value") {
 		t.Fatalf("? does not list Enter:\n%s", text)
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEsc})
@@ -586,6 +586,21 @@ func TestUnsavedChangeGoesBack(t *testing.T) {
 	}
 	if f := d.pages[rowPreferences].Current(); d.cfg.Pet.Species != "" || f.Selected != 0 {
 		t.Fatalf("pet %q, the radio on %d, want both back on the cat", d.cfg.Pet.Species, f.Selected)
+	}
+
+	// From an input, the error opens over it, which stays open with what was
+	// typed (tdp components/layout/popup)
+	press(d, tea.KeyMsg{Type: tea.KeyEsc})
+	toField(t, d, "Alias")
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	press(d, key("ccd"))
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if text := frameText(d); !strings.Contains(text, "FAILED") || d.cfg.Alias != "" {
+		t.Fatalf("no error over the alias, or the alias taken as saved (%q):\n%s", d.cfg.Alias, text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEsc}) // the error
+	if text := frameText(d); !strings.Contains(text, "One more name for /ccdrawu") || !strings.Contains(text, "ccd") {
+		t.Fatalf("the alias input is gone, or what was typed in it:\n%s", text)
 	}
 }
 

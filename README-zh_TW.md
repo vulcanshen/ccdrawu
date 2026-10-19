@@ -55,7 +55,7 @@
 - fullscreen 渲染模式（側邊欄才需要）：執行一次 `/tui fullscreen`。沒開的話，面板會放在輸入框上方，而不是對話旁邊（見[疑難排解](#疑難排解)）。狀態列不需要這一項，也不需要終端機夠寬
 - 終端機要夠寬：自動開啟的面板會等終端機寬到大約 110～144 欄才出現
 - 終端機的字型要設成 [Nerd Font](https://www.nerdfonts.com)：側邊欄的 bar，以及 `ccdrawu` 指令裡的標記（選了哪個、勾了哪些），都是它的圖示。沒有的話，見[疑難排解](#疑難排解)。圖示在你的終端機佔兩格、`ccdrawu` 的框線歪掉時，設 `CCDRAWU__ICON_WIDTH` 與 `CCDRAWU__POWERLINE_WIDTH`（`1` 或 `2`）只給 ccdrawu 用，或設 `TERMINU__ICON_WIDTH` 與 `TERMINU__POWERLINE_WIDTH` 給整個 terminu 家族：設一次，家族每個 app 都讀得到。家族裡會在自己的終端機跑程式的 app，會替那個程式設好這兩個 `TERMINU__` 變數
-- 終端機要支援 truecolor（24-bit 色），給 `ccdrawu` 指令用：它的配色是 Catppuccin，深淺之間的差別 256 色分不出來
+- `ccdrawu` 指令要在至少 40 欄寬、12 列高、支援 truecolor（24-bit 色）的終端機裡跑：它的配色是 Catppuccin，深淺之間的差別 256 色分不出來
 - `ccdrawu` 指令，用來挑側邊欄和狀態列顯示的項目。狀態列是 Claude Code 去執行它，所以它要在你的 `PATH` 上
 - macOS、Linux 或 Windows（Windows 上在 Windows Terminal 試過，見[限制](#限制)）
 

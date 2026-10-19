@@ -3,6 +3,7 @@ package ui
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -98,7 +99,7 @@ func (d *drawer) statuslineOn(when string) tea.Cmd {
 		s.Before = config.Kept(before)
 	}
 	s.On, s.When = true, when
-	return tea.Batch(d.save(), d.app.Toast(terminu.Info, "Claude Code's status line is now ccdrawu's"))
+	return tea.Batch(d.save(), d.app.Toast(terminu.Success, "Claude Code's status line is now ccdrawu's"))
 }
 
 // statuslineOff puts back the status line ccdrawu's replaced, or none.
@@ -109,7 +110,7 @@ func (d *drawer) statuslineOff() tea.Cmd {
 		return d.app.Error("Can't put the status line back", err.Error())
 	}
 	s.On, s.When, s.Before = false, "", nil
-	return tea.Batch(d.save(), d.app.Toast(terminu.Info, "Claude Code has its own status line back"))
+	return tea.Batch(d.save(), d.app.Toast(terminu.Success, "Claude Code has its own status line back"))
 }
 
 // formatField picks how each item reads, drawn in place, each option showing
@@ -137,7 +138,7 @@ func (d *drawer) colorField() *terminu.Field {
 
 // separatorField is what stands between the items, | when none is set.
 func (d *drawer) separatorField() *terminu.Field {
-	return &terminu.Field{Label: "Separator", Value: func() string { return shown(d.cfg.Statusline.Separator) }, Empty: "|",
+	return &terminu.Field{Label: "Separator", Value: func() string { return d.cfg.Statusline.Separator }, Empty: "|",
 		// Control characters set by hand in config.yaml
 		Err: func() bool { return strings.ContainsFunc(d.cfg.Statusline.Separator, unicode.IsControl) },
 		Edit: func() tea.Cmd {
@@ -150,13 +151,11 @@ func (d *drawer) separatorField() *terminu.Field {
 					}
 					return nil
 				},
-				Done: func(v string) tea.Cmd {
-					// TODO(lib CD18): the value it opened on writes nothing, as in the alias
-					if strings.TrimSpace(v) == d.cfg.Statusline.Separator {
+				Commit: func(v string) error {
+					return d.commit(func() error {
+						d.cfg.Statusline.Separator = strings.TrimSpace(v)
 						return nil
-					}
-					d.cfg.Statusline.Separator = strings.TrimSpace(v)
-					return d.save()
+					})
 				},
 			})
 		}}
@@ -171,25 +170,21 @@ func (d *drawer) refreshField() *terminu.Field {
 		// Past 60, set by hand in config.yaml
 		Err: func() bool { return refresh(d.cfg.Statusline) > 60 },
 		Edit: func() tea.Cmd {
+			// The unit on a row of its own under the value (tdp components/input/number)
 			return d.app.Number(terminu.NumberInput{
-				// TODO(lib CD51): the unit, seconds, on a row of its own under the
-				// value (tdp components/input/number), once NumberInput has one
 				Title: "Refresh", Glyph: glyphPencil, Prompt: "Seconds between runs while nothing happens, 1-60",
-				Verb: "save", Old: strconv.Itoa(refresh(d.cfg.Statusline)), Min: 1, Max: 60,
-				Done: func(v string) tea.Cmd {
-					n, _ := strconv.Atoi(strings.TrimSpace(v))
-					// TODO(lib CD18): the value it opened on writes nothing, as in the alias
-					if n == refresh(d.cfg.Statusline) {
-						return nil
-					}
-					d.cfg.Statusline.Refresh = n
-					// Into Claude Code's settings while ccdrawu's is the status line set there
-					if _, ours, _ := claude.CurrentStatusline(d.loc.Claude); ours && d.cfg.Statusline.On {
-						if _, _, err := claude.ApplyStatusline(d.loc.Claude, d.cfg.Statusline.Refresh); err != nil {
-							return d.app.Error("Can't set the status line", err.Error())
+				Verb: "save", Old: strconv.Itoa(refresh(d.cfg.Statusline)), Min: 1, Max: 60, Unit: "seconds",
+				Commit: func(v string) error {
+					return d.commit(func() error {
+						d.cfg.Statusline.Refresh, _ = strconv.Atoi(strings.TrimSpace(v))
+						// Into Claude Code's settings while ccdrawu's is the status line set there
+						if _, ours, _ := claude.CurrentStatusline(d.loc.Claude); ours && d.cfg.Statusline.On {
+							if _, _, err := claude.ApplyStatusline(d.loc.Claude, d.cfg.Statusline.Refresh); err != nil {
+								return fmt.Errorf("can't set the status line: %w", err)
+							}
 						}
-					}
-					return d.save()
+						return nil
+					})
 				},
 			})
 		}}

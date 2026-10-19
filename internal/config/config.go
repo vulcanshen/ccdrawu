@@ -317,8 +317,8 @@ func (c Config) Shown(p Placement, cat Catalog) []Item {
 }
 
 // WriteConfig writes the whole file at once (a temporary file renamed over
-// it), so a session never reads half of it, as YAML (tdp E3). The config.json
-// of 0.1.4 and before beside it goes then: it is in config.yaml now.
+// it), so a session never reads half of it, as YAML (tdp E3). Written first,
+// it takes the place of the config.json of 0.1.4 and before beside it.
 func WriteConfig(path string, c Config) error {
 	data, err := json.Marshal(c)
 	if err != nil {
@@ -330,6 +330,9 @@ func WriteConfig(path string, c Config) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
+	// The first config.yaml is the config.json beside it moved; one written
+	// over a config.yaml leaves a config.json there as it is (tdp E3)
+	moving := !fileThere(path)
 	tmp := path + ".tmp"
 	if err := os.WriteFile(tmp, data, 0o644); err != nil {
 		return err
@@ -337,7 +340,7 @@ func WriteConfig(path string, c Config) error {
 	if err := os.Rename(tmp, path); err != nil {
 		return err
 	}
-	if old := oldConfig(path); old != path {
+	if old := oldConfig(path); moving && old != path {
 		if err := os.Remove(old); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			return err
 		}

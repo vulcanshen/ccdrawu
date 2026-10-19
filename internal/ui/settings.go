@@ -2,6 +2,7 @@ package ui
 
 import (
 	"cmp"
+	"fmt"
 	"os"
 	"regexp"
 	"slices"
@@ -28,15 +29,18 @@ var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 func (d *drawer) themeField() *terminu.Field {
 	options := append([]string{"off"}, claude.Themes...)
 	return &terminu.Field{Label: "Claude theme", Value: func() string { return cmp.Or(d.cfg.Theme.Base, "off") }, Edit: func() tea.Cmd {
+		var note string
 		return d.app.Select(terminu.Select{
 			Title: "Claude theme", Glyph: glyphPalette, Options: options, Selected: max(0, slices.Index(options, d.cfg.Theme.Base)),
-			Done: func(i int) tea.Cmd {
+			Commit: func(i int) (err error) {
 				d.cfg.Theme.Base = ""
 				if i > 0 {
 					d.cfg.Theme.Base = options[i]
 				}
-				return d.applyTheme()
+				note, err = d.setTheme()
+				return err
 			},
+			Done: func(int) tea.Cmd { return d.app.Toast(terminu.Success, note) },
 		})
 	}}
 }
@@ -49,7 +53,7 @@ func (d *drawer) backgroundField() *terminu.Field {
 		Label: "Drawer background", Empty: "the theme's own",
 		Value: func() string {
 			if !hexColor.MatchString(d.cfg.Theme.Background) {
-				return shown(d.cfg.Theme.Background)
+				return d.cfg.Theme.Background
 			}
 			return terminu.ColorText(terminu.Hex(d.cfg.Theme.Background))
 		},
@@ -57,20 +61,22 @@ func (d *drawer) backgroundField() *terminu.Field {
 		// Not a color: set by hand in config.yaml
 		Err: func() bool { return d.cfg.Theme.Background != "" && !hexColor.MatchString(d.cfg.Theme.Background) },
 		Edit: func() tea.Cmd {
-			// TODO(lib CD12): with none set, the picker's old reads NONE, where
-			// tdp has none in grey with no swatch (tdp components/input/color-picker)
 			var old terminu.Color
 			if hexColor.MatchString(d.cfg.Theme.Background) {
 				old = terminu.Hex(d.cfg.Theme.Background)
 			}
+			var note string
 			return d.app.PickColor(terminu.ColorPicker{Title: "Background", Glyph: glyphPalette, Value: old,
-				Done: func(c terminu.Color) tea.Cmd {
+				Commit: func(c terminu.Color) (err error) {
 					d.cfg.Theme.Background = ""
 					if c.Set {
 						d.cfg.Theme.Background = c.String()
 					}
-					return d.applyTheme()
-				}})
+					note, err = d.setTheme()
+					return err
+				},
+				Done: func(terminu.Color) tea.Cmd { return d.app.Toast(terminu.Success, note) },
+			})
 		},
 	}
 }
@@ -93,22 +99,23 @@ func (d *drawer) resetBackground() terminu.Action {
 	}
 }
 
-// applyTheme puts the theme as picked into Claude Code: ccdrawu's, or the
-// user's own as it was before it.
-func (d *drawer) applyTheme() tea.Cmd {
-	t := &d.cfg.Theme
-	note := "Claude Code has its own theme back"
-	if t.Base == "" {
-		if err := claude.RestoreTheme(d.loc.Claude, t.Before); err != nil {
-			d.revert()
-			return d.app.Error("Can't put the theme back", err.Error())
+// setTheme puts the theme as picked into Claude Code, ccdrawu's or the user's
+// own as it was before it, and saves: what to say when it is done, or why it
+// can't be, with everything put back as saved.
+func (d *drawer) setTheme() (note string, err error) {
+	err = d.commit(func() error {
+		t := &d.cfg.Theme
+		if t.Base == "" {
+			if err := claude.RestoreTheme(d.loc.Claude, t.Before); err != nil {
+				return fmt.Errorf("can't put your own theme back: %w", err)
+			}
+			t.Before = ""
+			note = "Claude Code has its own theme back"
+			return nil
 		}
-		t.Before = ""
-	} else {
 		before, switched, err := claude.ApplyTheme(d.loc.Claude, t.Base, t.Background)
 		if err != nil {
-			d.revert()
-			return d.app.Error("Can't set the theme", err.Error())
+			return err
 		}
 		if switched {
 			t.Before = before
@@ -117,8 +124,19 @@ func (d *drawer) applyTheme() tea.Cmd {
 		if t.Background != "" {
 			note += " with " + t.Background
 		}
+		return nil
+	})
+	return note, err
+}
+
+// applyTheme sets the theme where no input waits on it: a Success toast, or
+// an error popup.
+func (d *drawer) applyTheme() tea.Cmd {
+	note, err := d.setTheme()
+	if err != nil {
+		return d.app.Error("Can't set the theme", err.Error())
 	}
-	return tea.Batch(d.save(), d.app.Toast(terminu.Info, note))
+	return d.app.Toast(terminu.Success, note)
 }
 
 // barField picks how the drawer draws its bars, drawn in place: Nerd Font
@@ -167,7 +185,7 @@ type pluginDone struct {
 
 func (d *drawer) pluginField() *terminu.Field {
 	return &terminu.Field{
-		Label: "Plugin", Value: func() string { return shown(d.plugin) }, Empty: "checking…",
+		Label: "Plugin", Value: func() string { return d.plugin }, Empty: "checking…",
 		Disabled: func() bool { return d.plugin == "" || d.busy },
 		Err:      func() bool { return d.pluginErr },
 		Edit:     d.pluginAction,
