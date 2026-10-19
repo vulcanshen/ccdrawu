@@ -4,16 +4,18 @@
 import type { Config } from '../types'
 import { truncateStart } from './format'
 import { C, ITEMS, NO_VALUE, type Item, type Seg, type View } from './items'
+import { parseYaml } from './yaml'
 
 export type Placement = 'dock' | 'inline'
 
-// ~/.config/ccdrawu/config.json: { "dock": [ids], "inline": [ids], "alias": name, "pet": { "species" },
-// "bar": style, "drawer": { "sidebarOff", "inlineOff" }, "statusline": { "on", ... } }. Undefined when it is not JSON, as when caught half written:
+// ~/.config/ccdrawu/config.yaml: dock: [ids], inline: [ids], alias: name, pet: { species }, bar: style,
+// drawer: { sidebarOff, inlineOff }, statusline: { on, ... }; as JSON in the config.json of 0.1.4 and
+// before, until ccdrawu moves it (`json`). Undefined when it can't be read, as when caught half written:
 // read it again on the next tick
-export function parseConfig(text: string): Config | undefined {
+export function parseConfig(text: string, json = false): Config | undefined {
   let raw: unknown
   try {
-    raw = JSON.parse(text)
+    raw = json ? JSON.parse(text) : parseYaml(text)
   } catch {
     return undefined
   }

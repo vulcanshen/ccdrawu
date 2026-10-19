@@ -128,7 +128,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.s
 irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | iex
 ```
 
-兩者都會先問過你，才刪 `~/.config/ccdrawu/` 和 `~/.ccdrawu/`。用 Homebrew 或 Scoop 裝的，用 `brew uninstall ccdrawu` 或 `scoop uninstall ccdrawu`。
+兩者都會先問過你，才刪 `~/.config/ccdrawu/` 和系統快取資料夾裡的 ccdrawu（見[資料存放位置](#資料存放位置)）。用 Homebrew 或 Scoop 裝的，用 `brew uninstall ccdrawu` 或 `scoop uninstall ccdrawu`。
 
 ## 快速開始
 
@@ -193,7 +193,7 @@ Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h |
 
 執行 `ccdrawu`，移到 Settings 底下的 **preferences** 按 `Enter`，在 **Alias** 上再按 `Enter`，輸入例如 `ccd`。一秒內，每個開著的 session 裡 `/ccd` 就跟 `/ccdrawu` 一樣能用。改掉或拿掉的名字，在 session 重開之前都還能用。
 
-別名存在 `~/.config/ccdrawu/config.json` 的 `"alias": "ccd"`，也可以直接改那裡。
+別名存在 `~/.config/ccdrawu/config.yaml` 的 `alias: ccd`，也可以直接改那裡。
 
 ### 讓底色跟終端機一樣
 
@@ -205,15 +205,6 @@ Model claude-opus-5-5 | Context 42% | Session 18% · 2h31m | Weekly 7% · 3d4h |
 ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底色（`~/.claude/themes/ccdrawu.json`），並在 Claude Code 裡選用它。把 Claude theme 設回 `off`，或執行 `ccdrawu uninstall claude`，會換回你原本的主題。開著的 Claude Code 會立刻跟著換。
 
 在 tmux 裡，Claude Code 會把顏色限制在 256 色，像 `#11111b` 這種顏色會被換成別的顏色。如果你的 tmux 會傳遞全彩，在 `~/.claude/settings.json` 的 `env` 加上 `"CLAUDE_CODE_TMUX_TRUECOLOR": "1"`，再重開 Claude Code。
-
-## 資料存放位置
-
-- `~/.config/ccdrawu/config.json`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
-- `~/.ccdrawu/`：外掛寫的東西：`ccdrawu` 列出的項目清單（`catalog.json`），以及狀態列打開時、每個 session 給它的值（`sessions/`；一週沒用到的 session 檔會刪掉）。`CCDRAWU__DATA` 可以改放別的資料夾。
-
-在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
-
-側邊欄每 6 小時會向 npm registry 查一次 Claude Code 的最新版本。打開 **Status** 的話，還會每 5 分鐘向 status.claude.com 查一次；除此之外不會連網。
 
 ## 疑難排解
 
@@ -252,6 +243,17 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 ### 狀態列只有 Model、Context 和 Cost
 
 那個 session 裡沒有跑 ccdrawu 外掛，狀態列只能顯示 Claude Code 給它的資料。用 `ccdrawu install claude` 裝外掛；外掛裝好之前就開著的 session，跑一次 `/reload-plugins`。
+
+## 資料存放位置
+
+- `~/.config/ccdrawu/config.yaml`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
+- 系統快取資料夾裡的 `ccdrawu`（macOS 是 `~/Library/Caches/ccdrawu`，Linux 是 `~/.cache/ccdrawu`，Windows 是 `%LOCALAPPDATA%\ccdrawu`）：外掛寫給 `ccdrawu` 的東西，也就是它列出的項目清單（`catalog.json`），以及狀態列打開時、每個 session 給它的值（`sessions/`；一週沒用到的 session 檔會刪掉）。外掛會再寫一次，刪掉也不會少什麼。`CCDRAWU__CACHE` 可以改放別的資料夾。
+
+在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
+
+早一點的版本把這些放在 `config.json` 與 `~/.ccdrawu/`：第一次執行 `ccdrawu` 時會搬過來，並告訴你。
+
+側邊欄每 6 小時會向 npm registry 查一次 Claude Code 的最新版本。打開 **Status** 的話，還會每 5 分鐘向 status.claude.com 查一次；除此之外不會連網。
 
 ## 限制
 

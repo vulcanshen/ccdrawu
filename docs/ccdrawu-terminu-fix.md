@@ -1,28 +1,23 @@
 # ccdrawu 還沒符合 tdp 的地方
 
-照 tdp v0.7.4 與它的 checklist（`checklist/items-zh_TW.md`）對過，2026-10-18，ccdrawu 用 terminu-go v0.1.13。下面每一條都
-回報給 terminu 了（CD 編號），等 lib 發版或規範定案再修；全部修完就刪掉這個檔（tdp E7）。偏離 tdp 的地方（有理由、不打算修的）
+照 tdp v0.8.0 對過（2026-10-19），ccdrawu 用 terminu-go v0.1.13。下面每一條的規範都定案了（括號裡是 ccdrawu 回報的 CD 編號與
+定案的 S 編號），都在等 terminu-go 的第三批發版：發版後升級 go.mod、照改，全部修完就刪掉這個檔（tdp E7）。偏離 tdp 的地方
 寫在 [`dev-remarks.md`](dev-remarks.md) 的「偏離 tdp」。
 
-## 等 lib（terminu-go）
-
-| 條目 | 在哪裡 | 現況 | 該怎麼改 |
+| 條目 | 在哪裡 | 現況 | 等 lib 之後怎麼改 |
 |---|---|---|---|
-| tdp K7、tdp K12（清單 K7-1、K12-4） | Order 的 reorder popup | `h\|l`、`←\|→` 不動，同一個 app 的其他一維清單都會動 | lib 的 reorder 收 `h\|l`（CD20） |
-| tdp M6（清單 M6-6） | 沒有 catalog 時的 `[2]`、Install confirm | `?` 照常列出移動鍵、捲動鍵，其實沒東西可移、可捲 | lib 不列，或用停用色（CD21） |
-| tdp E5（清單 E5-10） | 任何 popup | 終端機 5 列以下打開 popup 會 panic | lib 的 draw 不讓高度變負（CD22） |
-| components/layout/screen 空狀態（清單 screen-29） | 沒有 catalog 時的 sidebar、inline、statusline 頁 | 只能用 `Failure` 畫，事實那一句是 Red | lib 給 `Values` 一個 Overlay0 的空狀態，ccdrawu 改用它（CD23，`TODO(lib CD23)`） |
-| components/layout/popup 錯誤列、dialog/note（清單 popup-69、note-69） | Alias、Separator、Refresh、Claude theme、Drawer background 等 input 的動作失敗時 | popup 已經關了，error popup 蓋在 panel 上，打的值不見；ccdrawu 已經把設定改回檔案裡的樣子，畫面不會假裝存好 | lib 的 input 能回報失敗、留住 popup（CD24，`TODO(lib CD24)`） |
-| tdp K3（清單 K3-8） | Alias、Separator、Refresh | lib 在值沒變時照樣呼叫 `Done`；ccdrawu 自己比對，值一樣就不寫 | lib 修好後拿掉 ccdrawu 的比對（CD18，`TODO(lib CD18)`） |
-| components/input/README（值裡的控制字元） | Alias、Separator、Drawer background、Plugin 的值 | lib 原樣畫出控制字元；ccdrawu 自己寫成 `\x1b`（`shown()`） | lib 照規範畫（CD25，`TODO(lib CD25)`） |
-| components/dialog/confirm、layout/popup hint | Install、Uninstall confirm，窄到出現捲動位置時 | hint 只剩 `Enter:install`，`Esc:cancel` 被擠掉 | lib 讓 confirm 的框放得下 hint 與捲動位置（CD49） |
-| components/layout/panel 膠囊串 | `[1]`、`[2]` 的標題，很窄時 | 選中的膠囊比框寬時被硬切，沒有 `…`、右端的斜角不見 | 規範定截法，lib 照做（CD43） |
-| components/input/README 太長加 `…` | 最上面一列的 statusbar，很窄時 | `…` 是終端機的預設字色 | lib 的 `Truncate` 給 `…` 顏色（CD44） |
+| tdp K7、tdp K12、components/input/reorder（CD20，S21） | Order 的 reorder popup | `h\|l`、`←\|→` 不動 | lib 的 reorder 收 `h\|l`，Drag 時也一樣；ccdrawu 不用改 |
+| tdp M6（CD21，S20） | 沒有 catalog 時的 `[2]`、Install confirm | `?` 照常列出移動鍵、捲動鍵 | lib 照當下的狀態給；ccdrawu 不用改 |
+| tdp E5（CD22） | 任何 popup | 終端機 5 列以下打開 popup 會 panic | 第一批 #1 修好；`TestL4EveryRowFullWidth` 加 5 列以下的尺寸 |
+| tdp L1（S53） | 整個 TUI | 沒有最小尺寸的門檻 | lib 的門檻（預設 80×40）；ccdrawu 在 80×24、60×20 都照常能用，門檻調低（暫定 40×12），測試加門檻以下到 1×1 |
+| components/layout/screen 空狀態（CD23） | 沒有 catalog 時的 sidebar、inline、statusline 頁 | 用 `Failure` 畫，事實那一句是 Red | 改用 lib 給 `Values` 的空狀態（第二批 #8），拿掉 `TODO(lib CD23)` |
+| components/layout/popup 錯誤列、dialog/note（CD24） | Alias、Separator、Refresh、Claude theme、Drawer background 的動作失敗時 | popup 已經關了，error popup 蓋在 panel 上；ccdrawu 把設定改回檔案裡的樣子 | 改用能回報失敗的 Done（第二批 #1），拿掉 `revert` 裡的 `TODO(lib CD24)` |
+| components/input/README 值裡的控制字元（CD25，S22） | Alias、Separator、Drawer background、Plugin 的值 | ccdrawu 自己寫成 `\x1b`，沒上色（`shown()`） | lib 畫成紅色的轉義後拿掉 `shown()` 與 `TODO(lib CD25)` |
+| components/input/color-picker（CD12，S40） | Drawer background 沒設時打開 color picker | old 寫 `NONE`、色塊是終端機的前景色 | lib 照改（old 寫灰色的 `none`、沒有色塊），拿掉 `TODO(lib CD12)` |
+| components/input/number 的單位（CD51，S47） | Refresh 的輸入框 | panel 上已經寫 `10 seconds`；輸入框沒有單位列 | NumberInput 給單位 `seconds`，拿掉 `TODO(lib CD51)` |
+| components/dialog/toast 的 Success（CD27，S8） | 套用主題、打開或關掉狀態列、安裝或移除外掛之後的 toast | 用 Info | 成功做完的改用 Success（Green）；搬家照 tdp E3 留 Info |
+| components/layout/panel 一列一個值的捲動位置（CD40，S11） | `[2]` 的 `N of M` | radio 的每個選項各算一個 | lib 照欄位算；ccdrawu 不用改 |
+| components/layout/popup hint、panel 膠囊、screen 空狀態的「放不下時」（CD43、CD49，S12） | 很窄時的 confirm、`[1]`／`[2]` 的標題 | hint 擠掉 `Esc`、膠囊被硬切 | lib 照改；ccdrawu 不用改 |
+| components/input/README 太長加 `…`（CD44） | 最上面一列的 statusbar，很窄時 | `…` 是終端機的預設字色 | 第一批 #3 修好；ccdrawu 不用改 |
 
-## 等規範（tdp）
-
-| 條目 | 在哪裡 | 現況 | 該怎麼改 |
-|---|---|---|---|
-| components/input/color-picker | Drawer background 沒設時打開 color picker | old 寫 `NONE`，色塊是終端機的預設前景色；new 從 `#000000` 起 | 規範定空值的畫法，lib 照做（CD12，`TODO(tdp CD12)`） |
-
-Drawer 的 off／on radio（CD13）是 user 定的，寫在 dev-remarks 的偏離，不在這裡。
+已經符合、但靠 ccdrawu 自己的暫時做法的，lib 發版後拿掉：`[2]` 的 Enter 列進 Space menu 與 `?`（`enterField`，`TODO(lib CD19)`，第二批 #7）；值沒變不寫回（三處 `TODO(lib CD18)`，第一批 #2）。

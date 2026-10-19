@@ -15,7 +15,7 @@ import (
 // does whether or not the plugin was still there to take out
 func TestPutBackGivesClaudeCodeItsOwnBack(t *testing.T) {
 	dir := t.TempDir()
-	loc := config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.json"), Claude: filepath.Join(dir, "claude")}
+	loc := config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude")}
 	const theirs = "{\n  \"statusLine\": {\"type\": \"command\", \"command\": \"npx -y ccstatusline@latest\", \"padding\": 0},\n  \"theme\": \"dark\"\n}\n"
 	settings := filepath.Join(loc.Claude, "settings.json")
 	if err := os.MkdirAll(loc.Claude, 0o755); err != nil {

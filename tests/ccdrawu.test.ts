@@ -29,6 +29,7 @@ import { ITEMS, view, type Snapshot } from '../hooks/items'
 import { cellWidth, columnRows, drawerShows, drawerWanted, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from '../hooks/layout'
 import { locations } from '../hooks/paths'
 import { statuslineFile, statuslineItems } from '../hooks/statusline'
+import { parseYaml } from '../hooks/yaml'
 import {
   BALL_LINES,
   ballAt,
@@ -606,9 +607,71 @@ test('Claude Code and ccdrawu have a version row each', async () => {
 })
 
 test('files sit where terminu design E3 puts them, unless CCDRAWU__ variables say otherwise', async () => {
-  expect(locations({ home: '/h' })).toEqual({ data: '/h/.ccdrawu', configFile: '/h/.config/ccdrawu/config.json' })
-  expect(locations({ home: '/h', xdgConfig: '/x', data: '' })).toEqual({ data: '/h/.ccdrawu', configFile: '/x/ccdrawu/config.json' })
-  expect(locations({ home: '/h', xdgConfig: '/x', config: '/c', data: '/d' })).toEqual({ data: '/d', configFile: '/c/config.json' })
+  const config = (dir: string) => ({ configFile: `${dir}/config.yaml`, oldConfigFile: `${dir}/config.json` })
+  expect(locations({ home: '/h', os: 'darwin' })).toEqual({ ...config('/h/.config/ccdrawu'), cache: '/h/Library/Caches/ccdrawu' })
+  expect(locations({ home: '/h', os: 'linux', xdgConfig: '/x', xdgCache: '/xc', cache: '' })).toEqual({
+    ...config('/x/ccdrawu'),
+    cache: '/xc/ccdrawu',
+  })
+  // A relative XDG_CACHE_HOME is not taken, as Go's os.UserCacheDir does not
+  expect(locations({ home: '/h', os: 'linux', xdgCache: 'rel' }).cache).toBe('/h/.cache/ccdrawu')
+  expect(locations({ home: 'C:\\U', os: 'windows', localAppData: 'C:\\U\\AppData\\Local' }).cache).toBe('C:\\U\\AppData\\Local/ccdrawu')
+  expect(locations({ home: '/h', os: 'linux', xdgConfig: '/x', config: '/c', cache: '/k' })).toEqual({ ...config('/c'), cache: '/k' })
+})
+
+test('config.yaml reads as the ccdrawu command writes it, and as a person writes YAML by hand', async () => {
+  // As the command writes it (gopkg.in/yaml.v3): block style, quotes only where needed, a kept status line
+  // of many rows as a literal block
+  const written = [
+    'dock:',
+    '  - pet',
+    '  - model',
+    'inline: null',
+    'alias: "true"',
+    'pet:',
+    '  species: dog',
+    'bar: line',
+    'drawer:',
+    '  inlineOff: true',
+    'statusline:',
+    '  on: true',
+    '  items: []',
+    "  separator: ' · '",
+    '  esc: "a\\eb"',
+    '  before: |-',
+    '    {',
+    '        "type": "command"',
+    '      }',
+    '  refresh: 30',
+    '',
+  ].join('\n')
+  expect(parseYaml(written)).toEqual({
+    dock: ['pet', 'model'],
+    inline: null,
+    alias: 'true',
+    pet: { species: 'dog' },
+    bar: 'line',
+    drawer: { inlineOff: true },
+    statusline: { on: true, items: [], separator: ' · ', esc: 'a\x1bb', before: '{\n    "type": "command"\n  }', refresh: 30 },
+  })
+  expect(parseConfig(written)).toEqual({
+    dock: ['pet', 'model'],
+    alias: 'true',
+    pet: { species: 'dog' },
+    bar: 'line',
+    drawer: { sidebarOff: false, inlineOff: true },
+    statusline: { on: true },
+  })
+  // By hand: comments, a sequence as deep as its key, flow, quotes of both kinds, a mapping in a sequence
+  const hand = "# mine\n---\nalias: 'it''s'   # a name\ndock:\n- model\n- 'git'\ninline: [cost, \"context\"]\nx:\n  - a: 1\n    b: [2]\n"
+  expect(parseYaml(hand)).toEqual({ alias: "it's", dock: ['model', 'git'], inline: ['cost', 'context'], x: [{ a: 1, b: [2] }] })
+  // Not YAML, or YAML this does not read, is no config yet
+  for (const bad of ['dock: [', 'a: *ref', 'a: 1\n---\nb: 2', '\tdock: []', 'a: "\\q"']) {
+    expect(parseConfig(bad)).toBeUndefined()
+  }
+  // The config.json of 0.1.4 and before, read as JSON until the TUI moves it
+  expect(parseConfig('{"dock": ["git"], "alias": "ccd"}', true)).toEqual({ dock: ['git'], alias: 'ccd' })
+  expect(parseConfig('dock: [git]', true)).toBeUndefined()
 })
 
 test('the config picks items per placement, in the order it lists them', async () => {

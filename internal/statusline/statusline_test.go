@@ -108,16 +108,16 @@ func TestLineIsCutToTheWidth(t *testing.T) {
 func setup(t *testing.T) (config.Locations, string) {
 	t.Helper()
 	dir := t.TempDir()
-	loc := config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.json")}
+	loc := config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.yaml")}
 	if err := config.WriteConfig(loc.ConfigFile, config.Config{Statusline: config.Statusline{On: true}}); err != nil {
 		t.Fatal(err)
 	}
-	sessions := filepath.Join(loc.Data, "sessions")
+	sessions := filepath.Join(loc.Cache, "sessions")
 	if err := os.MkdirAll(sessions, 0o755); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := json.Marshal(cat)
-	if err := os.WriteFile(filepath.Join(loc.Data, "catalog.json"), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(loc.Cache, "catalog.json"), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	return loc, sessions
@@ -159,7 +159,7 @@ func TestRunWithoutTheFileShowsWhatTheInputHas(t *testing.T) {
 		t.Errorf("%q", got)
 	}
 	// An id that would reach out of the folder is not read
-	if items, _ := sessionItems(filepath.Join(loc.Data, "sessions"), "../catalog"); items != nil {
+	if items, _ := sessionItems(filepath.Join(loc.Cache, "sessions"), "../catalog"); items != nil {
 		t.Error("read a file outside sessions")
 	}
 	if got := fromInput(Input{})["context"]; got != nil {
@@ -169,7 +169,7 @@ func TestRunWithoutTheFileShowsWhatTheInputHas(t *testing.T) {
 
 func TestRunWithNoCatalogOrConfig(t *testing.T) {
 	dir := t.TempDir()
-	loc := config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "none", "config.json")}
+	loc := config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "none", "config.yaml")}
 	input := `{"model": {"id": "claude-opus-5-5"}, "cost": {"total_cost_usd": 0}}`
 	if got := run(t, loc, input, 0, time.Now()); got != "Model claude-opus-5-5 | Context - | Cost $0.00\n" {
 		t.Errorf("%q", got)

@@ -128,7 +128,7 @@ curl -fsSL https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.s
 irm https://raw.githubusercontent.com/vulcanshen/ccdrawu/main/uninstall.ps1 | iex
 ```
 
-Both ask before removing `~/.config/ccdrawu/` and `~/.ccdrawu/`. With Homebrew or Scoop, `brew uninstall ccdrawu` or `scoop uninstall ccdrawu`.
+Both ask before removing `~/.config/ccdrawu/` and ccdrawu's folder in the system's cache folder (see [Where it keeps things](#where-it-keeps-things)). With Homebrew or Scoop, `brew uninstall ccdrawu` or `scoop uninstall ccdrawu`.
 
 ## Quick start
 
@@ -193,7 +193,7 @@ What it says comes from a fixed set of lines, so it costs no tokens. To pick the
 
 Run `ccdrawu`, move to **preferences** under Settings and press `Enter`, then `Enter` on **Alias** and type a name such as `ccd`. Within a second `/ccd` works as well as `/ccdrawu`, in every open session. A name you change or remove keeps working in a session until you restart it.
 
-The alias is kept in `~/.config/ccdrawu/config.json` as `"alias": "ccd"`, so you can also set it there.
+The alias is kept in `~/.config/ccdrawu/config.yaml` as `alias: ccd`, so you can also set it there.
 
 ### Match the background
 
@@ -205,15 +205,6 @@ The drawer's background comes from your Claude Code theme, not from the plugin. 
 ccdrawu writes its own theme, that built-in one with your background (`~/.claude/themes/ccdrawu.json`), and selects it in Claude Code. Setting Claude theme back to `off`, or `ccdrawu uninstall claude`, selects the theme you had before. Open Claude Code sessions change at once.
 
 Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` comes out as a different one. If your tmux passes truecolor through, add `"CLAUDE_CODE_TMUX_TRUECOLOR": "1"` to the `env` block of `~/.claude/settings.json` and restart Claude Code.
-
-## Where it keeps things
-
-- `~/.config/ccdrawu/config.json`: what you picked in `ccdrawu`: the items, the alias, the bar, the pet, whether the drawer opens by itself, and the status line's settings. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
-- `~/.ccdrawu/`: what the plugin writes: the list of items `ccdrawu` offers (`catalog.json`) and, while the status line is on, each session's values for it (`sessions/`; a session's file is removed after a week without use). `CCDRAWU__DATA` names another folder for it.
-
-On Windows, `~` is your user folder (`%USERPROFILE%`).
-
-Every 6 hours the drawer asks the npm registry for Claude Code's newest version. With **Status** on, it also asks status.claude.com every 5 minutes; it makes no other requests.
 
 ## Troubleshooting
 
@@ -252,6 +243,17 @@ Claude Code runs `ccdrawu statusline`, and the `ccdrawu` it finds on your `PATH`
 ### The status line shows only Model, Context and Cost
 
 The ccdrawu plugin is not running in that session, so the status line shows what Claude Code hands it. Install the plugin with `ccdrawu install claude`; a session started before it takes it with `/reload-plugins`.
+
+## Where it keeps things
+
+- `~/.config/ccdrawu/config.yaml`: what you picked in `ccdrawu`: the items, the alias, the bar, the pet, whether the drawer opens by itself, and the status line's settings. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`.
+- `ccdrawu` in your system's cache folder (`~/Library/Caches/ccdrawu` on macOS, `~/.cache/ccdrawu` on Linux, `%LOCALAPPDATA%\ccdrawu` on Windows): what the plugin writes for `ccdrawu`, the list of items it offers (`catalog.json`) and, while the status line is on, each session's values for it (`sessions/`; a session's file is removed after a week without use). The plugin writes it all again, so removing it loses nothing. `CCDRAWU__CACHE` names another folder for it.
+
+On Windows, `~` is your user folder (`%USERPROFILE%`).
+
+Earlier versions kept these in `config.json` and `~/.ccdrawu/`: the first time you run `ccdrawu`, it moves them here, and says so.
+
+Every 6 hours the drawer asks the npm registry for Claude Code's newest version. With **Status** on, it also asks status.claude.com every 5 minutes; it makes no other requests.
 
 ## Limitations
 

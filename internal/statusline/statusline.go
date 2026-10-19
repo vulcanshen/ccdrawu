@@ -94,12 +94,17 @@ func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now tim
 	if err != nil {
 		return err
 	}
-	cat, ok, err := config.ReadCatalog(filepath.Join(loc.Data, "catalog.json"))
+	cat, ok, err := config.ReadCatalog(loc.Catalog())
 	if err != nil || !ok {
 		cat = fallback
 	}
-	sessions := filepath.Join(loc.Data, "sessions")
+	sessions := filepath.Join(loc.Cache, "sessions")
 	items, docked := sessionItems(sessions, input.SessionID)
+	if items == nil {
+		// A plugin of 0.1.4 or before, not updated with the command, writes
+		// where it kept them then
+		items, docked = sessionItems(filepath.Join(loc.OldData, "sessions"), input.SessionID)
+	}
 	if items == nil {
 		items = fromInput(input)
 	}

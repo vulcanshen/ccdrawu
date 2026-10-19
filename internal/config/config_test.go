@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -20,17 +21,123 @@ var testCatalog = Catalog{Version: 1, Items: []Item{
 func TestLocateFollowsE3(t *testing.T) {
 	env := func(vars map[string]string) func(string) string { return func(k string) string { return vars[k] } }
 	j := filepath.Join
-	got := locate(env(nil), "/h")
-	if got != (Locations{Data: j("/h", ".ccdrawu"), ConfigFile: j("/h", ".config", "ccdrawu", "config.json"), Claude: j("/h", ".claude")}) {
-		t.Fatalf("defaults: %+v", got)
+	got := locate(env(nil), "/h", "darwin")
+	want := Locations{ConfigFile: j("/h", ".config", "ccdrawu", "config.yaml"), Cache: j("/h", "Library", "Caches", "ccdrawu"),
+		Claude: j("/h", ".claude"), OldData: j("/h", ".ccdrawu")}
+	if got != want {
+		t.Fatalf("defaults on macOS: %+v", got)
 	}
-	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "CCDRAWU__DATA": ""}), "/h")
-	if got != (Locations{Data: j("/h", ".ccdrawu"), ConfigFile: j("/x", "ccdrawu", "config.json"), Claude: j("/h", ".claude")}) {
+	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "XDG_CACHE_HOME": "/xc", "CCDRAWU__CACHE": ""}), "/h", "linux")
+	want = Locations{ConfigFile: j("/x", "ccdrawu", "config.yaml"), Cache: j("/xc", "ccdrawu"), Claude: j("/h", ".claude"), OldData: j("/h", ".ccdrawu")}
+	if got != want {
 		t.Fatalf("XDG: %+v", got)
 	}
-	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "CCDRAWU__CONFIG": "/c", "CCDRAWU__DATA": "/d"}), "/h")
-	if got != (Locations{Data: "/d", ConfigFile: j("/c", "config.json"), Claude: j("/h", ".claude")}) {
+	// A relative XDG_CACHE_HOME is not taken, as Go's os.UserCacheDir does not
+	if got = locate(env(map[string]string{"XDG_CACHE_HOME": "rel"}), "/h", "linux"); got.Cache != j("/h", ".cache", "ccdrawu") {
+		t.Fatalf("relative XDG_CACHE_HOME: %+v", got)
+	}
+	if got = locate(env(map[string]string{"LOCALAPPDATA": `C:\U\AppData\Local`}), `C:\U`, "windows"); got.Cache != j(`C:\U\AppData\Local`, "ccdrawu") {
+		t.Fatalf("Windows: %+v", got)
+	}
+	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "CCDRAWU__CONFIG": "/c", "CCDRAWU__CACHE": "/k", "CCDRAWU__DATA": "/d"}), "/h", "linux")
+	want = Locations{ConfigFile: j("/c", "config.yaml"), Cache: "/k", Claude: j("/h", ".claude"), OldData: "/d"}
+	if got != want {
 		t.Fatalf("CCDRAWU__: %+v", got)
+	}
+}
+
+// config.yaml holds the config as YAML, in its own order, a list left unset
+// as null and the status line kept before as a string; it reads back the same
+func TestConfigIsYAML(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	c := Config{Inline: []string{}, Alias: "ccd", Pet: Pet{Species: "dog"},
+		Statusline: Statusline{On: true, Items: []string{"model", "cost"}, Refresh: 30, Separator: "#", Before: Kept(`{"type":"command","command":"my-line"}`)}}
+	if err := WriteConfig(path, c); err != nil {
+		t.Fatal(err)
+	}
+	raw, _ := os.ReadFile(path)
+	for _, want := range []string{"dock: null\n", "inline: []\n", "alias: ccd\n", "pet:\n  species: dog\n", "  items:\n    - model\n", "  refresh: 30\n", "  separator: '#'\n"} {
+		if !strings.Contains(string(raw), want) {
+			t.Errorf("no %q in\n%s", want, raw)
+		}
+	}
+	got, err := ReadConfig(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Dock != nil || got.Inline == nil || got.Alias != "ccd" || got.Pet.Species != "dog" || got.Statusline.Refresh != 30 ||
+		got.Statusline.Separator != "#" || !slices.Equal(got.Statusline.Items, c.Statusline.Items) || string(got.Statusline.Before) != string(c.Statusline.Before) {
+		t.Fatalf("read back %+v\nfrom\n%s", got, raw)
+	}
+	// Written by hand, in YAML's own ways
+	if err := os.WriteFile(path, []byte("# mine\nalias: 'cc d'\ndock: [model, git]\nstatusline: {on: true}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got, err = ReadConfig(path); err != nil || got.Alias != "cc d" || !slices.Equal(got.Dock, []string{"model", "git"}) {
+		t.Fatalf("by hand: %+v, %v", got, err)
+	}
+}
+
+// 0.1.4 and before kept config.json, and the catalog and the statusline's
+// values in ~/.ccdrawu: config.json reads until config.yaml is written, and
+// Move takes both to their places now (tdp E3), once
+func TestMoveTakesTheOldPlaces(t *testing.T) {
+	dir := t.TempDir()
+	loc := Locations{ConfigFile: filepath.Join(dir, "config", "config.yaml"), Cache: filepath.Join(dir, "cache", "ccdrawu"), OldData: filepath.Join(dir, ".ccdrawu")}
+	old := filepath.Join(dir, "config", "config.json")
+	for _, d := range []string{filepath.Dir(old), filepath.Join(loc.OldData, "sessions")} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(old, []byte(`{"alias": "ccd", "dock": ["model"]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(loc.OldData, "catalog.json"), []byte(`{"version": 1, "items": []}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if c, err := ReadConfig(loc.ConfigFile); err != nil || c.Alias != "ccd" {
+		t.Fatalf("config.json not read before the move: %+v, %v", c, err)
+	}
+	if loc.Catalog() != filepath.Join(loc.OldData, "catalog.json") {
+		t.Fatalf("catalog at %s before the move", loc.Catalog())
+	}
+	moved, err := Move(loc)
+	if err != nil || len(moved) != 2 || moved[0] != (Moved{old, loc.ConfigFile}) || moved[1] != (Moved{loc.OldData, loc.Cache}) {
+		t.Fatalf("moved %+v, %v", moved, err)
+	}
+	if fileThere(old) || fileThere(loc.OldData) || !fileThere(filepath.Join(loc.Cache, "sessions")) {
+		t.Fatal("the old places are still there, or the sessions did not move")
+	}
+	if c, err := ReadConfig(loc.ConfigFile); err != nil || c.Alias != "ccd" || !slices.Equal(c.Dock, []string{"model"}) {
+		t.Fatalf("config.yaml after the move: %+v, %v", c, err)
+	}
+	if loc.Catalog() != filepath.Join(loc.Cache, "catalog.json") {
+		t.Fatalf("catalog at %s after the move", loc.Catalog())
+	}
+	if moved, err := Move(loc); err != nil || moved != nil {
+		t.Fatalf("moved again: %+v, %v", moved, err)
+	}
+
+	// On Windows the cache folder is ccdrawu.exe's, there already, and the mod
+	// may have written the catalog anew before ccdrawu ran: the sessions move,
+	// the stale catalog goes, and so does ~/.ccdrawu
+	if err := os.MkdirAll(filepath.Join(loc.OldData, "sessions"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range []string{filepath.Join(loc.OldData, "catalog.json"), filepath.Join(loc.OldData, "sessions", "s1.json")} {
+		if err := os.WriteFile(f, []byte(`{}`), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.RemoveAll(filepath.Join(loc.Cache, "sessions")); err != nil {
+		t.Fatal(err)
+	}
+	if moved, err := Move(loc); err != nil || len(moved) != 1 || moved[0] != (Moved{loc.OldData, loc.Cache}) {
+		t.Fatalf("moved into a cache folder there already: %+v, %v", moved, err)
+	}
+	if fileThere(loc.OldData) || !fileThere(filepath.Join(loc.Cache, "sessions", "s1.json")) {
+		t.Fatal("~/.ccdrawu still there, or its sessions not moved")
 	}
 }
 
@@ -56,11 +163,15 @@ func TestConfigKeepsUnknownIDsAndWritesAllOff(t *testing.T) {
 	}
 	c.Set(Dock, testCatalog, "from-newer-mod", false)
 
-	path := filepath.Join(t.TempDir(), "sub", "config.json")
+	path := filepath.Join(t.TempDir(), "sub", "config.yaml")
 	if err := WriteConfig(path, c); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := os.ReadFile(path)
+	data, err := jsonFromYAML(data)
+	if err != nil {
+		t.Fatal(err)
+	}
 	var raw map[string]any
 	if err := json.Unmarshal(data, &raw); err != nil {
 		t.Fatal(err)
@@ -135,8 +246,8 @@ func TestCleanAliasTakesWhatTheModTakes(t *testing.T) {
 
 // A toggle rewrites the whole file: the alias and the pet go back as they were
 func TestConfigKeepsTheAliasAndPet(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.json")
-	if err := os.WriteFile(path, []byte(`{"dock": null, "alias": "ccd", "pet": {"species": "duck"}}`), 0o644); err != nil {
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(path, []byte("dock: null\nalias: ccd\npet:\n  species: duck\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	c, err := ReadConfig(path)
@@ -154,9 +265,10 @@ func TestConfigKeepsTheAliasAndPet(t *testing.T) {
 
 // The status line a config keeps to put back comes back as it was written,
 // its own spacing and all, however the config is laid out around it; one a
-// config of ccdrawu 0.1.1 held as JSON reads too
+// config.json of ccdrawu 0.1.1 held as JSON reads too
 func TestKeptComesBackByteForByte(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "config.json")
+	dir := t.TempDir()
+	path, old := filepath.Join(dir, "config.yaml"), filepath.Join(dir, "config.json")
 	for _, before := range []string{
 		`{"type": "command", "command": "my-line"}`,
 		"{\n    \"type\": \"command\",\n    \"command\": \"npx -y ccstatusline@latest\",\n    \"padding\": 0\n  }",
@@ -170,13 +282,16 @@ func TestKeptComesBackByteForByte(t *testing.T) {
 			t.Fatalf("kept %q, read back %q (%v)", before, c.Statusline.Before, err)
 		}
 	}
-	if err := os.WriteFile(path, []byte("{\"statusline\": {\"on\": true, \"before\": {\n  \"type\": \"command\", \"command\": \"my-line\"\n}}}\n"), 0o644); err != nil {
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(old, []byte("{\"statusline\": {\"on\": true, \"before\": {\n  \"type\": \"command\", \"command\": \"my-line\"\n}}}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if c, err := ReadConfig(path); err != nil || string(c.Statusline.Before) != `{"type":"command","command":"my-line"}` {
 		t.Fatalf("0.1.1 object read as %q (%v)", c.Statusline.Before, err)
 	}
-	if err := os.WriteFile(path, []byte(`{"statusline": {"on": true, "before": null}}`), 0o644); err != nil {
+	if err := os.WriteFile(old, []byte(`{"statusline": {"on": true, "before": null}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if c, err := ReadConfig(path); err != nil || len(c.Statusline.Before) != 0 {

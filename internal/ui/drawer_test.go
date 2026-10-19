@@ -55,14 +55,14 @@ func (f *claudeFake) run(name string, args ...string) ([]byte, error) {
 func newTestDrawer(t *testing.T) (*drawer, config.Locations) {
 	t.Helper()
 	dir := t.TempDir()
-	loc := config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.json"), Claude: filepath.Join(dir, "claude")}
-	for _, d := range []string{loc.Data, loc.Claude} {
+	loc := config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude")}
+	for _, d := range []string{loc.Cache, loc.Claude} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
 	data, _ := json.Marshal(testCatalog)
-	if err := os.WriteFile(filepath.Join(loc.Data, "catalog.json"), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(loc.Cache, "catalog.json"), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	if err := os.WriteFile(filepath.Join(loc.Claude, "settings.json"), []byte("{\n  \"theme\": \"dark\"\n}\n"), 0o644); err != nil {
@@ -199,7 +199,7 @@ func TestDrawerTurnsOffAndOn(t *testing.T) {
 	press(d, key("j"))
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // into inline, on off
 	press(d, tea.KeyMsg{Type: tea.KeyEnter}) // off
-	if c, _ := config.ReadConfig(loc.ConfigFile); !c.Drawer.InlineOff || c.Drawer.SidebarOff || !strings.Contains(raw(), `"inlineOff": true`) {
+	if c, _ := config.ReadConfig(loc.ConfigFile); !c.Drawer.InlineOff || c.Drawer.SidebarOff || !strings.Contains(raw(), "inlineOff: true") {
 		t.Fatalf("not written off above the prompt alone:\n%s", raw())
 	}
 	if sidebar.Selected != 1 {
@@ -259,9 +259,46 @@ func TestOrderIsReordered(t *testing.T) {
 	}
 }
 
+// tdp E3, a place changed: what 0.1.4 and before kept elsewhere moves on the
+// first start, and an Info toast says from where to where
+func TestOldPlacesMoveOnTheFirstStart(t *testing.T) {
+	dir := t.TempDir()
+	loc := config.Locations{ConfigFile: filepath.Join(dir, "config", "config.yaml"), Cache: filepath.Join(dir, "cache"),
+		Claude: filepath.Join(dir, "claude"), OldData: filepath.Join(dir, "old")}
+	for _, d := range []string{filepath.Dir(loc.ConfigFile), loc.OldData} {
+		if err := os.MkdirAll(d, 0o755); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(loc.ConfigFile), "config.json"), []byte(`{"alias": "ccd"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := json.Marshal(testCatalog)
+	if err := os.WriteFile(filepath.Join(loc.OldData, "catalog.json"), data, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.app.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	run(d, d.app.Start()) // what moved when it opened, said once the screen is up
+	moved, err := config.Move(loc)
+	if err != nil || moved != nil {
+		t.Fatalf("moved again: %+v, %v", moved, err)
+	}
+	text := frameText(d)
+	if _, err := os.Stat(loc.ConfigFile); err != nil || !strings.Contains(text, "Moved") || d.cfg.Alias != "ccd" || len(d.cat.Items) == 0 {
+		t.Fatalf("no toast of the move, or the config or the catalog not read after it:\n%s", text)
+	}
+	if _, err := os.Stat(filepath.Join(loc.Cache, "catalog.json")); err != nil {
+		t.Fatal("the catalog did not move to the cache:", err)
+	}
+}
+
 func TestNoCatalogSaysWhatToDo(t *testing.T) {
 	dir := t.TempDir()
-	d, err := newDrawer(config.Locations{Data: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config.json")}, (&claudeFake{}).run)
+	d, err := newDrawer(config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config.yaml")}, (&claudeFake{}).run)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -492,7 +529,7 @@ func TestPetIsPicked(t *testing.T) {
 }
 
 // tdp components/layout/panel, one value per row: a value set by hand in
-// config.json that ccdrawu does not take turns its label Red
+// config.yaml that ccdrawu does not take turns its label Red
 func TestWrongValuesAreMarked(t *testing.T) {
 	d, loc := newTestDrawer(t)
 	if err := os.MkdirAll(filepath.Dir(loc.ConfigFile), 0o755); err != nil {

@@ -47,13 +47,14 @@ if ($env:CCDRAWU__CONFIG) {
 }
 Ask-Remove $configDir "ccdrawu settings (the drawer's items and the alias)"
 
-# What the plugin writes: the catalog.
-if ($env:CCDRAWU__DATA) {
-    $dataDir = $env:CCDRAWU__DATA
-} else {
-    $dataDir = Join-Path $env:USERPROFILE ".ccdrawu"
+# What the plugin writes for ccdrawu, a cache (terminu design E3): in %LOCALAPPDATA%\ccdrawu, the folder
+# removed above with ccdrawu.exe, unless CCDRAWU__CACHE names another
+if ($env:CCDRAWU__CACHE) {
+    Ask-Remove $env:CCDRAWU__CACHE "ccdrawu cache (the catalog, the status line's values)"
 }
-Ask-Remove $dataDir "ccdrawu data (the catalog)"
+
+# Where versions before kept it, until ccdrawu moved it
+Ask-Remove (Join-Path $env:USERPROFILE ".ccdrawu") "ccdrawu's old data (the catalog)"
 
 Write-Host ""
 Write-Host "ccdrawu uninstalled. Restart your terminal for PATH changes to take effect." -ForegroundColor Green

@@ -4,17 +4,18 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
+- Your picks are in `~/.config/ccdrawu/config.yaml`, where they were in `config.json`; what the plugin writes for `ccdrawu`, the list of items and the status line's values, is in your system's cache folder (`~/Library/Caches/ccdrawu` on macOS, `~/.cache/ccdrawu` on Linux, `%LOCALAPPDATA%\ccdrawu` on Windows), where it was in `~/.ccdrawu`. The first time you run `ccdrawu`, it moves them and says from where to where; where it can't, it names both places for you to move them, and goes on reading the old ones. Until then the drawer and the status line read the old places too. `CCDRAWU__CACHE` names another folder for the cache, in place of `CCDRAWU__DATA`.
 - Built on terminu-go v0.1.13 (tdp v0.7.2): in the color picker for the drawer background `h|j|k|l` move among R, G and B only, and `Tab` goes to `Choose`; text in a confirm, a toast and an error popup wraps at spaces, and between wide characters; in the items popup a filter that matches nothing leaves `Space` out of the hint.
-- The repo, from the tdp v0.7.4 project templates: `family.mk`, the release workflow, goreleaser, `install.sh` and `uninstall.sh`, `internal/version`. `uninstall.sh` also offers to remove a cache folder, where there is one.
+- The repo, from the tdp v0.8.0 project templates: `family.mk`, the release workflow, goreleaser, `install.sh` and `uninstall.sh`, `internal/version`. `uninstall.sh` also offers to remove a cache folder, where there is one.
 - **Drawer background** reads as a swatch of the color and its hex, where it read the hex alone.
 - **Claude theme** reads the theme picked; `Enter` opens the list to pick from, where all seven were drawn on the page (tdp: more than five is a select).
-- **Refresh** takes digits only, and says the range, 1-60, before you type; on the page it reads the seconds alone, `10`, where it read `every 10 seconds`.
-- A value set by hand in `config.json` that ccdrawu does not take, an alias, a background, a refresh or a separator, turns its label red; a control character in it reads as `\x1b`, where it went to the terminal as it was. **Plugin** turns red too where ccdrawu can't tell whether Claude Code has the plugin.
+- **Refresh** takes digits only, and says the range, 1-60, before you type; on the page it reads `10 seconds`, where it read `every 10 seconds`.
+- A value set by hand in `config.yaml` that ccdrawu does not take, an alias, a background, a refresh or a separator, turns its label red; a control character in it reads as `\x1b`, where it went to the terminal as it was. **Plugin** turns red too where ccdrawu can't tell whether Claude Code has the plugin.
 - A change that can't be saved, or a theme that can't be set, is not shown as if it were: the page goes back to what is saved.
 - An install or uninstall that fails says which in its title, `INSTALL FAILED` or `UNINSTALL FAILED`, where both read `CLAUDE CODE SAID NO`; the alias's errors name the alias.
 - On the right side, what `Enter` does on the value under the cursor is in the `Space` menu and in `?` too: `[Enter] Edit`, or `Choose` on an option.
 - Before ccdrawu has run in Claude Code, the empty pages name the key that installs the plugin: `[Enter]` on **Plugin** in preferences.
-- The README runs in the family's order: requirements, the first run, updating and removing under Install, then a quick start. It says the terminal needs truecolor, and names the variables for an icon two cells wide, `CCDRAWU__ICON_WIDTH`, `CCDRAWU__POWERLINE_WIDTH` and the family's `TERMINU__` ones; Claude Code's keys read as Claude Code writes them, `ctrl+x tab`.
+- The README runs in the family's order: requirements, the first run, updating and removing under Install, then a quick start; troubleshooting comes right after usage. It says the terminal needs truecolor, and names the variables for an icon two cells wide, `CCDRAWU__ICON_WIDTH`, `CCDRAWU__POWERLINE_WIDTH` and the family's `TERMINU__` ones; Claude Code's keys read as Claude Code writes them, `ctrl+x tab`.
 - After `/clear` the drawer and the status line keep their values, and the drawer the rows you picked in `ccdrawu`. Model, Session, Weekly and Cost read `-` until the next reply, the versions until Claude Code started again, the drawer went back to its default rows, and the pet fell asleep.
 
 ## [0.1.4] - 2026-10-16

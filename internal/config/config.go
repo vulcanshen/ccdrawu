@@ -202,12 +202,19 @@ func (c *Config) ids(p Placement) *[]string {
 	return &c.Inline
 }
 
-// ReadConfig reads the config; a file not there is an empty config.
+// ReadConfig reads the config, config.yaml (tdp E3). Where there is none yet,
+// it reads the config.json 0.1.4 and before wrote beside it, until Move or
+// WriteConfig takes it to config.yaml; neither there is an empty config.
 func ReadConfig(path string) (Config, error) {
 	var c Config
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return c, nil
+		data, err = os.ReadFile(oldConfig(path))
+		if errors.Is(err, fs.ErrNotExist) {
+			return c, nil
+		}
+	} else if err == nil {
+		data, err = jsonFromYAML(data)
 	}
 	if err != nil {
 		return c, err
@@ -310,18 +317,30 @@ func (c Config) Shown(p Placement, cat Catalog) []Item {
 }
 
 // WriteConfig writes the whole file at once (a temporary file renamed over
-// it), so a session never reads half of it.
+// it), so a session never reads half of it, as YAML (tdp E3). The config.json
+// of 0.1.4 and before beside it goes then: it is in config.yaml now.
 func WriteConfig(path string, c Config) error {
-	data, err := json.MarshalIndent(c, "", "  ")
+	data, err := json.Marshal(c)
 	if err != nil {
+		return err
+	}
+	if data, err = yamlFromJSON(data); err != nil {
 		return err
 	}
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, append(data, '\n'), 0o644); err != nil {
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
 		return err
 	}
-	return os.Rename(tmp, path)
+	if err := os.Rename(tmp, path); err != nil {
+		return err
+	}
+	if old := oldConfig(path); old != path {
+		if err := os.Remove(old); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return err
+		}
+	}
+	return nil
 }

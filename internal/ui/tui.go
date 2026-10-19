@@ -70,6 +70,9 @@ func Run(loc config.Locations) error {
 }
 
 func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
+	// What 0.1.4 and before kept elsewhere, taken where tdp E3 has it now,
+	// said once the screen is up
+	moved, moveErr := config.Move(loc)
 	cfg, err := config.ReadConfig(loc.ConfigFile)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", loc.ConfigFile, err)
@@ -103,7 +106,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	a.Splash = splash()
 	a.Status = d.status
 	a.OnMsg = d.onMsg
-	a.Start = func() tea.Cmd { return tea.Batch(d.reload(), d.checkPlugin()) }
+	a.Start = func() tea.Cmd { return tea.Batch(d.reload(), d.checkPlugin(), d.sayMoved(moved, moveErr)) }
 	d.app = a
 	d.background, d.statusOn = d.backgroundField(), d.statusOnField()
 	d.drawerOn = map[string]*terminu.Field{rowSidebar: d.drawerOnField(&d.cfg.Drawer.SidebarOff), rowInline: d.drawerOnField(&d.cfg.Drawer.InlineOff)}
@@ -141,6 +144,22 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	})
 	d.load()
 	return d, nil
+}
+
+// sayMoved says what moved where, in an Info toast; what could not move, with
+// both places, in an error popup, to be moved by hand (tdp E3, a place changed).
+func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
+	if err != nil {
+		return d.app.Error("Can't move", err.Error()+"\nccdrawu reads the old place until it is moved; move it there yourself.")
+	}
+	var notes []string
+	for _, m := range moved {
+		notes = append(notes, "Moved "+shortHome(m.From)+" to "+shortHome(m.To))
+	}
+	if len(notes) == 0 {
+		return nil
+	}
+	return d.app.Toast(terminu.Info, strings.Join(notes, "; "))
 }
 
 // sidebar puts [1] in a sidebar 24 columns wide, as locku and webu do, and
@@ -195,7 +214,7 @@ func (d *drawer) show(id string) {
 // time the mod starts, so a mod updated (or run for the first time) while the
 // TUI is open shows up by itself.
 func (d *drawer) load() {
-	path := filepath.Join(d.loc.Data, "catalog.json")
+	path := d.loc.Catalog()
 	info, err := os.Stat(path)
 	if err != nil || info.ModTime().Equal(d.stamp) {
 		return
@@ -219,10 +238,9 @@ func (d *drawer) load() {
 // drawerOnField turns the drawer on or off in one place, beside the transcript
 // or above the prompt, as off says (config.Drawer), drawn in place. Off there,
 // open sessions take it out of that place within a second; off in both,
-// sessions start without it. /ccdrawu still opens and closes it.
-//
-// TODO(tdp CD13): a radio of off and on, as the statusline's off, on and on
-// when narrow (the user's), where tdp has a checkbox for a switch.
+// sessions start without it. /ccdrawu still opens and closes it. A radio of
+// off and on, as the statusline's off, on and on when narrow (the user's; tdp
+// components/input/radio has a switch either way).
 func (d *drawer) drawerOnField(off *bool) *terminu.Field {
 	f := &terminu.Field{Label: "Drawer", Options: []string{"off", "on"}}
 	f.OnChange = func() tea.Cmd {
@@ -374,7 +392,7 @@ func (d *drawer) choices(p config.Placement) []config.Item {
 // popup and checked as the mod reads it.
 func (d *drawer) aliasField() *terminu.Field {
 	return &terminu.Field{Label: "Alias", Value: func() string { return shown(d.cfg.Alias) }, Empty: "none",
-		// One set by hand in config.json that the mod does not take (tdp
+		// One set by hand in config.yaml that the mod does not take (tdp
 		// components/layout/panel: its label is Red)
 		Err: func() bool {
 			_, err := config.CleanAlias(d.cfg.Alias)
@@ -456,7 +474,7 @@ func (d *drawer) status(w int) string {
 	return terminu.Truncate(text, w)
 }
 
-// shown is a value set by hand in config.json as it can be drawn: a control
+// shown is a value set by hand in config.yaml as it can be drawn: a control
 // character written out, \x1b, where the terminal would run it.
 //
 // TODO(lib CD25): terminu-go draws a field's value as it is, and tdp has not

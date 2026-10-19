@@ -54,10 +54,11 @@ func (d *drawer) backgroundField() *terminu.Field {
 			return terminu.ColorText(terminu.Hex(d.cfg.Theme.Background))
 		},
 		Disabled: func() bool { return d.cfg.Theme.Base == "" },
-		// Not a color: set by hand in config.json
+		// Not a color: set by hand in config.yaml
 		Err: func() bool { return d.cfg.Theme.Background != "" && !hexColor.MatchString(d.cfg.Theme.Background) },
 		Edit: func() tea.Cmd {
-			// TODO(tdp CD12): with none set, the picker's old reads NONE
+			// TODO(lib CD12): with none set, the picker's old reads NONE, where
+			// tdp has none in grey with no swatch (tdp components/input/color-picker)
 			var old terminu.Color
 			if hexColor.MatchString(d.cfg.Theme.Background) {
 				old = terminu.Hex(d.cfg.Theme.Background)

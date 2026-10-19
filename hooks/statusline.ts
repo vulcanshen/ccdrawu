@@ -1,5 +1,5 @@
 // What `ccdrawu statusline` lays out: each item's value on one row, as it shows above the prompt, kept in
-// <data>/sessions/<session id>.json while the config has the statusline on. The command picks the items,
+// <cache>/sessions/<session id>.json while the config has the statusline on. The command picks the items,
 // their order, the labels and the separator; the values and their colors are worked out here alone.
 // None touches `$`, so tests can call them.
 

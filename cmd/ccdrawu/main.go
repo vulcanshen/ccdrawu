@@ -104,7 +104,7 @@ func integrate(install bool) error {
 	if err := putBack(loc, os.Stdout); err != nil {
 		return err
 	}
-	fmt.Printf("Your picks stay in %s, the plugin's data in %s.\n", loc.ConfigFile, loc.Data)
+	fmt.Printf("Your picks stay in %s, what the plugin wrote for ccdrawu in %s.\n", loc.ConfigFile, loc.Cache)
 	return nil
 }
 
@@ -214,7 +214,8 @@ Usage:
 
 Environment:
   CCDRAWU__CONFIG            the settings folder, instead of ~/.config/ccdrawu
-  CCDRAWU__DATA              the data folder, instead of ~/.ccdrawu
+  CCDRAWU__CACHE             what the plugin writes for ccdrawu, instead of
+                             ccdrawu in the system's cache folder
   CCDRAWU__MARKETPLACE       where install takes the plugin from, instead of
                              vulcanshen/ccdrawu: owner/repo, a git URL or a folder
   CCDRAWU__ICON_WIDTH        1 or 2: how many cells a Nerd Font icon takes,

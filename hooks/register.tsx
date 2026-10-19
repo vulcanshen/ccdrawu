@@ -131,27 +131,39 @@ async function refreshModelName($: Engine) {
 }
 
 let home: string | undefined
-let dataDir: string | undefined
+let cacheDir: string | undefined
 let configFile: string | undefined
+let oldConfigFile: string | undefined
 
 async function locateFiles($: Engine) {
   // Windows has USERPROFILE, and often no HOME; the TUI's os.UserHomeDir reads them in this order too
   home = (await $.env.get('USERPROFILE')) || (await $.env.get('HOME'))
   if (!home) return
+  const localAppData = await $.env.get('LOCALAPPDATA')
   const found = locations({
     home,
-    data: await $.env.get('CCDRAWU__DATA'),
+    os: localAppData ? 'windows' : await unixName($),
     config: await $.env.get('CCDRAWU__CONFIG'),
+    cache: await $.env.get('CCDRAWU__CACHE'),
     xdgConfig: await $.env.get('XDG_CONFIG_HOME'),
+    xdgCache: await $.env.get('XDG_CACHE_HOME'),
+    localAppData,
   })
-  dataDir = found.data
+  cacheDir = found.cache
   configFile = found.configFile
+  oldConfigFile = found.oldConfigFile
 }
 
-// Write `text` to <data>/<name> unless it already holds it
+// darwin on macOS, as Go's runtime.GOOS has it, which says where the TUI looks for the cache
+async function unixName($: Engine): Promise<string> {
+  const run = await $.process.run(['uname', '-s'], { timeoutMs: 3_000 }).catch(() => undefined)
+  return run?.stdout.trim().toLowerCase() ?? ''
+}
+
+// Write `text` to <cache>/<name> unless it already holds it
 async function keepFile($: Engine, name: string, text: string) {
-  if (dataDir === undefined) return
-  const target = `${dataDir}/${name}`
+  if (cacheDir === undefined) return
+  const target = `${cacheDir}/${name}`
   const current = await $.fs.read(target).catch(() => undefined)
   if (current !== text) await $.fs.write(target, text)
 }
@@ -161,8 +173,9 @@ async function installCatalog($: Engine) {
   await keepFile($, 'catalog.json', JSON.stringify({ version: 1, items: ITEMS }, null, 2) + '\n')
 }
 
-// The TUI writes ~/.config/ccdrawu/config.json; every open session looks at it each second and takes
-// a change at once. A file not there means the catalog's defaults
+// The TUI writes ~/.config/ccdrawu/config.yaml; every open session looks at it each second and takes
+// a change at once. Where there is none, the config.json of 0.1.4 and before, until the TUI moves it; a
+// file not there means the catalog's defaults
 let configStamp: number | undefined
 let statusWasShown = false // whether the config read last had the Status row on
 // Where the config read last let the drawer show, before the first read
@@ -171,14 +184,20 @@ let drawerWas: { dock: boolean; inline: boolean } | undefined
 const commands = new Set<string>()
 
 async function refreshConfig($: Engine) {
-  const file = configFile
-  if (file === undefined) return
-  const stamp = await $.fs.stat(file).then(
-    s => s.mtimeMs,
-    () => 0,
-  )
+  if (configFile === undefined || oldConfigFile === undefined) return
+  const mtime = (file: string) =>
+    $.fs.stat(file).then(
+      s => s.mtimeMs,
+      () => 0,
+    )
+  let file = configFile
+  let stamp = await mtime(file)
+  if (stamp === 0) {
+    file = oldConfigFile
+    stamp = await mtime(file)
+  }
   if (stamp === configStamp) return
-  const parsed = stamp === 0 ? {} : parseConfig(await $.fs.read(file))
+  const parsed = stamp === 0 ? {} : parseConfig(await $.fs.read(file), file === oldConfigFile)
   // Half written: keep what shows and read it again next second
   if (parsed === undefined) return
   configStamp = stamp
@@ -388,7 +407,7 @@ async function readSnapshot($: Engine): Promise<Snapshot> {
   }
 }
 
-// While the config has the statusline on, keep what it shows in <data>/sessions/<session id>.json for
+// While the config has the statusline on, keep what it shows in <cache>/sessions/<session id>.json for
 // `ccdrawu statusline` to lay out, written only when it changed. The id is asked each time: after /clear
 // the session goes on under a new one, and Claude Code hands the command that one
 let statuslineWritten: { file: string; text: string } | undefined
@@ -397,9 +416,9 @@ let statuslineWritten: { file: string; text: string } | undefined
 let placedAs: Placement | undefined
 
 async function writeStatusline($: Engine) {
-  if (dataDir === undefined || !(await read($, config)).statusline?.on) return
+  if (cacheDir === undefined || !(await read($, config)).statusline?.on) return
   const id = (await $.session.id()).replace(/\.jsonl$/, '')
-  const file = `${dataDir}/sessions/${id}.json`
+  const file = `${cacheDir}/sessions/${id}.json`
   // Beside the transcript only while the pane is open and drawn there: not closed, nor waiting for a
   // wider terminal, nor above the prompt
   const pane = (await $.ui.panes()).find(p => p.id === PANE)

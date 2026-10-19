@@ -1,4 +1,4 @@
-// The drawer's items: the catalog (written to ~/.ccdrawu/catalog.json for the TUI to list)
+// The drawer's items: the catalog (written to catalog.json in the cache for the TUI to list)
 // and what each one shows. None touches `$`, so tests can call them.
 
 import type { Background, CacheInfo, GitInfo, Limit, ModelInfo, Modes, ServiceStatus, SessionInfo, SkillsInfo, TokenInfo, Usage, VersionInfo } from '../types'
