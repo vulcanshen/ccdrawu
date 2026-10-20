@@ -84,16 +84,18 @@ const (
 // the drawer's pet, and Bar how it draws its bars. Drawer is where the
 // drawer shows. Theme is the Claude Code theme ccdrawu selected, if
 // any; the mod never reads it. Statusline is `ccdrawu statusline`; the mod
-// reads only whether it is on.
+// reads only whether it is on. InputTabWidth is the family's input_tab_width
+// (tdp E3), the cells a tab takes in the App Log: 0 for terminu-go's 4.
 type Config struct {
-	Dock       []string   `json:"dock"`
-	Inline     []string   `json:"inline"`
-	Alias      string     `json:"alias,omitempty"`
-	Pet        Pet        `json:"pet,omitzero"`
-	Bar        string     `json:"bar,omitempty"`
-	Drawer     Drawer     `json:"drawer,omitzero"`
-	Theme      Theme      `json:"theme,omitzero"`
-	Statusline Statusline `json:"statusline,omitzero"`
+	Dock          []string   `json:"dock"`
+	Inline        []string   `json:"inline"`
+	Alias         string     `json:"alias,omitempty"`
+	Pet           Pet        `json:"pet,omitzero"`
+	Bar           string     `json:"bar,omitempty"`
+	Drawer        Drawer     `json:"drawer,omitzero"`
+	Theme         Theme      `json:"theme,omitzero"`
+	Statusline    Statusline `json:"statusline,omitzero"`
+	InputTabWidth int        `json:"input_tab_width,omitempty"`
 }
 
 // Drawer is where the drawer shows: beside the transcript unless SidebarOff,
