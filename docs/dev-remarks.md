@@ -177,8 +177,8 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **上色的值用 lib 的 span**：Drawer background 的色塊是 `Styled` 回傳的 `ColorSpans`，值是 `HexText`；最上面一列的
     `Status` 回傳 `[]Span`。顏色碼不再塞進字串。
   - **計時器用 `app.Tick`**：每 2 秒重讀 catalog 的 `reload`，tdptest 的 `Advance` 才推得動。
-  - **`input_tab_width`**（tdp E3-11）：App Log 是每個 app 都有的 viewer，config.yaml 收這個 key，名字照家族的（filu、sshu、
-    webu 都是它）；沒寫或 0 是 lib 的 4。TUI 上沒有它的列（tdp 沒要求，跟 alias 一樣可以手寫）。
+  - **沒有 `input_tab_width`**（tdp v0.9.1 E3-11）：只有 App Log 的 app 不算用到這個 key，照預設的 4。ccdrawu 沒有自己的
+    textarea、viewer、log panel、檔案預覽。v0.9.0 時加過，v0.9.1 改窄適用後拿掉，沒發版過。
   - **tdptest**：`internal/ui/tdp_test.go` 的 `TestTDP` 在 tdptest 的沙盒裡（`CCDRAWU__CONFIG`、`CCDRAWU__CACHE`、
     `CLAUDE_CONFIG_DIR` 指進去，`claude plugin list` 給 `claudeFake`）照第一次開的樣子走一遍；`TestTDPTricky` 把容易出事的值
     （顏色碼、OSC 52、換行、寬字，取自 `tdptest.Tricky`）手寫進 alias、separator、drawer background 再各走一遍。

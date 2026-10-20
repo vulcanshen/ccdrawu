@@ -105,7 +105,6 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	// It opens in a narrow pane beside Claude Code, and one panel and a page of
 	// values fit in 40 x 12 (tdp L1; the user's)
 	a.MinWidth, a.MinHeight = 40, 12
-	a.InputTabWidth = cfg.InputTabWidth
 	a.Splash = splash()
 	a.Status = d.status
 	a.OnMsg = d.onMsg

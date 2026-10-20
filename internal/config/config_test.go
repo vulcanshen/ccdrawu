@@ -70,18 +70,11 @@ func TestConfigIsYAML(t *testing.T) {
 		t.Fatalf("read back %+v\nfrom\n%s", got, raw)
 	}
 	// Written by hand, in YAML's own ways
-	if err := os.WriteFile(path, []byte("# mine\nalias: 'cc d'\ndock: [model, git]\nstatusline: {on: true}\ninput_tab_width: 2\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("# mine\nalias: 'cc d'\ndock: [model, git]\nstatusline: {on: true}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got, err = ReadConfig(path); err != nil || got.Alias != "cc d" || !slices.Equal(got.Dock, []string{"model", "git"}) || got.InputTabWidth != 2 {
+	if got, err = ReadConfig(path); err != nil || got.Alias != "cc d" || !slices.Equal(got.Dock, []string{"model", "git"}) {
 		t.Fatalf("by hand: %+v, %v", got, err)
-	}
-	// The family's input_tab_width stays through a save (tdp E3)
-	if err := WriteConfig(path, got); err != nil {
-		t.Fatal(err)
-	}
-	if raw, _ = os.ReadFile(path); !strings.Contains(string(raw), "input_tab_width: 2\n") {
-		t.Errorf("no input_tab_width in\n%s", raw)
 	}
 }
 
