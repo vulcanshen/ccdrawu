@@ -217,6 +217,33 @@ func TestOriginalsMoveToTheDataFolder(t *testing.T) {
 	}
 }
 
+// tdp E3, the new place has it already (CD56): a config.json beside a
+// config.yaml stays where it is, config.yaml read, and every Move names both
+// until the user merges them; the rest moves all the same
+func TestConfigJSONBesideConfigYAMLStays(t *testing.T) {
+	dir := t.TempDir()
+	loc := Locations{ConfigFile: filepath.Join(dir, "config", "config.yaml"), Cache: filepath.Join(dir, "cache"), Data: filepath.Join(dir, ".ccdrawu")}
+	old := filepath.Join(dir, "config", "config.json")
+	if err := WriteConfig(loc.ConfigFile, Config{Alias: "new", Theme: Theme{Base: "dark-ansi", Before: "dark"}}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(old, []byte(`{"alias": "old"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	for range 2 {
+		moved, err := Move(loc)
+		if err == nil || !strings.Contains(err.Error(), old) || !strings.Contains(err.Error(), loc.ConfigFile) || !strings.Contains(err.Error(), "ccdrawu reads config.yaml") {
+			t.Fatalf("config.json beside config.yaml: %v", err)
+		}
+		if !fileThere(old) || mustRead(t, loc).Alias != "new" {
+			t.Fatal("config.json not left as it is, or config.yaml not read")
+		}
+		if o, _ := ReadOriginals(loc.Originals(), Config{}); o.Theme != "dark" {
+			t.Fatalf("the originals did not move all the same: %+v, %+v", moved, o)
+		}
+	}
+}
+
 func mustRead(t *testing.T, loc Locations) Config {
 	t.Helper()
 	c, err := ReadConfig(loc.ConfigFile)

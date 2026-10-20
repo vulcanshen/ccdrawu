@@ -177,8 +177,10 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 // sayMoved says what moved where, in an Info toast; what could not move, with
 // both places, in an error popup, to be moved by hand (tdp E3, a place changed).
 func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
+	var cmds []tea.Cmd
 	if err != nil {
-		return d.app.Error("Can't move", err.Error()+"\nccdrawu reads the old place until it is moved; move it there yourself.")
+		// Each says which place ccdrawu reads, and what to do by hand
+		cmds = append(cmds, d.app.Error("Can't move", err.Error()))
 	}
 	var notes []string
 	for _, m := range moved {
@@ -188,10 +190,10 @@ func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
 		}
 		notes = append(notes, "Moved "+what+" to "+shortHome(m.To))
 	}
-	if len(notes) == 0 {
-		return nil
+	if len(notes) > 0 {
+		cmds = append(cmds, d.app.Toast(terminu.Info, strings.Join(notes, "; ")))
 	}
-	return d.app.Toast(terminu.Info, strings.Join(notes, "; "))
+	return tea.Batch(cmds...)
 }
 
 // sidebar puts [1] in a sidebar 24 columns wide, as locku and webu do, and

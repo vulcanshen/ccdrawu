@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -76,24 +77,32 @@ type Moved struct{ From, To, What string }
 // as config.yaml beside it; the originals it kept, into originals.yaml; and
 // what else is in ~/.ccdrawu, the catalog and the statusline's values the mod
 // writes, into the cache folder. An error names both places of what could not
-// move, and ccdrawu goes on reading the old place (ReadConfig,
-// ReadOriginals, Locations.Catalog).
+// move and says which one ccdrawu reads: the old place, until it moves
+// (ReadConfig, ReadOriginals, Locations.Catalog), or the config.yaml a
+// config.json is left beside, for the user to merge.
 func Move(loc Locations) ([]Moved, error) {
 	var moved []Moved
 	var errs []error
-	if old := oldConfig(loc.ConfigFile); fileThere(old) && !fileThere(loc.ConfigFile) {
-		c, err := ReadConfig(loc.ConfigFile)
-		if err == nil {
-			err = WriteConfig(loc.ConfigFile, c)
-		}
-		if err != nil {
-			errs = append(errs, fmt.Errorf("%s to %s: %w", old, loc.ConfigFile, err))
+	if old := oldConfig(loc.ConfigFile); fileThere(old) {
+		if fileThere(loc.ConfigFile) {
+			// Both there: config.json stays where it is, for the user to
+			// merge, and says so each start until then (tdp E3)
+			errs = append(errs, fmt.Errorf("%s is there beside %s. ccdrawu reads config.yaml: put what you want of config.json in it yourself, then remove config.json.", old, loc.ConfigFile))
 		} else {
-			moved = append(moved, Moved{From: old, To: loc.ConfigFile})
+			c, err := ReadConfig(loc.ConfigFile)
+			if err == nil {
+				err = WriteConfig(loc.ConfigFile, c)
+			}
+			if err != nil {
+				errs = append(errs, cantMove(old, loc.ConfigFile, err))
+			} else {
+				moved = append(moved, Moved{From: old, To: loc.ConfigFile})
+			}
 		}
 	}
-	// A config.yaml that can't be read is moved aside first (tdp E3)
-	if c, err := ReadConfig(loc.ConfigFile); err == nil && len(errs) == 0 {
+	// Out of a config.yaml there, readable: one that can't be read is moved
+	// aside first (tdp E3)
+	if c, err := ReadConfig(loc.ConfigFile); err == nil && fileThere(loc.ConfigFile) {
 		m, err := moveOriginals(loc, c)
 		if err != nil {
 			errs = append(errs, err)
@@ -129,12 +138,31 @@ func Move(loc Locations) ([]Moved, error) {
 			took = true
 		}
 		if failed != nil {
-			errs = append(errs, fmt.Errorf("%s to %s: %w", loc.Data, loc.Cache, failed))
+			errs = append(errs, cantMove(loc.Data, loc.Cache, failed))
 		} else if took {
 			moved = append(moved, Moved{From: loc.Data, To: loc.Cache})
 		}
 		// Gone once all of it moved, unless it keeps the originals
 		_ = os.Remove(loc.Data)
 	}
-	return moved, errors.Join(errs...)
+	return moved, paragraph(errs)
+}
+
+// cantMove is what could not move from from to to, and why: ccdrawu reads it
+// where it is until it moves (tdp E3).
+func cantMove(from, to string, err error) error {
+	return fmt.Errorf("%s to %s: %w. ccdrawu reads it where it is until it moves: move it there yourself.", from, to, err)
+}
+
+// paragraph is errs in one paragraph, sentence after sentence, as an error
+// popup is one (tdp components/dialog/note): nil for none.
+func paragraph(errs []error) error {
+	if len(errs) == 0 {
+		return nil
+	}
+	msgs := make([]string, len(errs))
+	for i, err := range errs {
+		msgs[i] = err.Error()
+	}
+	return errors.New(strings.Join(msgs, " "))
 }

@@ -155,8 +155,14 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **搬法**（tdp E3 的「換了位置時」，定案 S1）：`config.Move` 在 TUI 開始時跑，新位置沒有時把 `config.json` 寫成
     `config.yaml`、把 `~/.ccdrawu` 裡的東西搬進快取目錄，跳一個 Info toast；搬不動開 error popup 寫兩個路徑。在那之前（或搬不動時）
     都照舊讀舊的：Go 的 `ReadConfig`、`Locations.Catalog`，`ccdrawu statusline` 找不到新的 session 檔時也看舊的，mod 沒有
-    config.yaml 時讀 config.json。`WriteConfig` 第一次寫出 config.yaml 時刪掉旁邊的 config.json（已經有 config.yaml 時，舊的留著不刪，tdp E3）（`install`／`uninstall claude` 寫設定時
+    config.yaml 時讀 config.json。`WriteConfig` 第一次寫出 config.yaml 時刪掉旁邊的 config.json（`install`／`uninstall claude` 寫設定時
     也算搬完）。
+  - **新位置已經有時**（tdp E3-16，CD56）：config.json 與 config.yaml 都在時，config.json 留著不刪，讀 config.yaml，
+    每次啟動都開 error popup 寫兩個路徑，請使用者自己合併、刪掉 config.json；不能默默留著。其他照常搬（originals 從
+    config.yaml 搬、`~/.ccdrawu` 的快取）。
+  - **錯誤寫成一段**：error popup 是一段話的 note（tdp components/dialog/note），裡面的 `\n` 會照控制字元畫成紅色的 `\n`
+    （tdp components 的「控制字元」）。`Move` 的每個錯誤是自己說完的句子（哪裡到哪裡、為什麼、ccdrawu 讀哪一邊、要使用者做什麼），
+    用空白接成一段（`paragraph`），不用 `errors.Join`。
   - **Windows 的快取放在 `%LOCALAPPDATA%\ccdrawu\cache`**（user 定的，CD52）：照 os.UserCacheDir 是
     `%LOCALAPPDATA%\ccdrawu`，那正是 install.ps1 放 ccdrawu.exe 的資料夾，刪快取會刪到程式；改放它底下的 `cache`，
     uninstall.ps1 刪整個資料夾時一起走。

@@ -304,6 +304,27 @@ func TestOldPlacesMoveOnTheFirstStart(t *testing.T) {
 	}
 }
 
+// tdp E3, the new place has it already (CD56): a config.json left beside
+// config.yaml is named, with it, in an error popup each start
+func TestConfigJSONBesideConfigYAMLSaysSo(t *testing.T) {
+	_, loc := newTestDrawer(t)
+	if err := config.WriteConfig(loc.ConfigFile, config.Config{Alias: "new"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(filepath.Dir(loc.ConfigFile), "config.json"), []byte(`{"alias": "old"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.app.Update(tea.WindowSizeMsg{Width: 200, Height: 40})
+	run(d, d.app.Start())
+	if text := frameText(d); !strings.Contains(text, "CAN'T MOVE") || !strings.Contains(text, "ccdrawu reads config.yaml") || strings.Contains(text, `\n`) || d.cfg.Alias != "new" {
+		t.Fatalf("no error popup for config.json beside config.yaml, or config.yaml not read:\n%s", text)
+	}
+}
+
 // tdp E3, can't be read: originals.yaml, data, is asked about as the config
 // is; moved aside, nothing is kept
 func TestOriginalsCantBeRead(t *testing.T) {

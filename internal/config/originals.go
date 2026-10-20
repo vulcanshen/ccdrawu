@@ -90,7 +90,7 @@ func moveOriginals(loc Locations, c Config) (*Moved, error) {
 	}
 	o, err := ReadOriginals(loc.Originals(), Config{})
 	if err != nil {
-		return nil, fmt.Errorf("%s to %s: %w", loc.ConfigFile, loc.Originals(), err)
+		return nil, cantMove(loc.ConfigFile, loc.Originals(), err)
 	}
 	var took, kept []string
 	if b := c.Theme.Before; b != "" {
@@ -118,14 +118,15 @@ func moveOriginals(loc Locations, c Config) (*Moved, error) {
 	// The originals first: written twice is better than gone
 	if len(took) > 0 {
 		if err := WriteOriginals(loc.Originals(), o); err != nil {
-			return nil, fmt.Errorf("%s to %s: %w", loc.ConfigFile, loc.Originals(), err)
+			return nil, cantMove(loc.ConfigFile, loc.Originals(), err)
 		}
 	}
 	if err := WriteConfig(loc.ConfigFile, c); err != nil {
-		return nil, fmt.Errorf("%s to %s: %w", loc.ConfigFile, loc.Originals(), err)
+		return nil, cantMove(loc.ConfigFile, loc.Originals(), err)
 	}
 	if len(kept) > 0 {
-		err = fmt.Errorf("%s in %s to %s: it has one already", strings.Join(kept, " and "), loc.ConfigFile, loc.Originals())
+		what := strings.Join(kept, " and ")
+		err = fmt.Errorf("%s in %s: %s has another already. ccdrawu reads the one in config.yaml: keep the one you want in originals.yaml yourself, then take %s out of config.yaml.", what, loc.ConfigFile, loc.Originals(), what)
 	}
 	if len(took) == 0 {
 		return nil, err
