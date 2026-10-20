@@ -10,7 +10,6 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/vulcanshen/ccdrawu/internal/claude"
 	"github.com/vulcanshen/ccdrawu/internal/config"
-	terminu "github.com/vulcanshen/terminu-go"
 )
 
 // toStatusline goes into the statusline page, on the first field: its on and
@@ -54,7 +53,11 @@ func TestStatuslineReplacesTheUsersOnlyAfterAsking(t *testing.T) {
 		}
 	}
 	// The status bar says when the statusline follows (its folder, in a test, leaves no room on screen)
-	if got := terminu.StripStyles(d.status(300)); !strings.Contains(got, "the statusline follows within 10 seconds") {
+	var got string
+	for _, s := range d.status(300) {
+		got += s.Text
+	}
+	if !strings.Contains(got, "the statusline follows within 10 seconds") {
 		t.Fatalf("status bar: %q", got)
 	}
 

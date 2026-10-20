@@ -226,7 +226,8 @@ func (d *drawer) radio(f *terminu.Field, selected func() int) *terminu.Field {
 
 func (d *drawer) reload() tea.Cmd {
 	d.load()
-	return tea.Tick(2*time.Second, func(time.Time) tea.Msg { return catalogTick{} })
+	// The app's clock, which a test moves on (tdptest)
+	return d.app.Tick(2*time.Second, func(time.Time) tea.Msg { return catalogTick{} })
 }
 
 func (d *drawer) onMsg(msg tea.Msg) tea.Cmd {
@@ -435,14 +436,14 @@ func (d *drawer) revert() {
 // status says where the choice goes and that open sessions take it: the
 // drawer within a second, the statusline when Claude Code runs it next. It is
 // one sentence, not two items side by side (tdp components, spacing).
-func (d *drawer) status(w int) string {
+func (d *drawer) status(int) []terminu.Span {
 	grey := terminu.Fg(terminu.Overlay0)
 	follow := "; open Claude Code sessions follow within a second"
 	if d.detail.Label == rowStatusline {
 		follow = fmt.Sprintf("; the statusline follows within %d seconds", refresh(d.cfg.Statusline))
 	}
-	text := grey.Render("Saved to ") + terminu.Fg(terminu.Lavender).Render(shortHome(d.loc.ConfigFile)) + grey.Render(follow)
-	return terminu.Truncate(text, w)
+	// The lib cuts it at the width, and draws a control character in the path by name
+	return []terminu.Span{{Text: "Saved to ", Style: grey}, {Text: shortHome(d.loc.ConfigFile), Style: terminu.Fg(terminu.Lavender)}, {Text: follow, Style: grey}}
 }
 
 func shortHome(path string) string {

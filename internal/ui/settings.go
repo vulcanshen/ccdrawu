@@ -55,7 +55,14 @@ func (d *drawer) backgroundField() *terminu.Field {
 			if !hexColor.MatchString(d.cfg.Theme.Background) {
 				return d.cfg.Theme.Background
 			}
-			return terminu.ColorText(terminu.Hex(d.cfg.Theme.Background))
+			return terminu.HexText(terminu.Hex(d.cfg.Theme.Background))
+		},
+		// The swatch in its colour, drawn by the lib (tdp components, control characters)
+		Styled: func() []terminu.Span {
+			if !hexColor.MatchString(d.cfg.Theme.Background) {
+				return nil
+			}
+			return terminu.ColorSpans(terminu.Hex(d.cfg.Theme.Background))
 		},
 		Disabled: func() bool { return d.cfg.Theme.Base == "" },
 		// Not a color: set by hand in config.yaml
