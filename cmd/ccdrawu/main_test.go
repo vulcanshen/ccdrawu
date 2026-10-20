@@ -15,7 +15,7 @@ import (
 // does whether or not the plugin was still there to take out
 func TestPutBackGivesClaudeCodeItsOwnBack(t *testing.T) {
 	dir := t.TempDir()
-	loc := config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude")}
+	loc := config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude"), Data: filepath.Join(dir, ".ccdrawu")}
 	const theirs = "{\n  \"statusLine\": {\"type\": \"command\", \"command\": \"npx -y ccstatusline@latest\", \"padding\": 0},\n  \"theme\": \"dark\"\n}\n"
 	settings := filepath.Join(loc.Claude, "settings.json")
 	if err := os.MkdirAll(loc.Claude, 0o755); err != nil {
@@ -30,7 +30,12 @@ func TestPutBackGivesClaudeCodeItsOwnBack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	cfg.Theme.Base, cfg.Theme.Before = "dark-ansi", before
+	// The theme kept in originals.yaml, the status line where 0.1.4 kept it,
+	// in the config, not moved yet (tdp E3)
+	cfg.Theme.Base = "dark-ansi"
+	if err := config.WriteOriginals(loc.Originals(), config.Originals{Theme: before}); err != nil {
+		t.Fatal(err)
+	}
 	line, _, err := claude.ApplyStatusline(loc.Claude, 10)
 	if err != nil {
 		t.Fatal(err)
@@ -54,6 +59,9 @@ func TestPutBackGivesClaudeCodeItsOwnBack(t *testing.T) {
 	}
 	if c, _ := config.ReadConfig(loc.ConfigFile); c.Theme.Base != "" || c.Statusline.On || c.Statusline.Before != nil {
 		t.Fatalf("config still has ccdrawu's: %+v %+v", c.Theme, c.Statusline)
+	}
+	if _, err := os.Stat(loc.Data); err == nil {
+		t.Fatalf("%s still there with nothing kept", loc.Data)
 	}
 
 	// Again, there is nothing of ccdrawu's left to put back

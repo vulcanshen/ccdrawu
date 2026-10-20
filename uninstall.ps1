@@ -53,8 +53,14 @@ if ($env:CCDRAWU__CACHE) {
     Ask-Remove $env:CCDRAWU__CACHE "ccdrawu cache (the catalog, the status line's values)"
 }
 
-# Where versions before kept it, until ccdrawu moved it
-Ask-Remove (Join-Path $env:USERPROFILE ".ccdrawu") "ccdrawu's old data (the catalog)"
+# The data (terminu design E3): the theme and status line ccdrawu replaced, put back above by uninstall claude;
+# versions before kept the catalog there too
+if ($env:CCDRAWU__DATA) {
+    $dataDir = $env:CCDRAWU__DATA
+} else {
+    $dataDir = Join-Path $env:USERPROFILE ".ccdrawu"
+}
+Ask-Remove $dataDir "ccdrawu data (the theme and status line it replaced, to put back)"
 
 Write-Host ""
 Write-Host "ccdrawu uninstalled. Restart your terminal for PATH changes to take effect." -ForegroundColor Green

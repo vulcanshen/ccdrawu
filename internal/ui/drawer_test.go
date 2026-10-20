@@ -55,7 +55,7 @@ func (f *claudeFake) run(name string, args ...string) ([]byte, error) {
 func newTestDrawer(t *testing.T) (*drawer, config.Locations) {
 	t.Helper()
 	dir := t.TempDir()
-	loc := config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude")}
+	loc := config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude"), Data: filepath.Join(dir, ".ccdrawu")}
 	for _, d := range []string{loc.Cache, loc.Claude} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			t.Fatal(err)
@@ -264,17 +264,17 @@ func TestOrderIsReordered(t *testing.T) {
 func TestOldPlacesMoveOnTheFirstStart(t *testing.T) {
 	dir := t.TempDir()
 	loc := config.Locations{ConfigFile: filepath.Join(dir, "config", "config.yaml"), Cache: filepath.Join(dir, "cache"),
-		Claude: filepath.Join(dir, "claude"), OldData: filepath.Join(dir, "old")}
-	for _, d := range []string{filepath.Dir(loc.ConfigFile), loc.OldData} {
+		Claude: filepath.Join(dir, "claude"), Data: filepath.Join(dir, "old")}
+	for _, d := range []string{filepath.Dir(loc.ConfigFile), loc.Data} {
 		if err := os.MkdirAll(d, 0o755); err != nil {
 			t.Fatal(err)
 		}
 	}
-	if err := os.WriteFile(filepath.Join(filepath.Dir(loc.ConfigFile), "config.json"), []byte(`{"alias": "ccd"}`), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(filepath.Dir(loc.ConfigFile), "config.json"), []byte(`{"alias": "ccd", "theme": {"base": "dark-ansi", "before": "dark"}}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	data, _ := json.Marshal(testCatalog)
-	if err := os.WriteFile(filepath.Join(loc.OldData, "catalog.json"), data, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(loc.Data, "catalog.json"), data, 0o644); err != nil {
 		t.Fatal(err)
 	}
 	d, err := newDrawer(loc, (&claudeFake{}).run)
@@ -293,6 +293,39 @@ func TestOldPlacesMoveOnTheFirstStart(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(loc.Cache, "catalog.json")); err != nil {
 		t.Fatal("the catalog did not move to the cache:", err)
+	}
+	// The theme it replaced, data now, in the data folder (tdp E3, CD55)
+	if d.orig.Theme != "dark" || d.cfg.Theme.Before != "" {
+		t.Fatalf("the theme kept as %+v, the config's as %+v", d.orig, d.cfg.Theme)
+	}
+	press(d, key("!"))
+	if text := frameText(d); !strings.Contains(text, "theme.before") || !strings.Contains(text, "originals.yaml") {
+		t.Fatalf("the App Log does not say theme.before moved to originals.yaml:\n%s", text)
+	}
+}
+
+// tdp E3, can't be read: originals.yaml, data, is asked about as the config
+// is; moved aside, nothing is kept
+func TestOriginalsCantBeRead(t *testing.T) {
+	_, loc := newTestDrawer(t)
+	if err := os.MkdirAll(loc.Data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(loc.Originals(), []byte("theme: [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.app.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	run(d, d.app.Start())
+	if text := frameText(d); !strings.Contains(text, "MOVE ASIDE") || !strings.Contains(text, "originals.yaml.bak") {
+		t.Fatalf("no MOVE ASIDE for originals.yaml:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if _, err := os.Stat(loc.Originals() + ".bak"); err != nil || !d.orig.Equal(config.Originals{}) {
+		t.Fatalf("originals.yaml not moved aside (%v), or still kept: %+v", err, d.orig)
 	}
 }
 
@@ -333,7 +366,7 @@ func TestWhatCantBeRead(t *testing.T) {
 
 func TestNoCatalogSaysWhatToDo(t *testing.T) {
 	dir := t.TempDir()
-	d, err := newDrawer(config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config.yaml")}, (&claudeFake{}).run)
+	d, err := newDrawer(config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config.yaml"), Data: filepath.Join(dir, ".ccdrawu")}, (&claudeFake{}).run)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -468,9 +501,11 @@ func TestThemeGoesIntoClaudeCodeAndBack(t *testing.T) {
 	if got := claudeTheme(t, loc); got != claude.ThemeSetting {
 		t.Fatalf("Claude Code's theme = %q, want %q", got, claude.ThemeSetting)
 	}
+	// The dark it replaced kept as data, in originals.yaml (tdp E3)
 	c, _ := config.ReadConfig(loc.ConfigFile)
-	if c.Theme.Base != "dark-ansi" || c.Theme.Before != "dark" {
-		t.Fatalf("theme kept as %+v, want dark-ansi over the dark it replaced", c.Theme)
+	o, err := config.ReadOriginals(loc.Originals(), config.Config{})
+	if c.Theme.Base != "dark-ansi" || c.Theme.Before != "" || o.Theme != "dark" || err != nil {
+		t.Fatalf("theme kept as %+v and %+v (%v), want dark-ansi over the dark it replaced", c.Theme, o, err)
 	}
 	if _, err := os.Stat(filepath.Join(loc.Claude, "themes", "ccdrawu.json")); err != nil {
 		t.Fatal("no themes/ccdrawu.json:", err)
@@ -486,6 +521,10 @@ func TestThemeGoesIntoClaudeCodeAndBack(t *testing.T) {
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	if got := claudeTheme(t, loc); got != "dark" {
 		t.Fatalf("Claude Code's theme = %q after off, want dark back", got)
+	}
+	// Nothing kept, nothing left in the data folder
+	if _, err := os.Stat(loc.Data); err == nil {
+		t.Fatalf("%s still there after off", loc.Data)
 	}
 }
 

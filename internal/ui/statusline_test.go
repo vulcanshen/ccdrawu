@@ -79,10 +79,12 @@ func TestStatuslineReplacesTheUsersOnlyAfterAsking(t *testing.T) {
 	if _, ours, _ := claude.CurrentStatusline(loc.Claude); !ours {
 		t.Fatalf("Claude Code's status line is not ccdrawu's:\n%s", claudeSettings(t, loc))
 	}
+	// The one it replaced kept as data, in originals.yaml (tdp E3)
 	c, _ := config.ReadConfig(loc.ConfigFile)
+	o, _ := config.ReadOriginals(loc.Originals(), config.Config{})
 	var before struct{ Command string }
-	if err := json.Unmarshal(c.Statusline.Before, &before); !c.Statusline.On || err != nil || before.Command != "my-line" {
-		t.Fatalf("statusline kept as %+v, want on over my-line", c.Statusline)
+	if err := json.Unmarshal(o.Statusline, &before); !c.Statusline.On || c.Statusline.Before != nil || err != nil || before.Command != "my-line" {
+		t.Fatalf("statusline kept as %+v and %+v, want on over my-line", c.Statusline, o)
 	}
 
 	press(d, key("k"))                       // off
@@ -92,6 +94,9 @@ func TestStatuslineReplacesTheUsersOnlyAfterAsking(t *testing.T) {
 	}
 	if c, _ := config.ReadConfig(loc.ConfigFile); c.Statusline.On || c.Statusline.Before != nil {
 		t.Fatalf("statusline kept as %+v after off", c.Statusline)
+	}
+	if o, err := config.ReadOriginals(loc.Originals(), config.Config{}); o.Statusline != nil || err != nil {
+		t.Fatalf("still kept after off: %+v (%v)", o, err)
 	}
 }
 

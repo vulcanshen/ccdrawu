@@ -248,10 +248,11 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 
 - `~/.config/ccdrawu/config.yaml`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。`config.yaml` 讀不了時，`ccdrawu` 會寫出原因、先問再繼續：`Enter` 把它改名成 `config.yaml.bak` 並重新開一個，`Esc` 離開。
 - 系統快取資料夾裡的 `ccdrawu`（macOS 是 `~/Library/Caches/ccdrawu`，Linux 是 `~/.cache/ccdrawu`，Windows 是 `%LOCALAPPDATA%\ccdrawu\cache`，在 `ccdrawu.exe` 旁邊）：外掛寫給 `ccdrawu` 的東西，也就是它列出的項目清單（`catalog.json`），以及狀態列打開時、每個 session 給它的值（`sessions/`；一週沒用到的 session 檔會刪掉）。外掛會再寫一次，刪掉也不會少什麼。`CCDRAWU__CACHE` 可以改放別的資料夾。
+- `~/.ccdrawu/originals.yaml`：換成 ccdrawu 的之前，你原本的 Claude Code theme 與狀態列；關掉 ccdrawu 的、或執行 `ccdrawu uninstall claude` 時靠它放回去。只有 ccdrawu 的開著時才有這個檔，刪了就找不回來，備份時記得帶上。`CCDRAWU__DATA` 可以改放別的資料夾。讀不了時，`ccdrawu` 會像 `config.yaml` 那樣先問。
 
 在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
 
-早一點的版本把這些放在 `config.json` 與 `~/.ccdrawu/`：第一次執行 `ccdrawu` 時會搬過來，並告訴你。
+早一點的版本把這些放在 `config.json` 與 `~/.ccdrawu/`，要放回去的 theme 與狀態列放在設定裡：第一次執行 `ccdrawu` 時會搬過來，並告訴你。
 
 側邊欄每 6 小時會向 npm registry 查一次 Claude Code 的最新版本。打開 **Status** 的話，還會每 5 分鐘向 status.claude.com 查一次；除此之外不會連網。
 

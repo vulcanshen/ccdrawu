@@ -19,10 +19,11 @@ import (
 //     catalog and each session's statusline values, which the mod writes anew,
 //     so a cache (tdp E3: what the app makes again when it is deleted).
 //   - Claude is Claude Code's own folder, where the theme goes.
-//   - OldData is where 0.1.4 and before kept the catalog and the sessions:
-//     CCDRAWU__DATA, else ~/.ccdrawu. Move takes it to Cache.
+//   - Data is CCDRAWU__DATA, else ~/.ccdrawu: the originals (Originals), what
+//     can't be found again once gone (tdp E3). 0.1.4 and before kept the
+//     catalog and the sessions there too; Move takes those to Cache.
 type Locations struct {
-	ConfigFile, Cache, Claude, OldData string
+	ConfigFile, Cache, Claude, Data string
 }
 
 func locate(getenv func(string) string, home, goos string) Locations {
@@ -34,15 +35,15 @@ func locate(getenv func(string) string, home, goos string) Locations {
 			config = filepath.Join(home, ".config", "ccdrawu")
 		}
 	}
-	old := getenv("CCDRAWU__DATA")
-	if old == "" {
-		old = filepath.Join(home, ".ccdrawu")
+	data := getenv("CCDRAWU__DATA")
+	if data == "" {
+		data = filepath.Join(home, ".ccdrawu")
 	}
 	return Locations{
 		ConfigFile: filepath.Join(config, "config.yaml"),
 		Cache:      cacheDir(getenv, home, goos),
 		Claude:     claude.Dir(getenv, home),
-		OldData:    old,
+		Data:       data,
 	}
 }
 
@@ -83,11 +84,14 @@ func UserLocations() (Locations, error) {
 // until it is moved (Move).
 func (l Locations) Catalog() string {
 	path := filepath.Join(l.Cache, "catalog.json")
-	if old := filepath.Join(l.OldData, "catalog.json"); !fileThere(path) && fileThere(old) {
+	if old := filepath.Join(l.Data, "catalog.json"); !fileThere(path) && fileThere(old) {
 		return old
 	}
 	return path
 }
+
+// Originals is the originals' file, originals.yaml in Data.
+func (l Locations) Originals() string { return filepath.Join(l.Data, originalsFile) }
 
 func fileThere(path string) bool {
 	_, err := os.Stat(path)

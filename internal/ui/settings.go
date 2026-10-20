@@ -113,10 +113,10 @@ func (d *drawer) setTheme() (note string, err error) {
 	err = d.commit(func() error {
 		t := &d.cfg.Theme
 		if t.Base == "" {
-			if err := claude.RestoreTheme(d.loc.Claude, t.Before); err != nil {
+			if err := claude.RestoreTheme(d.loc.Claude, d.orig.Theme); err != nil {
 				return fmt.Errorf("can't put your own theme back: %w", err)
 			}
-			t.Before = ""
+			d.orig.Theme = ""
 			note = "Claude Code has its own theme back"
 			return nil
 		}
@@ -125,7 +125,7 @@ func (d *drawer) setTheme() (note string, err error) {
 			return err
 		}
 		if switched {
-			t.Before = before
+			d.orig.Theme = before
 		}
 		note = "Claude Code's theme is now " + t.Base
 		if t.Background != "" {

@@ -67,15 +67,17 @@ func Source(path string) string {
 // oldConfig is the config.json 0.1.4 and before wrote where config.yaml is now.
 func oldConfig(path string) string { return filepath.Join(filepath.Dir(path), "config.json") }
 
-// A Moved is what Move took to its new place.
-type Moved struct{ From, To string }
+// A Moved is what Move took to its new place: What names the items taken out
+// of From, "" where all of it went.
+type Moved struct{ From, To, What string }
 
 // Move takes what 0.1.4 and before kept elsewhere to where tdp E3 has it now,
 // once, where the new place does not have it yet: config.json, written again
-// as config.yaml beside it; and what is in ~/.ccdrawu, the catalog and the
-// statusline's values the mod writes, into the cache folder. An error names
-// both places of what could not move, and ccdrawu goes on reading the old
-// place (ReadConfig, Locations.Catalog).
+// as config.yaml beside it; the originals it kept, into originals.yaml; and
+// what else is in ~/.ccdrawu, the catalog and the statusline's values the mod
+// writes, into the cache folder. An error names both places of what could not
+// move, and ccdrawu goes on reading the old place (ReadConfig,
+// ReadOriginals, Locations.Catalog).
 func Move(loc Locations) ([]Moved, error) {
 	var moved []Moved
 	var errs []error
@@ -87,16 +89,30 @@ func Move(loc Locations) ([]Moved, error) {
 		if err != nil {
 			errs = append(errs, fmt.Errorf("%s to %s: %w", old, loc.ConfigFile, err))
 		} else {
-			moved = append(moved, Moved{old, loc.ConfigFile})
+			moved = append(moved, Moved{From: old, To: loc.ConfigFile})
 		}
 	}
-	// Each thing in it on its own: the mod writes the catalog to the cache
-	// folder as a session starts, often before ccdrawu first runs
-	if entries, err := os.ReadDir(loc.OldData); err == nil {
+	// A config.yaml that can't be read is moved aside first (tdp E3)
+	if c, err := ReadConfig(loc.ConfigFile); err == nil && len(errs) == 0 {
+		m, err := moveOriginals(loc, c)
+		if err != nil {
+			errs = append(errs, err)
+		}
+		if m != nil {
+			moved = append(moved, *m)
+		}
+	}
+	// Each thing in it on its own, the originals aside: the mod writes the
+	// catalog to the cache folder as a session starts, often before ccdrawu
+	// first runs
+	if entries, err := os.ReadDir(loc.Data); err == nil {
 		var failed error
 		took := false
 		for _, e := range entries {
-			from, to := filepath.Join(loc.OldData, e.Name()), filepath.Join(loc.Cache, e.Name())
+			if e.Name() == originalsFile {
+				continue
+			}
+			from, to := filepath.Join(loc.Data, e.Name()), filepath.Join(loc.Cache, e.Name())
 			// The mod wrote it anew there already: the old one is a stale cache
 			if fileThere(to) {
 				_ = os.RemoveAll(from)
@@ -113,12 +129,12 @@ func Move(loc Locations) ([]Moved, error) {
 			took = true
 		}
 		if failed != nil {
-			errs = append(errs, fmt.Errorf("%s to %s: %w", loc.OldData, loc.Cache, failed))
+			errs = append(errs, fmt.Errorf("%s to %s: %w", loc.Data, loc.Cache, failed))
 		} else if took {
-			moved = append(moved, Moved{loc.OldData, loc.Cache})
+			moved = append(moved, Moved{From: loc.Data, To: loc.Cache})
 		}
-		// Gone once all of it moved
-		_ = os.Remove(loc.OldData)
+		// Gone once all of it moved, unless it keeps the originals
+		_ = os.Remove(loc.Data)
 	}
 	return moved, errors.Join(errs...)
 }

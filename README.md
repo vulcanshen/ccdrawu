@@ -248,10 +248,11 @@ The ccdrawu plugin is not running in that session, so the status line shows what
 
 - `~/.config/ccdrawu/config.yaml`: what you picked in `ccdrawu`: the items, the alias, the bar, the pet, whether the drawer opens by itself, and the status line's settings. `CCDRAWU__CONFIG` names another folder for it, and so does `XDG_CONFIG_HOME`. If `config.yaml` can't be read, `ccdrawu` says why and asks before going on: `Enter` renames it `config.yaml.bak` and starts a new one, `Esc` quits.
 - `ccdrawu` in your system's cache folder (`~/Library/Caches/ccdrawu` on macOS, `~/.cache/ccdrawu` on Linux, `%LOCALAPPDATA%\ccdrawu\cache` on Windows, beside `ccdrawu.exe`): what the plugin writes for `ccdrawu`, the list of items it offers (`catalog.json`) and, while the status line is on, each session's values for it (`sessions/`; a session's file is removed after a week without use). The plugin writes it all again, so removing it loses nothing. `CCDRAWU__CACHE` names another folder for it.
+- `~/.ccdrawu/originals.yaml`: the Claude Code theme and status line you had before ccdrawu's, kept to put back when you turn ccdrawu's off or run `ccdrawu uninstall claude`. It is there only while ccdrawu's are on, and can't be made again once removed, so keep it with your backups. `CCDRAWU__DATA` names another folder for it. If it can't be read, `ccdrawu` asks as it does for `config.yaml`.
 
 On Windows, `~` is your user folder (`%USERPROFILE%`).
 
-Earlier versions kept these in `config.json` and `~/.ccdrawu/`: the first time you run `ccdrawu`, it moves them here, and says so.
+Earlier versions kept these in `config.json` and `~/.ccdrawu/`, the theme and status line to put back in the config: the first time you run `ccdrawu`, it moves them here, and says so.
 
 Every 6 hours the drawer asks the npm registry for Claude Code's newest version. With **Status** on, it also asks status.claude.com every 5 minutes; it makes no other requests.
 

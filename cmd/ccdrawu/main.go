@@ -173,24 +173,41 @@ func selfUpdate(out io.Writer) error {
 // putBack gives Claude Code the user's own theme and status line back where
 // ccdrawu's are set, or none where the user had none, and says so on out.
 func putBack(loc config.Locations, out io.Writer) error {
-	// ccdrawu's theme goes with the drawer: Claude Code has the user's own back
-	if cfg, err := config.ReadConfig(loc.ConfigFile); err == nil && cfg.Theme.Base != "" {
-		if err := claude.RestoreTheme(loc.Claude, cfg.Theme.Before); err != nil {
+	cfg, err := config.ReadConfig(loc.ConfigFile)
+	if err != nil || (cfg.Theme.Base == "" && !cfg.Statusline.On) {
+		return nil
+	}
+	orig, err := config.ReadOriginals(loc.Originals(), cfg)
+	if err != nil {
+		return err
+	}
+	// The originals first, as they can't be found again (tdp E3); the
+	// config's old place for them is done with once they are written
+	save := func() error {
+		if err := config.WriteOriginals(loc.Originals(), orig); err != nil {
 			return err
 		}
-		cfg.Theme.Base, cfg.Theme.Before = "", ""
-		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
+		cfg.Theme.Before, cfg.Statusline.Before = "", nil
+		return config.WriteConfig(loc.ConfigFile, cfg)
+	}
+	// ccdrawu's theme goes with the drawer: Claude Code has the user's own back
+	if cfg.Theme.Base != "" {
+		if err := claude.RestoreTheme(loc.Claude, orig.Theme); err != nil {
+			return err
+		}
+		cfg.Theme.Base, orig.Theme = "", ""
+		if err := save(); err != nil {
 			return err
 		}
 		fmt.Fprintln(out, "Claude Code has its own theme back.")
 	}
 	// So does the statusline: Claude Code has the user's own status line back, or none
-	if cfg, err := config.ReadConfig(loc.ConfigFile); err == nil && cfg.Statusline.On {
-		if err := claude.RestoreStatusline(loc.Claude, json.RawMessage(cfg.Statusline.Before)); err != nil {
+	if cfg.Statusline.On {
+		if err := claude.RestoreStatusline(loc.Claude, json.RawMessage(orig.Statusline)); err != nil {
 			return err
 		}
-		cfg.Statusline.On, cfg.Statusline.Before = false, nil
-		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
+		cfg.Statusline.On, orig.Statusline = false, nil
+		if err := save(); err != nil {
 			return err
 		}
 		fmt.Fprintln(out, "Claude Code has its own status line back.")
@@ -216,6 +233,8 @@ Environment:
   CCDRAWU__CONFIG            the settings folder, instead of ~/.config/ccdrawu
   CCDRAWU__CACHE             what the plugin writes for ccdrawu, instead of
                              ccdrawu in the system's cache folder
+  CCDRAWU__DATA              the theme and status line ccdrawu replaced in
+                             Claude Code, to put back, instead of ~/.ccdrawu
   CCDRAWU__MARKETPLACE       where install takes the plugin from, instead of
                              vulcanshen/ccdrawu: owner/repo, a git URL or a folder
   CCDRAWU__ICON_WIDTH        1 or 2: how many cells a Nerd Font icon takes,

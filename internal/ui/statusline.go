@@ -96,7 +96,7 @@ func (d *drawer) statuslineOn(when string) tea.Cmd {
 		return d.app.Error("Can't set the status line", err.Error())
 	}
 	if switched {
-		s.Before = config.Kept(before)
+		d.orig.Statusline = config.Kept(before)
 	}
 	s.On, s.When = true, when
 	return tea.Batch(d.save(), d.app.Toast(terminu.Success, "Claude Code's status line is now ccdrawu's"))
@@ -105,11 +105,11 @@ func (d *drawer) statuslineOn(when string) tea.Cmd {
 // statuslineOff puts back the status line ccdrawu's replaced, or none.
 func (d *drawer) statuslineOff() tea.Cmd {
 	s := &d.cfg.Statusline
-	if err := claude.RestoreStatusline(d.loc.Claude, json.RawMessage(s.Before)); err != nil {
+	if err := claude.RestoreStatusline(d.loc.Claude, json.RawMessage(d.orig.Statusline)); err != nil {
 		d.statusOn.Selected = d.statusSelected()
 		return d.app.Error("Can't put the status line back", err.Error())
 	}
-	s.On, s.When, s.Before = false, "", nil
+	s.On, s.When, d.orig.Statusline = false, "", nil
 	return tea.Batch(d.save(), d.app.Toast(terminu.Success, "Claude Code has its own status line back"))
 }
 

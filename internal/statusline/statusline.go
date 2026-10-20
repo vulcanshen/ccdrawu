@@ -103,7 +103,7 @@ func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now tim
 	if items == nil {
 		// A plugin of 0.1.4 or before, not updated with the command, writes
 		// where it kept them then
-		items, docked = sessionItems(filepath.Join(loc.OldData, "sessions"), input.SessionID)
+		items, docked = sessionItems(filepath.Join(loc.Data, "sessions"), input.SessionID)
 	}
 	if items == nil {
 		items = fromInput(input)

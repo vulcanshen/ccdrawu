@@ -24,6 +24,8 @@ type drawer struct {
 	cat    config.Catalog
 	stamp  time.Time // the catalog's mtime when it was read
 	cfg    config.Config
+	orig   config.Originals // what ccdrawu replaced in Claude Code, to put back
+	kept   config.Originals // orig as written in originals.yaml
 	detail *terminu.Panel
 	pages  map[string]*terminu.Values // [2]'s body for each row of [1]
 
@@ -78,11 +80,18 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	if readErr != nil {
 		cfg = config.Config{}
 	}
+	// So are the originals, data (tdp E3)
+	orig, origErr := config.ReadOriginals(loc.Originals(), cfg)
 	// A status line set in Claude Code since, in place of ccdrawu's, turns the
-	// statusline off: the mod need not keep values for it
+	// statusline off: the mod need not keep values for it, nor ccdrawu the
+	// one it replaced
 	statusTaken := false
-	if _, ours, err := claude.CurrentStatusline(loc.Claude); readErr == nil && err == nil && cfg.Statusline.On && !ours {
-		cfg.Statusline.On, cfg.Statusline.Before = false, nil
+	if _, ours, err := claude.CurrentStatusline(loc.Claude); readErr == nil && origErr == nil && err == nil && cfg.Statusline.On && !ours {
+		orig.Statusline = nil
+		if err := config.WriteOriginals(loc.Originals(), orig); err != nil {
+			return nil, err
+		}
+		cfg.Statusline.On, cfg.Theme.Before, cfg.Statusline.Before = false, "", nil
 		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
 			return nil, err
 		}
@@ -97,6 +106,8 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	d := &drawer{
 		loc:    loc,
 		cfg:    cfg,
+		orig:   orig,
+		kept:   orig,
 		run:    run,
 		pages:  map[string]*terminu.Values{rowSidebar: page(), rowInline: page(), rowStatusline: page()},
 		radios: map[*terminu.Field]func() int{},
@@ -116,6 +127,12 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 		if readErr != nil {
 			cmds = append(cmds, a.MoveAside(source, readErr, func() tea.Cmd {
 				d.revert() // none there now: the defaults
+				return nil
+			}))
+		}
+		if origErr != nil {
+			cmds = append(cmds, a.MoveAside(loc.Originals(), origErr, func() tea.Cmd {
+				d.revert() // none kept now
 				return nil
 			}))
 		}
@@ -165,7 +182,11 @@ func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
 	}
 	var notes []string
 	for _, m := range moved {
-		notes = append(notes, "Moved "+shortHome(m.From)+" to "+shortHome(m.To))
+		what := shortHome(m.From)
+		if m.What != "" {
+			what = m.What + " in " + what
+		}
+		notes = append(notes, "Moved "+what+" to "+shortHome(m.To))
 	}
 	if len(notes) == 0 {
 		return nil
@@ -430,6 +451,15 @@ func (d *drawer) save() tea.Cmd {
 // under the error (tdp components/layout/popup).
 func (d *drawer) commit(change func() error) error {
 	err := change()
+	// The originals first, as they can't be found again (tdp E3); the
+	// config's old place for them is done with once they are written
+	if err == nil && !d.orig.Equal(d.kept) {
+		if err = config.WriteOriginals(d.loc.Originals(), d.orig); err == nil {
+			d.kept = d.orig
+			d.cfg.Theme.Before, d.cfg.Statusline.Before = "", nil
+			d.app.Log(terminu.Info, "Saved "+shortHome(d.loc.Originals()))
+		}
+	}
 	if err == nil {
 		err = config.WriteConfig(d.loc.ConfigFile, d.cfg)
 	}
@@ -441,14 +471,17 @@ func (d *drawer) commit(change func() error) error {
 	return nil
 }
 
-// revert puts d.cfg, and the radios with it, back to the file as it is: a
-// change that could not be made is not shown as if it were.
+// revert puts d.cfg, and the radios with it, and d.orig back to the files as
+// they are: a change that could not be made is not shown as if it were.
 func (d *drawer) revert() {
 	if c, err := config.ReadConfig(d.loc.ConfigFile); err == nil {
 		d.cfg = c
 		for f, selected := range d.radios {
 			f.Selected = selected()
 		}
+	}
+	if o, err := config.ReadOriginals(d.loc.Originals(), d.cfg); err == nil {
+		d.orig, d.kept = o, o
 	}
 }
 

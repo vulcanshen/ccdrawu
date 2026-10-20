@@ -114,8 +114,8 @@ type Drawer struct {
 // "" for the first); Color how it is colored (one of Colors, "" for the
 // first); Separator what stands between items ("" for "|"); Refresh how many
 // seconds Claude Code waits to run it again while nothing happens (0 for
-// DefaultRefresh). Before is the statusLine Claude Code had until ccdrawu's,
-// to put back as it was written: JSON null when it had none.
+// DefaultRefresh). Before is where the config kept Originals.Statusline until
+// Move takes it to originals.yaml.
 type Statusline struct {
 	On        bool     `json:"on"`
 	When      string   `json:"when,omitempty"`
@@ -124,8 +124,7 @@ type Statusline struct {
 	Color     string   `json:"color,omitempty"`
 	Separator string   `json:"separator,omitempty"`
 	Refresh   int      `json:"refresh,omitempty"`
-	// TODO(tdp CD55): data by tdp E3, as Theme.Before
-	Before Kept `json:"before,omitempty"`
+	Before    Kept     `json:"before,omitempty"`
 }
 
 // Kept is a JSON value kept byte for byte as it was written elsewhere.
@@ -185,14 +184,12 @@ var PetSpecies = []string{"cat", "dog", "rabbit", "duck", "penguin"}
 
 // Theme is ccdrawu's Claude Code theme (internal/claude): Base, a built-in
 // theme ("" for none, the user's own theme as it was), with Background over
-// the drawer ("" for the base's own). Before is the theme selected until
-// ccdrawu's was, to go back to ("" when none was set).
+// the drawer ("" for the base's own). Before is where the config kept
+// Originals.Theme until Move takes it to originals.yaml.
 type Theme struct {
 	Base       string `json:"base,omitempty"`
 	Background string `json:"background,omitempty"`
-	// TODO(tdp CD55): gone, it can't be found again, so data by tdp E3; kept
-	// in config.yaml until terminu says where
-	Before string `json:"before,omitempty"`
+	Before     string `json:"before,omitempty"`
 }
 
 func (c *Config) ids(p Placement) *[]string {

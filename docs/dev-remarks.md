@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.0；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.1；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -148,8 +148,8 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
     （block、需要時才加引號、多列的 `|-`）加上手寫常見的寫法（flow 的 `[..]`、`{..}`，所以 JSON 也讀得了、註解、兩種引號、
     `|`、`>`）；anchor、tag、第二份文件不讀，跟讀不懂一樣當作還沒寫好、下一秒再讀。
   - **catalog 與 sessions 是快取**（tdp E3：刪了 app 會自己重建的是快取，定案 S2；sessions 是推得出來的，catalog 也照同一條
-    規則）：mod 每次開始都重寫 catalog，sessions 每秒寫，刪了都會回來，所以 `~/.ccdrawu` 整個不用了，`CCDRAWU__DATA` 換成
-    `CCDRAWU__CACHE`。位置照 Go 的 `os.UserCacheDir`（macOS `~/Library/Caches`、Linux 絕對路徑的 `$XDG_CACHE_HOME` 或
+    規則）：mod 每次開始都重寫 catalog，sessions 每秒寫，刪了都會回來，所以搬出 `~/.ccdrawu`、改用 `CCDRAWU__CACHE`
+    （`~/.ccdrawu` 後來只放原值，見下面的 CD55）。位置照 Go 的 `os.UserCacheDir`（macOS `~/Library/Caches`、Linux 絕對路徑的 `$XDG_CACHE_HOME` 或
     `~/.cache`；Windows 見下面）；mod 沒有平台資訊，有 `LOCALAPPDATA` 就是 Windows，其他跑一次 `uname -s`，`darwin`
     就是 macOS，兩邊才會算出同一個資料夾。
   - **搬法**（tdp E3 的「換了位置時」，定案 S1）：`config.Move` 在 TUI 開始時跑，新位置沒有時把 `config.json` 寫成
@@ -164,7 +164,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
     就搬不了，`~/.ccdrawu` 會一直留著。所以一項一項看：新位置沒有的搬過去，已經有的（mod 寫的新 catalog）把舊的刪掉，那是舊的
     快取；搬完把空的 `~/.ccdrawu` 拿掉。
 
-- **跟上 terminu-go v0.4.0（tdp v0.9.0，2026-10-20）。**
+- **跟上 terminu-go v0.4.0（tdp v0.9.0，2026-10-20），之後是 tdp v0.9.1（同一天）。**
   - **App Log**（tdp dialog/note、Rules F5）：lib 記每個 toast 與 error popup，`!` 打開，footer 常駐 `!:log`（有沒看過的
     錯誤、警告時是 `!:N errors`、`!:N warning`）。ccdrawu 另外記自己做的事：每次存檔（`Saved <路徑>`）、Refresh 寫進
     Claude Code 的設定、啟動時發現 Claude Code 換了自己的 status line 而把 statusline 關掉、`claude plugin list` 看不出外掛
@@ -182,9 +182,23 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **tdptest**：`internal/ui/tdp_test.go` 的 `TestTDP` 在 tdptest 的沙盒裡（`CCDRAWU__CONFIG`、`CCDRAWU__CACHE`、
     `CLAUDE_CONFIG_DIR` 指進去，`claude plugin list` 給 `claudeFake`）照第一次開的樣子走一遍；`TestTDPTricky` 把容易出事的值
     （顏色碼、OSC 52、換行、寬字，取自 `tdptest.Tricky`）手寫進 alias、separator、drawer background 再各走一遍。
-  - **暫定（CD55）：`theme.before`、`statusline.before` 留在 config.yaml。** 它們是 ccdrawu 換掉使用者自己的 Claude Code
-    theme 與 statusLine 之前的原值，關掉時靠它放回去；刪了找不回來，照 tdp v0.9.0 E3 的分類是資料，但不是使用者寫給 app 的
-    清單，又跟著設定一起清空。已回報 terminu，定案前不搬（`TODO(tdp CD55)`，`docs/ccdrawu-terminu-fix.md`）。
+  - **原值是資料，放 `~/.ccdrawu/originals.yaml`（CD55，user 定，tdp v0.9.1 E3）。** ccdrawu 換掉使用者自己的 Claude Code
+    theme 與 statusLine 之前記下的原值，關掉時靠它放回去；刪了找不回來，tdp v0.9.1 E3 把「app 替使用者記下的原值」寫成資料
+    （例子就是 ccdrawu）。
+    - `config.Originals`（`Theme`、`Statusline`），`Locations.Data` 是 `CCDRAWU__DATA` 或 `~/.ccdrawu`（原本的 `OldData`），
+      檔案是 `Locations.Originals()`。只有 ccdrawu 的 theme 或狀態列開著時才有東西：`WriteOriginals` 寫空的時候刪掉檔案，
+      資料目錄空了也一起拿掉，沒用過的人不會多一個 `~/.ccdrawu`。
+    - **搬法**（tdp E3「換了位置時」）：`Move` 在 config.json 搬完之後，把 config 的 `theme.before`、`statusline.before`
+      逐項搬進 originals.yaml，toast 寫 `Moved theme.before and statusline.before in <config.yaml> to <originals.yaml>`。
+      originals.yaml 已經有一樣的值，只從 config 拿掉；有不一樣的，留在 config、error popup 寫兩個路徑。先寫 originals 再寫
+      config：中間斷掉時是兩邊都有，下次當作一樣的拿掉，不會兩邊都沒有。`~/.ccdrawu` 裡其他的東西（0.1.4 的 catalog、
+      sessions）照舊搬去快取，originals.yaml 不動。
+    - **還沒搬之前讀舊的**（tdp E3-15）：`ReadOriginals(path, cfg)` 讀 originals.yaml，config 還留著的那一項以 config 的為準
+      （搬不動、或兩邊不一樣時都是 config 的）。TUI 改到原值時（`commit`）先寫 originals.yaml，再把 config 的舊位置清掉。
+      `ccdrawu uninstall claude`（`putBack`）也照這樣讀、寫。
+    - **讀不了時**：originals.yaml 是 app 自己的資料，跟 config.yaml 一樣在啟動時 `app.MoveAside`；搬開後當作沒有原值。
+    - `ccdrawu statusline` 與 mod 都不讀原值，不用改。
+    - 測試的 `Locations` 一定要給 `Data`：沒給時 `Originals()` 是相對路徑，會把 originals.yaml 寫進 package 的資料夾。
 
 ## 已否決，不要重提
 
@@ -219,9 +233,9 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 ## 偏離 tdp
 
-照 tdp v0.9.0 對過（2026-10-20）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
+照 tdp v0.9.1 對過（2026-10-20）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
 `statusLine` 指令的一列），不是 terminu 的畫面，不套用。跟 tdp 對不上、要修的，tdp E7 寫在
-[`docs/ccdrawu-terminu-fix.md`](ccdrawu-terminu-fix.md)；現在只有 CD55 一條。
+`docs/ccdrawu-terminu-fix.md`；現在都修完了，沒有這個檔。
 
 - **`ccdrawu statusline` 用 `ansi.Truncate` 截斷（tdp E5：所有量寬度的地方走同一個函式）。** 它印給 Claude Code 的狀態列，那一列是
   Claude Code 畫的，不是 terminu 的畫面；寬度是 Claude Code 給的 `COLUMNS`，不經過 terminu 的 icon 探測。
@@ -236,9 +250,9 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.0）；ccdrawu 提過的盲點與定案（CD 編號）記在
-  terminu 的 session 那邊。還沒做到的逐條寫在 `docs/ccdrawu-terminu-fix.md`，程式裡標 `TODO(tdp CDn)`、
-  `TODO(lib CDn)`；現在有 `TODO(tdp CD55)`。
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.1）；ccdrawu 提過的盲點與定案（CD 編號）記在
+  terminu 的 session 那邊。還沒做到的會逐條寫在 `docs/ccdrawu-terminu-fix.md`，程式裡標 `TODO(tdp CDn)`、
+  `TODO(lib CDn)`；現在沒有。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
 
 ## 建置與開發
