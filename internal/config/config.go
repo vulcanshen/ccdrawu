@@ -126,7 +126,8 @@ type Statusline struct {
 	Color     string   `json:"color,omitempty"`
 	Separator string   `json:"separator,omitempty"`
 	Refresh   int      `json:"refresh,omitempty"`
-	Before    Kept     `json:"before,omitempty"`
+	// TODO(tdp CD55): data by tdp E3, as Theme.Before
+	Before Kept `json:"before,omitempty"`
 }
 
 // Kept is a JSON value kept byte for byte as it was written elsewhere.
@@ -191,7 +192,9 @@ var PetSpecies = []string{"cat", "dog", "rabbit", "duck", "penguin"}
 type Theme struct {
 	Base       string `json:"base,omitempty"`
 	Background string `json:"background,omitempty"`
-	Before     string `json:"before,omitempty"`
+	// TODO(tdp CD55): gone, it can't be found again, so data by tdp E3; kept
+	// in config.yaml until terminu says where
+	Before string `json:"before,omitempty"`
 }
 
 func (c *Config) ids(p Placement) *[]string {

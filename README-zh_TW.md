@@ -140,7 +140,7 @@ claude
 
 - 側邊欄在對話旁邊。如果在輸入框上方，執行一次 `/tui fullscreen`。
 - `/ccdrawu pat` 摸摸寵物；`/ccdrawu` 關掉側邊欄，再打一次打開。
-- 在另一個終端機執行 `ccdrawu` 挑側邊欄顯示的項目：`j`、`k` 移動，`Enter` 進去、選定，`Space` 看能做什麼，`?` 列出按鍵，`q` 離開。
+- 在另一個終端機執行 `ccdrawu` 挑側邊欄顯示的項目：`j`、`k` 移動，`Enter` 進去、選定，`Space` 看能做什麼，`?` 列出按鍵，`!` 看 ccdrawu 啟動以來做了什麼、有沒有出錯，`q` 離開。
 
 ## 使用方式
 
@@ -246,7 +246,7 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 
 ## 資料存放位置
 
-- `~/.config/ccdrawu/config.yaml`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。
+- `~/.config/ccdrawu/config.yaml`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。在裡面寫 `input_tab_width: 2` 可以設定 `!` 顯示的內容裡一個 Tab 佔幾格（沒寫是 4）。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。`config.yaml` 讀不了時，`ccdrawu` 會寫出原因、先問再繼續：`Enter` 把它改名成 `config.yaml.bak` 並重新開一個，`Esc` 離開。
 - 系統快取資料夾裡的 `ccdrawu`（macOS 是 `~/Library/Caches/ccdrawu`，Linux 是 `~/.cache/ccdrawu`，Windows 是 `%LOCALAPPDATA%\ccdrawu\cache`，在 `ccdrawu.exe` 旁邊）：外掛寫給 `ccdrawu` 的東西，也就是它列出的項目清單（`catalog.json`），以及狀態列打開時、每個 session 給它的值（`sessions/`；一週沒用到的 session 檔會刪掉）。外掛會再寫一次，刪掉也不會少什麼。`CCDRAWU__CACHE` 可以改放別的資料夾。
 
 在 Windows 上，`~` 就是你的使用者資料夾（`%USERPROFILE%`）。
