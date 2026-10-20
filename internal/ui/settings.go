@@ -212,6 +212,7 @@ func (d *drawer) pluginChecked(m pluginChecked) {
 	switch {
 	case m.err != nil:
 		d.plugin = "can't tell: " + m.err.Error()
+		d.app.Log(terminu.Warning, "claude plugin list did not say whether Claude Code has the plugin: "+m.err.Error())
 	case m.id == "":
 		d.plugin = "not installed"
 	case !m.enabled:

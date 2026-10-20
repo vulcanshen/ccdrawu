@@ -182,6 +182,7 @@ func (d *drawer) refreshField() *terminu.Field {
 							if _, _, err := claude.ApplyStatusline(d.loc.Claude, d.cfg.Statusline.Refresh); err != nil {
 								return fmt.Errorf("can't set the status line: %w", err)
 							}
+							d.app.Log(terminu.Info, fmt.Sprintf("Claude Code runs the statusline every %d seconds while nothing happens", d.cfg.Statusline.Refresh))
 						}
 						return nil
 					})

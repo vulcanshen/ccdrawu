@@ -26,7 +26,6 @@ type drawer struct {
 	cfg    config.Config
 	detail *terminu.Panel
 	pages  map[string]*terminu.Values // [2]'s body for each row of [1]
-	fail   *terminu.Failure           // what a page of items says when the catalog can't be read
 
 	background *terminu.Field            // the drawer background, which x resets
 	drawerOn   map[string]*terminu.Field // the drawer's on and off atop sidebar and inline, each its own
@@ -72,17 +71,22 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	// What 0.1.4 and before kept elsewhere, taken where tdp E3 has it now,
 	// said once the screen is up
 	moved, moveErr := config.Move(loc)
-	cfg, err := config.ReadConfig(loc.ConfigFile)
-	if err != nil {
-		return nil, fmt.Errorf("%s: %w", loc.ConfigFile, err)
+	// A config that can't be read is not worked on: the screen opens on none
+	// and asks to move it aside first (tdp E3, can't be read)
+	source := config.Source(loc.ConfigFile)
+	cfg, readErr := config.ReadConfig(loc.ConfigFile)
+	if readErr != nil {
+		cfg = config.Config{}
 	}
 	// A status line set in Claude Code since, in place of ccdrawu's, turns the
 	// statusline off: the mod need not keep values for it
-	if _, ours, err := claude.CurrentStatusline(loc.Claude); err == nil && cfg.Statusline.On && !ours {
+	statusTaken := false
+	if _, ours, err := claude.CurrentStatusline(loc.Claude); readErr == nil && err == nil && cfg.Statusline.On && !ours {
 		cfg.Statusline.On, cfg.Statusline.Before = false, nil
 		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
 			return nil, err
 		}
+		statusTaken = true
 	}
 	// A page of items before the mod has written the catalog: an empty state
 	// (tdp components/layout/screen), not a failure
@@ -104,7 +108,19 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	a.Splash = splash()
 	a.Status = d.status
 	a.OnMsg = d.onMsg
-	a.Start = func() tea.Cmd { return tea.Batch(d.reload(), d.checkPlugin(), d.sayMoved(moved, moveErr)) }
+	a.Start = func() tea.Cmd {
+		if statusTaken {
+			a.Log(terminu.Info, "Claude Code has a status line of its own now: ccdrawu's statusline is off")
+		}
+		cmds := []tea.Cmd{d.reload(), d.checkPlugin(), d.sayMoved(moved, moveErr)}
+		if readErr != nil {
+			cmds = append(cmds, a.MoveAside(source, readErr, func() tea.Cmd {
+				d.revert() // none there now: the defaults
+				return nil
+			}))
+		}
+		return tea.Batch(cmds...)
+	}
 	d.app = a
 	d.background, d.statusOn = d.backgroundField(), d.statusOnField()
 	d.drawerOn = map[string]*terminu.Field{rowSidebar: d.drawerOnField(&d.cfg.Drawer.SidebarOff), rowInline: d.drawerOnField(&d.cfg.Drawer.InlineOff)}
@@ -168,7 +184,6 @@ func sidebar(w, h int) []terminu.Rect {
 func (d *drawer) show(id string) {
 	d.detail.Label = id
 	d.detail.Body = d.pages[id]
-	d.detail.Fail = d.fail
 }
 
 // load reads the catalog when it is new or changed: Claude Code writes it each
@@ -181,9 +196,11 @@ func (d *drawer) load() {
 		return
 	}
 	cat, ok, err := config.ReadCatalog(path)
+	// A cache: one that can't be read is thrown away, and the plugin writes it
+	// again as a session starts (tdp E3, can't be read)
 	if err != nil {
-		d.fail = &terminu.Failure{Fact: "The catalog can't be read: " + err.Error(), Hint: "Start Claude Code again to write it anew"}
-		d.detail.Fail = d.fail
+		os.Remove(path)
+		d.app.Log(terminu.Warning, shortHome(path)+" can't be read, thrown away for the plugin to write anew: "+err.Error())
 		return
 	}
 	if !ok {
@@ -418,8 +435,10 @@ func (d *drawer) commit(change func() error) error {
 	}
 	if err != nil {
 		d.revert()
+		return err
 	}
-	return err
+	d.app.Log(terminu.Info, "Saved "+shortHome(d.loc.ConfigFile))
+	return nil
 }
 
 // revert puts d.cfg, and the radios with it, back to the file as it is: a

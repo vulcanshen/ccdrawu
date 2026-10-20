@@ -55,6 +55,15 @@ func jsonFromYAML(data []byte) ([]byte, error) {
 	return json.Marshal(v)
 }
 
+// Source is the file ReadConfig reads for path: config.yaml, or until there
+// is one, the config.json beside it.
+func Source(path string) string {
+	if old := oldConfig(path); !fileThere(path) && fileThere(old) {
+		return old
+	}
+	return path
+}
+
 // oldConfig is the config.json 0.1.4 and before wrote where config.yaml is now.
 func oldConfig(path string) string { return filepath.Join(filepath.Dir(path), "config.json") }
 

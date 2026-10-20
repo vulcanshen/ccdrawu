@@ -296,6 +296,41 @@ func TestOldPlacesMoveOnTheFirstStart(t *testing.T) {
 	}
 }
 
+// tdp E3, can't be read: a config that can't be read is asked about first
+// and moved aside on Enter; a catalog, a cache, is thrown away, in the App Log
+func TestWhatCantBeRead(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	if err := os.MkdirAll(filepath.Dir(loc.ConfigFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(loc.ConfigFile, []byte("alias: [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(loc.Cache, "catalog.json"), []byte("{"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.app.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	run(d, d.app.Start())
+	if text := frameText(d); !strings.Contains(text, "MOVE ASIDE") || !strings.Contains(text, "can't be read") {
+		t.Fatalf("no MOVE ASIDE for the config:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if _, err := os.Stat(loc.ConfigFile + ".bak"); err != nil {
+		t.Fatal("the config was not moved aside:", err)
+	}
+	if _, err := os.Stat(filepath.Join(loc.Cache, "catalog.json")); err == nil {
+		t.Fatal("the catalog that can't be read is still there")
+	}
+	press(d, key("!"))
+	if text := frameText(d); !strings.Contains(text, "thrown away for the plugin") {
+		t.Fatalf("the App Log says nothing of the catalog:\n%s", text)
+	}
+}
+
 func TestNoCatalogSaysWhatToDo(t *testing.T) {
 	dir := t.TempDir()
 	d, err := newDrawer(config.Locations{Cache: filepath.Join(dir, "data"), ConfigFile: filepath.Join(dir, "config.yaml")}, (&claudeFake{}).run)
