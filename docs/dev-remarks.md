@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.2；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.3；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -225,6 +225,16 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
     `Moved …`、`Saved …` 開頭；error popup 記進去是 `<標題>: <內容>`，標題是大寫。MoveAside 自己記的那一筆
     （`Moved … to ….bak`）是 lib 寫的，v0.4.3 改成大寫。
 
+- **跟上 terminu-go v0.4.4（tdp v0.9.3，2026-10-21）。**
+  - MOVE ASIDE 的問句改成 `Move it to <name>.bak and start fresh?`，lib 畫的，ccdrawu 沒有測試比對問句。
+  - **不再用的檔**（tdp E3-23：不刪、不跳 toast，檔還在時每次啟動在 App Log 記一筆，lib 的 `App.NoLongerUsed`）：ccdrawu
+    沒有，所以沒叫。查過 0.1.0～0.1.4 寫過的檔：`~/.config/ccdrawu/config.json` 搬進 config.yaml 時 `WriteConfig` 就把它刪了，
+    跟 config.yaml 並存時是 E3-16（每次啟動 error popup），不是不再用；`~/.ccdrawu` 的 catalog、sessions 是快取，不算；
+    `~/.claude/themes/ccdrawu.json` 還在用；`~/.claude/ccdrawu/config.json` 是 0.1.0 之前的、沒發版過；Windows 上
+    `ccdrawu update` 留下的 `ccdrawu.exe.old` 是執行檔，不是設定、狀態或資料，下次 update 會刪。之後改版不再用某個檔時，
+    在 `Start` 叫 `a.NoLongerUsed(路徑)`，CHANGELOG 寫一句。
+  - lib 自己送開關動畫與 toast 的計時，ccdrawu 不用改；自己的 command 照常回傳。
+
 ## 已否決，不要重提
 
 理由寫在上面的設計決定，這裡只列出來。
@@ -258,7 +268,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 ## 偏離 tdp
 
-照 tdp v0.9.2 對過（2026-10-21）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
+照 tdp v0.9.3 對過（2026-10-21）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
 `statusLine` 指令的一列），不是 terminu 的畫面，不套用。跟 tdp 對不上、要修的，tdp E7 寫在
 `docs/ccdrawu-terminu-fix.md`；現在都修完了，沒有這個檔。
 
@@ -275,7 +285,7 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.2）；ccdrawu 提過的盲點與定案（CD 編號）記在
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.3）；ccdrawu 提過的盲點與定案（CD 編號）記在
   terminu 的 session 那邊。還沒做到的會逐條寫在 `docs/ccdrawu-terminu-fix.md`，程式裡標 `TODO(tdp CDn)`、
   `TODO(lib CDn)`；現在沒有。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
