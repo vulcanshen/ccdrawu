@@ -70,33 +70,6 @@ func Run(loc config.Locations) error {
 }
 
 func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
-	// What 0.1.4 and before kept elsewhere, taken where tdp E3 has it now,
-	// said once the screen is up
-	moved, moveErr := config.Move(loc)
-	// A config that can't be read is not worked on: the screen opens on none
-	// and asks to move it aside first (tdp E3, can't be read)
-	source := config.Source(loc.ConfigFile)
-	cfg, readErr := config.ReadConfig(loc.ConfigFile)
-	if readErr != nil {
-		cfg = config.Config{}
-	}
-	// So are the originals, data (tdp E3)
-	orig, origErr := config.ReadOriginals(loc.Originals(), cfg)
-	// A status line set in Claude Code since, in place of ccdrawu's, turns the
-	// statusline off: the mod need not keep values for it, nor ccdrawu the
-	// one it replaced
-	statusTaken := false
-	if _, ours, err := claude.CurrentStatusline(loc.Claude); readErr == nil && origErr == nil && err == nil && cfg.Statusline.On && !ours {
-		orig.Statusline = nil
-		if err := config.WriteOriginals(loc.Originals(), orig); err != nil {
-			return nil, err
-		}
-		cfg.Statusline.On, cfg.Theme.Before, cfg.Statusline.Before = false, "", nil
-		if err := config.WriteConfig(loc.ConfigFile, cfg); err != nil {
-			return nil, err
-		}
-		statusTaken = true
-	}
 	// A page of items before the mod has written the catalog: an empty state
 	// (tdp components/layout/screen), not a failure
 	page := func() *terminu.Values {
@@ -105,12 +78,13 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	}
 	d := &drawer{
 		loc:    loc,
-		cfg:    cfg,
-		orig:   orig,
-		kept:   orig,
 		run:    run,
 		pages:  map[string]*terminu.Values{rowSidebar: page(), rowInline: page(), rowStatusline: page()},
 		radios: map[*terminu.Field]func() int{},
+	}
+	found, err := d.open()
+	if err != nil {
+		return nil, err
 	}
 	a := terminu.New("ccdrawu")
 	// It opens in a narrow pane beside Claude Code, and one panel and a page of
@@ -120,23 +94,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	a.Status = d.status
 	a.OnMsg = d.onMsg
 	a.Start = func() tea.Cmd {
-		if statusTaken {
-			a.Log(terminu.Info, "Claude Code has a status line of its own now: ccdrawu's statusline is off")
-		}
-		cmds := []tea.Cmd{d.reload(), d.checkPlugin(), d.sayMoved(moved, moveErr)}
-		if readErr != nil {
-			cmds = append(cmds, a.MoveAside(source, readErr, func() tea.Cmd {
-				d.revert() // none there now: the defaults
-				return nil
-			}))
-		}
-		if origErr != nil {
-			cmds = append(cmds, a.MoveAside(loc.Originals(), origErr, func() tea.Cmd {
-				d.revert() // none kept now
-				return nil
-			}))
-		}
-		return tea.Batch(cmds...)
+		return tea.Batch(d.reload(), d.checkPlugin(), d.say(found))
 	}
 	d.app = a
 	d.background, d.statusOn = d.backgroundField(), d.statusOnField()
@@ -172,6 +130,79 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	})
 	d.load()
 	return d, nil
+}
+
+// opened is what a start found, said once the screen is up (say).
+type opened struct {
+	moved       []config.Moved
+	moveErr     error
+	statusTaken bool   // Claude Code has a status line of its own now
+	aside       string // one of ccdrawu's own files that can't be read
+	asideErr    error  // why
+}
+
+// open reads what ccdrawu keeps, as it starts. A config or originals (data)
+// that can't be read is not worked on: nothing moves, the screen opens on
+// what can be read, and it is asked about first, one at a time; Enter moves
+// it aside and opens again, as on the first start (tdp E3, can't be read).
+func (d *drawer) open() (opened, error) {
+	var o opened
+	cfg, cfgErr := config.ReadConfig(d.loc.ConfigFile)
+	_, origErr := config.ReadOriginals(d.loc.Originals(), config.Config{})
+	if cfgErr == nil && origErr == nil {
+		// What 0.1.4 and before kept elsewhere, taken where tdp E3 has it now
+		o.moved, o.moveErr = config.Move(d.loc)
+		cfg, cfgErr = config.ReadConfig(d.loc.ConfigFile)
+	}
+	if cfgErr != nil {
+		o.aside, o.asideErr, cfg = config.Source(d.loc.ConfigFile), cfgErr, config.Config{}
+	}
+	orig, origErr := config.ReadOriginals(d.loc.Originals(), cfg)
+	if origErr != nil && o.asideErr == nil {
+		o.aside, o.asideErr = d.loc.Originals(), origErr
+	}
+	// A status line set in Claude Code since, in place of ccdrawu's, turns the
+	// statusline off: the mod need not keep values for it, nor ccdrawu the
+	// one it replaced
+	if _, ours, err := claude.CurrentStatusline(d.loc.Claude); o.asideErr == nil && err == nil && cfg.Statusline.On && !ours {
+		orig.Statusline = nil
+		if err := config.WriteOriginals(d.loc.Originals(), orig); err != nil {
+			return o, err
+		}
+		cfg.Statusline.On, cfg.Theme.Before, cfg.Statusline.Before = false, "", nil
+		if err := config.WriteConfig(d.loc.ConfigFile, cfg); err != nil {
+			return o, err
+		}
+		o.statusTaken = true
+	}
+	d.cfg, d.orig, d.kept = cfg, orig, orig
+	for f, selected := range d.radios {
+		f.Selected = selected()
+	}
+	return o, nil
+}
+
+// say says what open found: a status line taken back, in the App Log; what
+// moved; and the question about a file that can't be read.
+func (d *drawer) say(o opened) tea.Cmd {
+	if o.statusTaken {
+		d.app.Log(terminu.Info, "Claude Code has a status line of its own now: ccdrawu's statusline is off")
+	}
+	cmd := d.sayMoved(o.moved, o.moveErr)
+	if o.asideErr != nil {
+		cmd = tea.Batch(cmd, d.app.MoveAside(o.aside, o.asideErr, d.reopen))
+	}
+	return cmd
+}
+
+// reopen is Enter on MOVE ASIDE, the file moved: ccdrawu starts again as on
+// its first start (tdp E3-18).
+func (d *drawer) reopen() tea.Cmd {
+	found, err := d.open()
+	if err != nil {
+		return d.app.Error("Can't save", err.Error())
+	}
+	return d.say(found)
 }
 
 // sayMoved says what moved where, in an Info toast; what could not move, with
@@ -223,7 +254,7 @@ func (d *drawer) load() {
 	// again as a session starts (tdp E3, can't be read)
 	if err != nil {
 		os.Remove(path)
-		d.app.Log(terminu.Warning, shortHome(path)+" can't be read, thrown away for the plugin to write anew: "+err.Error())
+		d.app.Log(terminu.Warning, "Threw away "+shortHome(path)+" for the plugin to write anew, as it can't be read: "+err.Error())
 		return
 	}
 	if !ok {

@@ -161,6 +161,10 @@ func TestOriginalsMoveToTheDataFolder(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(loc.Data, "catalog.json"), []byte(`{}`), 0o644); err != nil {
 		t.Fatal(err)
 	}
+	// One that could not be read, moved aside (tdp E3), stays with them
+	if err := os.WriteFile(loc.Originals()+".bak", []byte("theme: [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
 	// Read from the old place until moved
 	if o, err := ReadOriginals(loc.Originals(), mustRead(t, loc)); err != nil || o.Theme != "dark" || string(o.Statusline) != line {
 		t.Fatalf("before the move: %+v, %v", o, err)
@@ -175,8 +179,11 @@ func TestOriginalsMoveToTheDataFolder(t *testing.T) {
 	if c.Theme.Before != "" || c.Statusline.Before != nil || c.Theme.Base != "dark-ansi" || !c.Statusline.On || err != nil || o.Theme != "dark" || string(o.Statusline) != line {
 		t.Fatalf("after the move: %+v and %+v (%v)", c, o, err)
 	}
-	if entries, _ := os.ReadDir(loc.Data); len(entries) != 1 || !fileThere(filepath.Join(loc.Cache, "catalog.json")) {
-		t.Fatalf("the data folder holds %v, want originals.yaml alone", entries)
+	if entries, _ := os.ReadDir(loc.Data); len(entries) != 2 || !fileThere(filepath.Join(loc.Cache, "catalog.json")) {
+		t.Fatalf("the data folder holds %v, want originals.yaml and its .bak alone", entries)
+	}
+	if err := os.Remove(loc.Originals() + ".bak"); err != nil { // the user's, looked at
+		t.Fatal(err)
 	}
 	if moved, err := Move(loc); err != nil || moved != nil {
 		t.Fatalf("moved again: %+v, %v", moved, err)

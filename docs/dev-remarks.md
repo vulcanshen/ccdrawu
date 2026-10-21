@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.1；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.2；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -176,8 +176,8 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
     Claude Code 的設定、啟動時發現 Claude Code 換了自己的 status line 而把 statusline 關掉、`claude plugin list` 看不出外掛
     在不在的原因（WARN）、丟掉讀不了的 catalog（WARN）。
   - **讀不了時**（tdp E3）：config.yaml（或還沒搬的 config.json，`config.Source`）讀不了時不碰它，畫面用預設開，`Start` 時
-    `app.MoveAside`：`Enter` 改名成 `.bak`（已經有就 `.bak.1`……，lib 做的）後 `revert` 讀回預設；`Esc` 讓 `Run` 回傳錯誤，
-    main 印到 stderr。catalog 是快取：讀不了就刪掉、記進 App Log，mod 下次開始時重寫；頁面上的紅字 `Failure` 拿掉了。
+    `app.MoveAside`：`Enter` 改名成 `.bak`（已經有就 `.bak.1`……，lib 做的）後像第一次啟動一樣重來（tdp v0.9.2 改過，見下面
+    v0.4.3 那一段）；`Esc` 讓 `Run` 回傳錯誤，main 印到 stderr。catalog 是快取：讀不了就刪掉、記進 App Log，mod 下次開始時重寫；頁面上的紅字 `Failure` 拿掉了。
     `ccdrawu statusline` 與 mod 也讀 config.yaml，但它們不是 app 的啟動、在 Claude Code 裡沒有畫面可以問：讀不了時
     statusline 把原因印到 stderr（Claude Code 那一列空著）、mod 照預設，等使用者開 TUI 時再問要不要搬開。
   - **上色的值用 lib 的 span**：Drawer background 的色塊是 `Styled` 回傳的 `ColorSpans`，值是 `HexText`；最上面一列的
@@ -205,6 +205,25 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
     - **讀不了時**：originals.yaml 是 app 自己的資料，跟 config.yaml 一樣在啟動時 `app.MoveAside`；搬開後當作沒有原值。
     - `ccdrawu statusline` 與 mod 都不讀原值，不用改。
     - 測試的 `Locations` 一定要給 `Data`：沒給時 `Originals()` 是相對路徑，會把 originals.yaml 寫進 package 的資料夾。
+
+- **跟上 terminu-go v0.4.3（tdp v0.9.2，2026-10-21）。**
+  - **讀不了時，`Enter` 像第一次啟動一樣重來**（tdp E3-18）。啟動要讀的東西集中在 `drawer.open`：先看 config 與 originals
+    讀不讀得了，有一個讀不了就什麼都不搬（不跑 `config.Move`）、畫面用讀得到的開、一次只問一個；`Enter` 搬開後的 `reopen`
+    再跑一次 `open`，搬舊位置、讀檔、檢查 Claude Code 是不是換了自己的 status line，全照第一次啟動。以前 `Enter` 只做
+    `revert`，跟第一次啟動有三處不一樣：config.yaml 壞掉而旁邊有 config.json 時，config.json 留在舊位置被讀、沒有搬進
+    config.yaml；originals.yaml 壞掉時，搬開後不會檢查 status line 被換掉；而且先 `Move` 再問，CD56 的 error popup 會在問題
+    底下說「ccdrawu 讀 config.yaml」，搬開以後就不對了。第一次啟動不會建任何檔（config.yaml 等第一次存檔才有），`Enter` 後也
+    一樣。沙盒裡實際跑過：沒有檔的第一次啟動、config.yaml 壞掉、壞掉而旁邊有 config.json、originals.yaml 壞掉而 Claude
+    Code 換了 status line，四種的畫面與留下的檔都對得上。
+  - **`~/.ccdrawu` 裡 `originals.yaml` 開頭的都不搬**：`Move` 把資料目錄裡 originals.yaml 以外的東西當成 0.1.4 的快取搬走，
+    搬開的 `originals.yaml.bak` 也會被搬進快取資料夾；現在 `originals.yaml.bak`、`.bak.1`……留在原處。
+  - **App Log 每一筆大寫開頭，跟 toast 一樣**（tdp note-78）。toast 一字不改記進 App Log，所以 toast 也算。改了三處：
+    `claude plugin list` 看不出外掛在不在（`Can't tell from claude plugin list whether Claude Code has the plugin: …`，指令名
+    不能改大寫，所以改寫成句子）、丟掉讀不了的 catalog（`Threw away <路徑> for the plugin to write anew, as it can't be read:
+    …`，原本是路徑開頭）、外掛裝好或移除後的 toast：那是 Claude Code 自己的話，`claude plugin update` 會回
+    `ccdrawu is already at the latest version (…)`，開頭是外掛名，前面加 `Claude Code: `。其他 toast 都是 `Claude Code …`、
+    `Moved …`、`Saved …` 開頭；error popup 記進去是 `<標題>: <內容>`，標題是大寫。MoveAside 自己記的那一筆
+    （`Moved … to ….bak`）是 lib 寫的，v0.4.3 改成大寫。
 
 ## 已否決，不要重提
 
@@ -239,7 +258,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 ## 偏離 tdp
 
-照 tdp v0.9.1 對過（2026-10-20）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
+照 tdp v0.9.2 對過（2026-10-21）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
 `statusLine` 指令的一列），不是 terminu 的畫面，不套用。跟 tdp 對不上、要修的，tdp E7 寫在
 `docs/ccdrawu-terminu-fix.md`；現在都修完了，沒有這個檔。
 
@@ -256,7 +275,7 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.1）；ccdrawu 提過的盲點與定案（CD 編號）記在
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.2）；ccdrawu 提過的盲點與定案（CD 編號）記在
   terminu 的 session 那邊。還沒做到的會逐條寫在 `docs/ccdrawu-terminu-fix.md`，程式裡標 `TODO(tdp CDn)`、
   `TODO(lib CDn)`；現在沒有。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。

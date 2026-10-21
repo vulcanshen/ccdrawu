@@ -212,7 +212,7 @@ func (d *drawer) pluginChecked(m pluginChecked) {
 	switch {
 	case m.err != nil:
 		d.plugin = "can't tell: " + m.err.Error()
-		d.app.Log(terminu.Warning, "claude plugin list did not say whether Claude Code has the plugin: "+m.err.Error())
+		d.app.Log(terminu.Warning, "Can't tell from claude plugin list whether Claude Code has the plugin: "+m.err.Error())
 	case m.id == "":
 		d.plugin = "not installed"
 	case !m.enabled:
@@ -267,7 +267,9 @@ func (d *drawer) pluginDone(m pluginDone) tea.Cmd {
 		}
 		return tea.Batch(d.app.Error(title, m.err.Error()), d.checkPlugin())
 	}
-	cmds := []tea.Cmd{d.app.Toast(terminu.Info, m.msg), d.checkPlugin()}
+	// Claude Code's own word, which may start with the plugin's name: said
+	// as its, so the toast starts with a capital (tdp note-78)
+	cmds := []tea.Cmd{d.app.Toast(terminu.Info, "Claude Code: "+m.msg), d.checkPlugin()}
 	if m.uninstall && d.cfg.Theme.Base != "" {
 		d.cfg.Theme.Base = ""
 		cmds = append(cmds, d.applyTheme())

@@ -350,6 +350,69 @@ func TestOriginalsCantBeRead(t *testing.T) {
 	}
 }
 
+// tdp E3-18: Enter on MOVE ASIDE starts as on the first start, where nothing
+// moved while the question was there: a config.json beside the config.yaml
+// moved aside is taken where config.yaml is
+func TestMovedAsideStartsAsTheFirstStart(t *testing.T) {
+	_, loc := newTestDrawer(t)
+	if err := os.MkdirAll(filepath.Dir(loc.ConfigFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(loc.ConfigFile, []byte("alias: [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	old := filepath.Join(filepath.Dir(loc.ConfigFile), "config.json")
+	if err := os.WriteFile(old, []byte(`{"alias": "old"}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	d, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.app.Update(tea.WindowSizeMsg{Width: 200, Height: 40})
+	run(d, d.app.Start())
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	c, _ := config.ReadConfig(loc.ConfigFile)
+	if text := frameText(d); fileThere(old) || c.Alias != "old" || d.cfg.Alias != "old" || !strings.Contains(text, "Moved") || strings.Contains(text, "CAN'T MOVE") {
+		t.Fatalf("config.json not taken where config.yaml is, as on a first start (%+v):\n%s", c, text)
+	}
+}
+
+// tdp E3-18: with originals.yaml moved aside, a status line set in Claude
+// Code since turns the statusline off, as a first start does
+func TestMovedAsideOriginalsStartAsTheFirstStart(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	d.cfg.Statusline = config.Statusline{On: true}
+	if err := config.WriteConfig(loc.ConfigFile, d.cfg); err != nil {
+		t.Fatal(err)
+	}
+	setClaudeSettings(t, loc, mine)
+	if err := os.MkdirAll(loc.Data, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(loc.Originals(), []byte("statusline: [\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	again, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	again.app.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
+	run(again, again.app.Start())
+	press(again, tea.KeyMsg{Type: tea.KeyEnter})
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Statusline.On || again.statusOn.Selected != 0 {
+		t.Fatalf("on over a status line set since: %+v", c.Statusline)
+	}
+	if got := claudeSettings(t, loc); got != mine {
+		t.Fatalf("changed what the user set:\n%s", got)
+	}
+}
+
+func fileThere(path string) bool {
+	_, err := os.Stat(path)
+	return err == nil
+}
+
 // tdp E3, can't be read: a config that can't be read is asked about first
 // and moved aside on Enter; a catalog, a cache, is thrown away, in the App Log
 func TestWhatCantBeRead(t *testing.T) {
@@ -380,7 +443,7 @@ func TestWhatCantBeRead(t *testing.T) {
 		t.Fatal("the catalog that can't be read is still there")
 	}
 	press(d, key("!"))
-	if text := frameText(d); !strings.Contains(text, "thrown away for the plugin") {
+	if text := frameText(d); !strings.Contains(text, "WARN Threw away") {
 		t.Fatalf("the App Log says nothing of the catalog:\n%s", text)
 	}
 }
@@ -656,6 +719,12 @@ func TestWrongValuesAreMarked(t *testing.T) {
 	if f := d.pages[rowPreferences].Fields[len(d.pages[rowPreferences].Fields)-1]; f.Label != "Plugin" || !f.Err() {
 		t.Error("the plugin row is not marked wrong when it can't tell")
 	}
+	// An entry starts with a capital, as a toast (tdp note-78)
+	d.app.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	press(d, key("!"))
+	if text := frameText(d); !strings.Contains(text, "WARN Can't tell from claude plugin list") {
+		t.Errorf("the App Log does not say it can't tell:\n%s", text)
+	}
 }
 
 // A change that can't be written is not shown as if it were: the config, and
@@ -723,6 +792,9 @@ func TestPluginRowInstallsAfterAsking(t *testing.T) {
 	}
 	if d.plugin != "installed" {
 		t.Fatalf("plugin row = %q after installing, want installed", d.plugin)
+	}
+	if text := frameText(d); !strings.Contains(text, "Claude Code: Installed ccdrawu") {
+		t.Fatalf("no toast in Claude Code's own word:\n%s", text)
 	}
 }
 

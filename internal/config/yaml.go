@@ -111,14 +111,14 @@ func Move(loc Locations) ([]Moved, error) {
 			moved = append(moved, *m)
 		}
 	}
-	// Each thing in it on its own, the originals aside: the mod writes the
-	// catalog to the cache folder as a session starts, often before ccdrawu
-	// first runs
+	// Each thing in it on its own, the originals aside, and those moved aside
+	// as .bak, .bak.1… (tdp E3, can't be read): the mod writes the catalog to
+	// the cache folder as a session starts, often before ccdrawu first runs
 	if entries, err := os.ReadDir(loc.Data); err == nil {
 		var failed error
 		took := false
 		for _, e := range entries {
-			if e.Name() == originalsFile {
+			if strings.HasPrefix(e.Name(), originalsFile) {
 				continue
 			}
 			from, to := filepath.Join(loc.Data, e.Name()), filepath.Join(loc.Cache, e.Name())
