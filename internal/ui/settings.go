@@ -211,7 +211,8 @@ func (d *drawer) pluginChecked(m pluginChecked) {
 	d.busy, d.pluginID, d.pluginErr = false, m.id, m.err != nil
 	switch {
 	case m.err != nil:
-		d.plugin = "can't tell: " + m.err.Error()
+		// The value one line of what claude said, the App Log all of it
+		d.plugin = "can't tell: " + firstLine(m.err.Error())
 		d.app.Log(terminu.Warning, "Can't tell from claude plugin list whether Claude Code has the plugin: "+m.err.Error())
 	case m.id == "":
 		d.plugin = "not installed"
@@ -265,7 +266,14 @@ func (d *drawer) pluginDone(m pluginDone) tea.Cmd {
 		if m.uninstall {
 			title = "Uninstall failed"
 		}
-		return tea.Batch(d.app.Error(title, m.err.Error()), d.checkPlugin())
+		// What claude said may be several lines: the popup has the one
+		// saying why, the App Log all of it
+		said := m.err.Error()
+		if why := firstLine(said); why != said {
+			d.app.Log(terminu.Info, "Claude Code said: "+said)
+			said = why
+		}
+		return tea.Batch(d.app.Error(title, said), d.checkPlugin())
 	}
 	// Claude Code's own word, which may start with the plugin's name: said
 	// as its, so the toast starts with a capital (tdp note-78)

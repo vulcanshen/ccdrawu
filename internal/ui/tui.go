@@ -210,8 +210,9 @@ func (d *drawer) reopen() tea.Cmd {
 func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
 	var cmds []tea.Cmd
 	if err != nil {
-		// Each says which place ccdrawu reads, and what to do by hand
-		cmds = append(cmds, d.app.Error("Can't move", err.Error()))
+		// Each says which place ccdrawu reads, and what to do by hand, a row
+		// of its own (tdp components, control characters)
+		cmds = append(cmds, d.app.Error("Can't move", rows(err)...))
 	}
 	var notes []string
 	for _, m := range moved {
@@ -222,9 +223,34 @@ func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
 		notes = append(notes, "Moved "+what+" to "+shortHome(m.To))
 	}
 	if len(notes) > 0 {
-		cmds = append(cmds, d.app.Toast(terminu.Info, strings.Join(notes, "; ")))
+		cmds = append(cmds, d.app.Toast(terminu.Info, notes...))
 	}
 	return tea.Batch(cmds...)
+}
+
+// rows is err a row at a time: each of errors.Join's on its own.
+func rows(err error) []string {
+	errs := []error{err}
+	if joined, ok := err.(interface{ Unwrap() []error }); ok {
+		errs = joined.Unwrap()
+	}
+	out := make([]string, len(errs))
+	for i, e := range errs {
+		out[i] = e.Error()
+	}
+	return out
+}
+
+// firstLine is what a program outside said, for short text: its first line
+// that says something, the line saying why; the whole goes in the App Log
+// (tdp components, control characters).
+func firstLine(said string) string {
+	for line := range strings.Lines(said) {
+		if line = strings.TrimSpace(line); line != "" {
+			return line
+		}
+	}
+	return said
 }
 
 // sidebar puts [1] in a sidebar 24 columns wide, as locku and webu do, and

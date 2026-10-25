@@ -145,24 +145,11 @@ func Move(loc Locations) ([]Moved, error) {
 		// Gone once all of it moved, unless it keeps the originals
 		_ = os.Remove(loc.Data)
 	}
-	return moved, paragraph(errs)
+	return moved, errors.Join(errs...)
 }
 
 // cantMove is what could not move from from to to, and why: ccdrawu reads it
 // where it is until it moves (tdp E3).
 func cantMove(from, to string, err error) error {
 	return fmt.Errorf("%s to %s: %w. ccdrawu reads it where it is until it moves: move it there yourself.", from, to, err)
-}
-
-// paragraph is errs in one paragraph, sentence after sentence, as an error
-// popup is one (tdp components/dialog/note): nil for none.
-func paragraph(errs []error) error {
-	if len(errs) == 0 {
-		return nil
-	}
-	msgs := make([]string, len(errs))
-	for i, err := range errs {
-		msgs[i] = err.Error()
-	}
-	return errors.New(strings.Join(msgs, " "))
 }

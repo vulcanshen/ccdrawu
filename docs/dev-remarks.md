@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.3；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.16；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -160,9 +160,9 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **新位置已經有時**（tdp E3-16，CD56）：config.json 與 config.yaml 都在時，config.json 留著不刪，讀 config.yaml，
     每次啟動都開 error popup 寫兩個路徑，請使用者自己合併、刪掉 config.json；不能默默留著。其他照常搬（originals 從
     config.yaml 搬、`~/.ccdrawu` 的快取）。
-  - **錯誤寫成一段**：error popup 是一段話的 note（tdp components/dialog/note），裡面的 `\n` 會照控制字元畫成紅色的 `\n`
-    （tdp components 的「控制字元」）。`Move` 的每個錯誤是自己說完的句子（哪裡到哪裡、為什麼、ccdrawu 讀哪一邊、要使用者做什麼），
-    用空白接成一段（`paragraph`），不用 `errors.Join`。
+  - **錯誤一個一列**：error popup 裡的 `\n` 會照控制字元畫成紅色的 `\n`（tdp components 的「控制字元」），所以 app 自己的字
+    不夾換行。`Move` 的每個錯誤是自己說完的句子（哪裡到哪裡、為什麼、ccdrawu 讀哪一邊、要使用者做什麼），用 `errors.Join`
+    接起來，畫面那邊 `rows` 拆開、一個錯誤一列交給 `Error(title, rows...)`（tdp v0.9.15 之前是用空白接成一段）。
   - **Windows 的快取放在 `%LOCALAPPDATA%\ccdrawu\cache`**（user 定的，CD52）：照 os.UserCacheDir 是
     `%LOCALAPPDATA%\ccdrawu`，那正是 install.ps1 放 ccdrawu.exe 的資料夾，刪快取會刪到程式；改放它底下的 `cache`，
     uninstall.ps1 刪整個資料夾時一起走。
@@ -235,6 +235,21 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
     在 `Start` 叫 `a.NoLongerUsed(路徑)`，CHANGELOG 寫一句。
   - lib 自己送開關動畫與 toast 的計時，ccdrawu 不用改；自己的 command 照常回傳。
 
+- **跟上 terminu-go v0.4.22（tdp v0.9.4～v0.9.16，2026-10-25）。** 這輪 terminu 沒發交代，照 tdp 的 CHANGELOG 逐版對。
+  - **app 要做的**：
+    - **多列的字一列一列給**（tdp v0.9.15，components-30～32）：`Move` 搬不了的一個錯誤一列（見上面「錯誤一個一列」），
+      搬了的幾項在 toast 裡也一項一列（原本用 `; ` 接）。外面程式說的好幾行（`claude plugin ...` 的 stderr、看不懂的
+      回答）不整段塞進短的字：Install／Uninstall 失敗的 error popup、Plugin 那一列的值只放第一個有字的那一行
+      （`firstLine`；claude 是 Node 程式，原因在第一行、後面是 stack），整段另外記進 App Log（`Claude Code said: …`）。
+    - **`make dev`**（tdp v0.9.4 的專案範本）：`family.mk` 照範本換過，編好再跑 `./ccdrawu`，讀的是真的設定與資料。
+  - **lib 畫的，ccdrawu 不用改**：capsule 的顏色與斜角接頭（v0.9.4、v0.9.5）、模式名稱的開合動畫（v0.9.9、v0.9.10）、
+    模式裡的 Space menu（v0.9.7）、有 popup 時第一個 `q`／`Ctrl-C` 先問 `Quit ccdrawu?`（v0.9.8，ccdrawu 沒有自己的
+    quit flow，沙盒裡在 Space menu 上按 `q` 看過，`Esc` 回到 menu）、`Visual>select`（v0.9.13，App Log 的選取）、
+    `h|l:tab`（v0.9.14，ccdrawu 沒有分頁）。Items 的 checkbox popup 第一列是 lib 加的 `Select all`、選項往內兩格
+    （v0.9.11、v0.9.12，沙盒裡看過）；ccdrawu 沒有自己代表「全部」的選項。
+  - **不適用**：compare 模式（v0.9.6，ccdrawu 沒有要比對的東西）；被指到的 panel（v0.9.16，`List.Points`）：[1] 的每一列
+    對應的都是同一個 [2]，沒有「指出是哪一個」的資訊，所以不設。
+
 ## 已否決，不要重提
 
 理由寫在上面的設計決定，這裡只列出來。
@@ -268,7 +283,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 
 ## 偏離 tdp
 
-照 tdp v0.9.3 對過（2026-10-21）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
+照 tdp v0.9.16 對過（2026-10-25）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
 `statusLine` 指令的一列），不是 terminu 的畫面，不套用。跟 tdp 對不上、要修的，tdp E7 寫在
 `docs/ccdrawu-terminu-fix.md`；現在都修完了，沒有這個檔。
 
@@ -285,7 +300,7 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.3）；ccdrawu 提過的盲點與定案（CD 編號）記在
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.16）；ccdrawu 提過的盲點與定案（CD 編號）記在
   terminu 的 session 那邊。還沒做到的會逐條寫在 `docs/ccdrawu-terminu-fix.md`，程式裡標 `TODO(tdp CDn)`、
   `TODO(lib CDn)`；現在沒有。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。

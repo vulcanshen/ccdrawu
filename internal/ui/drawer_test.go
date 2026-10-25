@@ -798,6 +798,41 @@ func TestPluginRowInstallsAfterAsking(t *testing.T) {
 	}
 }
 
+// tdp components-32: several lines from claude are not put whole into the
+// error popup: the line saying why goes there, all of it into the App Log
+func TestClaudesLinesGoToTheAppLog(t *testing.T) {
+	d, _ := newTestDrawer(t)
+	d.app.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	run(d, d.pluginDone(pluginDone{err: errors.New("exit status 1: Error: no network\n    at fetch (cli.js:1)")}))
+	if text := frameText(d); !strings.Contains(text, "Error: no network") || strings.Contains(text, "cli.js") || strings.Contains(text, `\n`) {
+		t.Fatalf("the error popup does not hold the one line saying why:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	press(d, key("!"))
+	if text := frameText(d); !strings.Contains(text, "cli.js:1") {
+		t.Fatalf("the App Log does not hold all claude said:\n%s", text)
+	}
+}
+
+// tdp components-31: what could not move, a row each in the error popup
+func TestWhatCantMoveARowEach(t *testing.T) {
+	d, _ := newTestDrawer(t)
+	d.app.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
+	run(d, d.sayMoved(nil, errors.Join(errors.New("The first can't move."), errors.New("The second can't move."))))
+	first, second := -1, -1
+	for i, line := range strings.Split(frameText(d), "\n") {
+		if strings.Contains(line, "The first") {
+			first = i
+		}
+		if strings.Contains(line, "The second") {
+			second = i
+		}
+	}
+	if first < 0 || second != first+1 {
+		t.Fatalf("not a row each, one under the other:\n%s", frameText(d))
+	}
+}
+
 // tdp E6: the splash draws docs/icon.svg
 func TestSplashIconIsDocsIcon(t *testing.T) {
 	want, err := os.ReadFile("../../docs/icon.svg")
