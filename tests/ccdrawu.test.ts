@@ -606,7 +606,7 @@ test('Claude Code and ccdrawu have a version row each', async () => {
   expect(shown('ccdrawu', { ...FULL, drawer: null })).toBe('-')
 })
 
-test('files sit where terminu design E3 puts them, unless CCDRAWU__ variables say otherwise', async () => {
+test('files sit where tdp E3 puts them, unless CCDRAWU__ variables say otherwise', async () => {
   const config = (dir: string) => ({ configFile: `${dir}/config.yaml`, oldConfigFile: `${dir}/config.json` })
   expect(locations({ home: '/h', os: 'darwin' })).toEqual({ ...config('/h/.config/ccdrawu'), cache: '/h/Library/Caches/ccdrawu' })
   expect(locations({ home: '/h', os: 'linux', xdgConfig: '/x', xdgCache: '/xc', cache: '' })).toEqual({

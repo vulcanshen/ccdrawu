@@ -37,7 +37,7 @@ function Ask-Remove($dir, $what) {
     }
 }
 
-# What the user picked: the drawer's items and the alias (terminu design E3)
+# What the user picked: the drawer's items and the alias (tdp E3)
 if ($env:CCDRAWU__CONFIG) {
     $configDir = $env:CCDRAWU__CONFIG
 } elseif ($env:XDG_CONFIG_HOME) {
@@ -47,13 +47,13 @@ if ($env:CCDRAWU__CONFIG) {
 }
 Ask-Remove $configDir "ccdrawu settings (the drawer's items and the alias)"
 
-# What the plugin writes for ccdrawu, a cache (terminu design E3): in %LOCALAPPDATA%\ccdrawu\cache, gone above
+# What the plugin writes for ccdrawu, a cache (tdp E3): in %LOCALAPPDATA%\ccdrawu\cache, gone above
 # with the folder ccdrawu.exe is in, unless CCDRAWU__CACHE names another
 if ($env:CCDRAWU__CACHE) {
     Ask-Remove $env:CCDRAWU__CACHE "ccdrawu cache (the catalog, the status line's values)"
 }
 
-# The data (terminu design E3): the theme and status line ccdrawu replaced, put back above by uninstall claude;
+# The data (tdp E3): the theme and status line ccdrawu replaced, put back above by uninstall claude;
 # versions before kept the catalog there too
 if ($env:CCDRAWU__DATA) {
     $dataDir = $env:CCDRAWU__DATA

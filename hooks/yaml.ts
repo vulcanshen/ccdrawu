@@ -1,4 +1,4 @@
-// A small YAML reader for config.yaml (terminu design E3): what the ccdrawu command writes, and what a
+// A small YAML reader for config.yaml (tdp E3): what the ccdrawu command writes, and what a
 // person writes there by hand in YAML's usual ways. Block mappings and sequences; flow [..] and {..}, and so
 // JSON too; plain, single- and double-quoted scalars, and block scalars (| and >); comments. Anchors, tags
 // and documents after the first are not read: they throw, as text that is not YAML does.

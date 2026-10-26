@@ -1,4 +1,4 @@
-// Where ccdrawu keeps its files (terminu design E3), the same places the ccdrawu TUI reads and writes.
+// Where ccdrawu keeps its files (tdp E3), the same places the ccdrawu TUI reads and writes.
 // None touches `$`, so tests can call it.
 
 // What the environment says, a variable set but empty counted as unset: `os` is darwin, windows or else
