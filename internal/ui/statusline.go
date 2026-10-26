@@ -49,7 +49,7 @@ func (d *drawer) statusOnField() *terminu.Field {
 		command, ours, err := claude.CurrentStatusline(d.loc.Claude)
 		if err != nil {
 			f.Selected = 0
-			// No name in the title, upper case throughout (tdp components, capitals)
+			// No name in the title, upper case throughout (tdp components.4)
 			return d.app.Error("Can't read the settings", err.Error())
 		}
 		if command == "" || ours {
@@ -162,15 +162,15 @@ func (d *drawer) separatorField() *terminu.Field {
 }
 
 // refreshField is how many seconds Claude Code waits to run the statusline
-// again while nothing happens, a number (tdp components/input/number) written
+// again while nothing happens, a number (tdp number) written
 // into its settings at once while the statusline is on.
 func (d *drawer) refreshField() *terminu.Field {
-	// The value and its unit, a whole word (tdp components/input/README)
+	// The value and its unit, a whole word (tdp input.10)
 	return &terminu.Field{Label: "Refresh", Value: func() string { return strconv.Itoa(refresh(d.cfg.Statusline)) + " seconds" },
 		// Past 60, set by hand in config.yaml
 		Err: func() bool { return refresh(d.cfg.Statusline) > 60 },
 		Edit: func() tea.Cmd {
-			// The unit on a row of its own under the value (tdp components/input/number)
+			// The unit on a row of its own under the value (tdp number.2)
 			return d.app.Number(terminu.NumberInput{
 				Title: "Refresh", Glyph: glyphPencil, Prompt: "Seconds between runs while nothing happens, 1-60",
 				Verb: "save", Old: strconv.Itoa(refresh(d.cfg.Statusline)), Min: 1, Max: 60, Unit: "seconds",

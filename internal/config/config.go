@@ -16,8 +16,7 @@ var aliasName = regexp.MustCompile(`^[a-zA-Z0-9][a-zA-Z0-9-]*$`)
 
 // CleanAlias is the alias as the mod reads it (hooks/format.ts commandNames):
 // spaces around it and leading slashes dropped, "" for none. One the mod
-// would not take is an error saying why, naming the alias (tdp
-// components/input/README).
+// would not take is an error saying why, naming the alias (tdp input.1).
 func CleanAlias(s string) (string, error) {
 	name := strings.TrimLeft(strings.TrimSpace(s), "/")
 	switch {

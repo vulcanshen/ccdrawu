@@ -112,7 +112,7 @@ func TestStatuslineOnWithoutAskingWhereThereWasNone(t *testing.T) {
 		t.Fatalf("no refresh:\n%s", claudeSettings(t, loc))
 	}
 	// The refresh goes into Claude Code's settings at once. It is a number
-	// (tdp components/input/number): x does not go in, and 99 is out of range
+	// (tdp number): x does not go in, and 99 is out of range
 	toStatusField(t, d, "Refresh")
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	press(d, key("x9"))

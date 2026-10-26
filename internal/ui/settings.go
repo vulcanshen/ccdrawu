@@ -25,7 +25,7 @@ var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
 // themeField picks the built-in theme ccdrawu's stands on, or off: the user's
 // own theme as it was. More than five to pick from, so a select (tdp
-// components/input/radio); it takes effect when picked.
+// radio.1); it takes effect when picked.
 func (d *drawer) themeField() *terminu.Field {
 	options := append([]string{"off"}, claude.Themes...)
 	return &terminu.Field{Label: "Claude theme", Value: func() string { return cmp.Or(d.cfg.Theme.Base, "off") }, Edit: func() tea.Cmd {
@@ -47,7 +47,7 @@ func (d *drawer) themeField() *terminu.Field {
 
 // backgroundField is the drawer's background over that theme, in a color
 // picker; none keeps the theme's own. Off with the theme. Its value is a
-// swatch and the hex (tdp components/input/color-picker).
+// swatch and the hex (tdp color-picker.4).
 func (d *drawer) backgroundField() *terminu.Field {
 	return &terminu.Field{
 		Label: "Drawer background", Empty: "the theme's own",
@@ -57,7 +57,7 @@ func (d *drawer) backgroundField() *terminu.Field {
 			}
 			return terminu.HexText(terminu.Hex(d.cfg.Theme.Background))
 		},
-		// The swatch in its colour, drawn by the lib (tdp components, control characters)
+		// The swatch in its colour, drawn by the lib (tdp components.5)
 		Styled: func() []terminu.Span {
 			if !hexColor.MatchString(d.cfg.Theme.Background) {
 				return nil
@@ -89,7 +89,7 @@ func (d *drawer) backgroundField() *terminu.Field {
 }
 
 // resetBackground is x on the drawer background: back to the theme's own. The
-// color picker has no way to choose none (tdp components/input/color-picker),
+// color picker has no way to choose none (tdp color-picker.3),
 // so it is an item operation of its own, there only on that field.
 func (d *drawer) resetBackground() terminu.Action {
 	return terminu.Action{
@@ -261,7 +261,7 @@ func (d *drawer) pluginDone(m pluginDone) tea.Cmd {
 	if m.err != nil {
 		d.busy = false
 		// What failed, in the title; no name there, as a title is upper case
-		// throughout (tdp components, capitals)
+		// throughout (tdp components.4)
 		title := "Install failed"
 		if m.uninstall {
 			title = "Uninstall failed"

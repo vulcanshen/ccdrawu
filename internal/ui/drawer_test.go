@@ -455,14 +455,14 @@ func TestNoCatalogSaysWhatToDo(t *testing.T) {
 		t.Fatal(err)
 	}
 	d.app.Update(tea.WindowSizeMsg{Width: 80, Height: 40})
-	// tdp components/layout/screen, the empty state: a fact, and a hint that
+	// tdp screen.8, the empty state: a fact, and a hint that
 	// names a key
 	if !strings.Contains(terminu.StripStyles(strings.Join(d.app.Frame(), "\n")), "Press [Enter] on Plugin") {
 		t.Fatal("an empty panel says nothing of the key that installs the plugin")
 	}
 }
 
-// tdp components/layout/panel, groups and details: [1] in groups, the cursor
+// tdp panel.11 and panel.13, groups and details: [1] in groups, the cursor
 // skipping their titles; [2] is the row under it, named after it
 func TestDetailFollowsTheSidebar(t *testing.T) {
 	d, _ := newTestDrawer(t)
@@ -573,7 +573,7 @@ func TestThemeGoesIntoClaudeCodeAndBack(t *testing.T) {
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	press(d, key("j")) // past the alias
-	// More than five themes: a select (tdp components/input/radio), on off
+	// More than five themes: a select (tdp radio.1), on off
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
 	if text := frameText(d); !strings.Contains(text, "CLAUDE THEME") || !strings.Contains(text, "light-ansi") {
 		t.Fatalf("Enter on the theme did not open a select of them:\n%s", text)
@@ -626,7 +626,7 @@ func TestXResetsTheBackground(t *testing.T) {
 	if d.pages[rowPreferences].Current() != d.background {
 		t.Fatalf("the cursor is not on the background:\n%s", frameText(d))
 	}
-	// tdp components/input/color-picker: a swatch, then the hex
+	// tdp color-picker.4: a swatch, then the hex
 	if text := frameText(d); !strings.Contains(text, "███ #FF0000") {
 		t.Fatalf("the background is not a swatch and its hex:\n%s", text)
 	}
@@ -686,7 +686,7 @@ func TestPetIsPicked(t *testing.T) {
 	}
 }
 
-// tdp components/layout/panel, one value per row: a value set by hand in
+// tdp panel.12, one value per row: a value set by hand in
 // config.yaml that ccdrawu does not take turns its label Red
 func TestWrongValuesAreMarked(t *testing.T) {
 	d, loc := newTestDrawer(t)
@@ -753,7 +753,7 @@ func TestUnsavedChangeGoesBack(t *testing.T) {
 	}
 
 	// From an input, the error opens over it, which stays open with what was
-	// typed (tdp components/layout/popup)
+	// typed (tdp popup.7)
 	press(d, tea.KeyMsg{Type: tea.KeyEsc})
 	toField(t, d, "Alias")
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})

@@ -14,7 +14,7 @@ import (
 	terminu "github.com/vulcanshen/terminu-go"
 )
 
-// drawer is the TUI (tdp components/layout/panel, groups and details): [1]
+// drawer is the TUI (tdp panel.11 and panel.13, groups and details): [1]
 // Preferences lists what can be set, in groups; [2] is the one under its
 // cursor and follows it at once. A change is written at once, and every open
 // Claude Code session takes it within a second.
@@ -71,7 +71,7 @@ func Run(loc config.Locations) error {
 
 func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	// A page of items before the mod has written the catalog: an empty state
-	// (tdp components/layout/screen), not a failure
+	// (tdp screen.8), not a failure
 	page := func() *terminu.Values {
 		return &terminu.Values{Header: [2]string{"Setting", "Value"},
 			EmptyFact: "Nothing to list until ccdrawu runs in Claude Code", EmptyHint: "Press [Enter] on Plugin in preferences"}
@@ -117,7 +117,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	d.detail = &terminu.Panel{Actions: []terminu.Action{d.editItems(), d.resetBackground()}}
 	d.show(rowSidebar)
 	// Enter goes into the row's page in [2]: the one change of panels Enter
-	// makes (tdp K3, details, since tdp v0.6.3). Every row has a page.
+	// makes (tdp K3, panel.13, since tdp v0.6.3). Every row has a page.
 	prefs := &terminu.Panel{Label: "Preferences", Body: list, Details: d.detail, Actions: []terminu.Action{
 		{Key: "Enter", Label: "Edit", Desc: "go into it", Scope: terminu.ItemScope, Hint: "edit",
 			ToDetails: func() bool { return true }},
@@ -211,7 +211,7 @@ func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
 	var cmds []tea.Cmd
 	if err != nil {
 		// Each says which place ccdrawu reads, and what to do by hand, a row
-		// of its own (tdp components, control characters)
+		// of its own (tdp components.5)
 		cmds = append(cmds, d.app.Error("Can't move", rows(err)...))
 	}
 	var notes []string
@@ -243,7 +243,7 @@ func rows(err error) []string {
 
 // firstLine is what a program outside said, for short text: its first line
 // that says something, the line saying why; the whole goes in the App Log
-// (tdp components, control characters).
+// (tdp components.5).
 func firstLine(said string) string {
 	for line := range strings.Lines(said) {
 		if line = strings.TrimSpace(line); line != "" {
@@ -298,7 +298,7 @@ func (d *drawer) load() {
 // open sessions take it out of that place within a second; off in both,
 // sessions start without it. /ccdrawu still opens and closes it. A radio of
 // off and on, as the statusline's off, on and on when narrow (the user's; tdp
-// components/input/radio has a switch either way).
+// radio.1 has a switch either way).
 func (d *drawer) drawerOnField(off *bool) *terminu.Field {
 	f := &terminu.Field{Label: "Drawer", Options: []string{"off", "on"}}
 	f.OnChange = func() tea.Cmd {
@@ -339,11 +339,11 @@ func (d *drawer) onMsg(msg tea.Msg) tea.Cmd {
 	return nil
 }
 
-// summary is the page id in [2], its values shown as tdp components/input
+// summary is the page id in [2], its values shown as tdp input.10
 // shows a checkbox popup's and a reorder's, joined with ", ": Items, the
 // drawer's keys of the items on there, all set in one popup that Enter (or e,
 // editItems) opens; and Order, the same in the order the drawer draws them,
-// set in a reorder popup (tdp v0.6.6 components/input/reorder) once there are
+// set in a reorder popup (tdp reorder, since tdp v0.6.6) once there are
 // two to order.
 func (d *drawer) summary(id string) []*terminu.Field {
 	p := placements[id]
@@ -403,7 +403,7 @@ func (d *drawer) reorder(id string) tea.Cmd {
 
 // editItems is [2]'s panel operation on the sidebar and inline pages: one
 // checkbox popup of every item, more than five so a popup (tdp
-// components/input/checkbox), where Space checks and Enter applies them all.
+// checkbox.1), where Space checks and Enter applies them all.
 // Enter on Items opens it too and is the one in the hint.
 func (d *drawer) editItems() terminu.Action {
 	return terminu.Action{
@@ -456,7 +456,7 @@ func (d *drawer) choices(p config.Placement) []config.Item {
 func (d *drawer) aliasField() *terminu.Field {
 	return &terminu.Field{Label: "Alias", Value: func() string { return d.cfg.Alias }, Empty: "none",
 		// One set by hand in config.yaml that the mod does not take (tdp
-		// components/layout/panel: its label is Red)
+		// panel.12: its label is Red)
 		Err: func() bool {
 			_, err := config.CleanAlias(d.cfg.Alias)
 			return err != nil
@@ -507,7 +507,7 @@ func (d *drawer) save() tea.Cmd {
 
 // commit makes a change and writes the config, or puts it all back as saved
 // and says why: an input's Commit, which keeps the input open with its value
-// under the error (tdp components/layout/popup).
+// under the error (tdp popup.7).
 func (d *drawer) commit(change func() error) error {
 	err := change()
 	// The originals first, as they can't be found again (tdp E3); the
@@ -546,7 +546,7 @@ func (d *drawer) revert() {
 
 // status says where the choice goes and that open sessions take it: the
 // drawer within a second, the statusline when Claude Code runs it next. It is
-// one sentence, not two items side by side (tdp components, spacing).
+// one sentence, not two items side by side (tdp components.2).
 func (d *drawer) status(int) []terminu.Span {
 	grey := terminu.Fg(terminu.Overlay0)
 	follow := "; open Claude Code sessions follow within a second"
