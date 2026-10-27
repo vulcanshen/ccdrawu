@@ -273,16 +273,11 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 
 ## The terminu family
 
-The `ccdrawu` command follows [terminu design](https://github.com/vulcanshen/terminu) and is built with [terminu-go](https://github.com/vulcanshen/terminu-go). The other apps in the family:
+The `ccdrawu` command follows [terminu design](https://github.com/vulcanshen/terminu) and is built with [terminu-go](https://github.com/vulcanshen/terminu-go).
 
-| App | What it is |
-|---|---|
-| [kbu](https://github.com/vulcanshen/kbu) | A Kubernetes TUI dashboard |
-| [filu](https://github.com/vulcanshen/filu) | A terminal file manager you don't have to learn |
-| [sshu](https://github.com/vulcanshen/sshu) | A terminal front end for ssh and sftp |
-| [webu](https://github.com/vulcanshen/webu) | A terminal browser that reads a web page as a document |
-| [locku](https://github.com/vulcanshen/locku) | A screensaver with a PIN lock, for the terminal |
-| [kamonu](https://github.com/vulcanshen/kamonu) | A terminal editor for the family's marks (kamon), drawn letter by letter |
+- [terminu design](https://github.com/vulcanshen/terminu): the design the family's apps follow, and the list of them
+- [terminu-go](https://github.com/vulcanshen/terminu-go): the Go library they are built with
+- [terminu-harness](https://github.com/vulcanshen/terminu-harness): a Claude Code plugin that makes apps with terminu design and terminu-go
 
 ## License
 
