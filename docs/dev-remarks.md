@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v0.9.16；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v1.0.0；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -250,6 +250,25 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **不適用**：compare 模式（v0.9.6，ccdrawu 沒有要比對的東西）；被指到的 panel（v0.9.16，`List.Points`）：[1] 的每一列
     對應的都是同一個 [2]，沒有「指出是哪一個」的資訊，所以不設。
 
+- **跟上 terminu-go v0.5.0～v1.0.0（tdp v0.10.0～v1.0.0，2026-10-26～27）。** 每一版照 terminu、terminu-go 的交代對過，
+  程式只改了引用與版號。tdp v1.0.0 是穩定版，user 在每個 app 上手動測過。
+  - **引用 tdp 寫段落編號**（tdp v0.10.0）：註解與測試寫 `tdp radio.1`、`tdp panel.12` 這種段落 ID，整個元件寫檔名
+    （`tdp reorder`），規則照舊寫 `tdp K4`；`terminu design E3` 改成 `tdp E3`。範本開頭的路徑、checklist 編號
+    （E3-18、note-78、components-31/32）照 tdp v0.10.2 可以留著，下次改到那段程式時再換成出處（`tdp E3`、`tdp note.7`、
+    `tdp components.5`）。
+  - **`ccdrawu statusline` 交給 app**（tdp v0.10.0 P5）：見下面「tdp 不管的地方」。
+  - **tdptest 也查 repo**（terminu-go v0.5.3）：`Check` 的子測試 `repo` 比對 tdp project.2 的範本，再查 project.3 的檔案、
+    project.5 的 Makefile、project.6 的 CHANGELOG；ccdrawu 照原樣就過了。
+  - **標準尺寸 60×32**（tdp v0.11.0 L1，原本 80×40）：ccdrawu 的最低尺寸 40×12、`NarrowBelow` 60 都在上限內，`Check` 改在
+    60×32 跑。比最低尺寸小時，lib 多畫一列 `Press [Ctrl-C] twice to quit`。60～65 欄時 preferences 頁的 [2] 只剩 36 欄，
+    Bar 的樣本與 `the theme's own` 會被截斷，66 欄以上都放得下；user 定維持現狀：側欄 24 跟 locku、webu 一樣，不改窄、
+    也不換 Preferences 這個詞（側欄改成 18 欄的話，`[1] PREFERENCES` 放不下）。
+  - **App Log 記的範圍**（tdp v0.11.0～v0.11.3 note.7）：使用者執行的 operation（Rules P3）都記，只看不改的也記；切換畫面由
+    lib 記。ccdrawu 改設定時都記 `Saved <路徑>`，toast、error popup 由 lib 記；在 [1] 按 `Enter` 進 [2] 是換 focus，panel 的
+    篩選、比較模式、按 `Esc` 取消都不記。ccdrawu 只有一個畫面，沒有 viewer，也沒有自己的篩選，所以不用改。
+  - **用不到的**：`PopupActions.ErrorSubject`（v0.5.2）、PTY panel 啟動前的空狀態（panel.15，ccdrawu 沒有 PTY）、提權
+    `Elevate`（tdp terminal.7）、清單旗標 `List.Flags`（tdp panel.7、panel.11）。
+
 ## 已否決，不要重提
 
 理由寫在上面的設計決定，這裡只列出來。
@@ -281,17 +300,16 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - 寵物取名（做過又拿掉，見設計決定的寵物 pet；之後的版本再看）
 - Windows 還沒驗到的：rename 蓋過 mod 正在讀的檔會不會失敗（TUI 存設定靠 rename；同事試裝時 TUI 存檔成功，但沒刻意在 mod 讀檔時存）、`.ps1` 的語法（不知道同事用哪種方式裝的，這台 Mac 沒有 PowerShell）。mod 的 `$.fs` 寫 Windows 路徑已驗到：TUI 列得出 mod 寫的 catalog
 
-## 偏離 tdp
+## tdp 不管的地方
 
-照 tdp v0.9.16 對過（2026-10-25）。tdp 的畫面規定只管 `ccdrawu` 這個設定 TUI；drawer 與狀態列是 Claude Code 畫的（mod 的 pane、
-`statusLine` 指令的一列），不是 terminu 的畫面，不套用。跟 tdp 對不上、要修的，tdp E7 寫在
-`docs/ccdrawu-terminu-fix.md`；現在都修完了，沒有這個檔。
+照 tdp v1.0.0 對過（2026-10-27）。tdp 的畫面規定只管 app 自己畫的 TUI，也就是 `ccdrawu` 這個設定程式（tdp P5）。drawer 是 mod 畫在
+Claude Code 裡的 pane，狀態列是 `ccdrawu statusline` 印給 Claude Code 顯示的一列，都由 app 自己定：
 
-- **`ccdrawu statusline` 用 `ansi.Truncate` 截斷（tdp E5：所有量寬度的地方走同一個函式）。** 它印給 Claude Code 的狀態列，那一列是
-  Claude Code 畫的，不是 terminu 的畫面；寬度是 Claude Code 給的 `COLUMNS`，不經過 terminu 的 icon 探測。
+- **`ccdrawu statusline` 用 `ansi.Truncate` 截斷。** 寬度是 Claude Code 給的 `COLUMNS`，不經過 terminu 的 icon 探測。tdp v0.9.16 以前
+  這裡算偏離 tdp E5（所有量寬度的地方走同一個函式）；tdp v0.10.0 拿掉「偏離」，P5 把印給別的程式顯示的輸出交給 app，例子就是它。
 
-以前寫在這裡、tdp v0.8.0 定案後不再是偏離的：README 的兩張 gif（tdp E7 第 3 段：其他段可以放說明那一段的，CD50）、Drawer 的
-off／on radio（tdp components/input/radio：開關可以用兩個選項的 radio，CD13）、README 自己的段落（tdp E7，CD29）、表頭比 label 寬
+以前算偏離、後來 tdp 定案的（tdp v0.8.0）：README 的兩張 gif（tdp E7 第 3 段：其他段可以放說明那一段的，CD50）、Drawer 的 off／on
+radio（tdp components/input/radio：開關可以用兩個選項的 radio，CD13）、README 自己的段落（tdp E7，CD29）、表頭比 label 寬
 （tdp components/layout/panel：label 欄寬取 label 與表頭第一欄名裡最長的，CD26）、sessions 的位置（現在是快取，CD28）。
 
 ## 設計文件導讀
@@ -300,9 +318,8 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v0.9.16）；ccdrawu 提過的盲點與定案（CD 編號）記在
-  terminu 的 session 那邊。還沒做到的會逐條寫在 `docs/ccdrawu-terminu-fix.md`，程式裡標 `TODO(tdp CDn)`、
-  `TODO(lib CDn)`；現在沒有。
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v1.0.0）；ccdrawu 提過的盲點與定案（CD 編號）記在
+  terminu 的 session 那邊。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
 
 ## 建置與開發
@@ -333,11 +350,13 @@ ccdrawu 沒有另外的設計文件。
 
 - `make gif` 錄 README 的兩張：`docs/demo.gif`（Claude Code 裡的 drawer 與輸入框下方的狀態列：問 `~/my-app` 一句話、寵物在 Claude 工作時走動、做完坐下說話、`/ccdrawu pat`、`/ccdrawu ball`）與 `docs/settings.gif`（設定畫面：Items 勾兩項、Order 用 `D` 搬 Cost、statusline 的 Format 換成 short、preferences 把寵物換成狗）。tape 都在 `.local/demos/`（不進版控）。
 - demo 的狀態列：`setup.sh demo` 在沙盒的 config 打開 `statusline.on`，另寫一份 `~/demo-settings.json`（`statusLine` 指向 repo 剛 build 的 `./ccdrawu statusline`），tape 用 `claude --settings` 帶進去。這樣錄出來的狀態列不受真正的 `~/.claude/settings.json` 和 `PATH` 上是哪一版 ccdrawu 影響。
+- demo 的 drawer：沙盒用 `youtube/setup.sh`（裡面先跑 `setup.sh demo`），`~/.claude` 是逐一連到真的、只有 `plugins` 空著的資料夾，tape 用 `--plugin-dir` 載這個 repo 的外掛（v1.0.0 起，2026-10-27）。drawer 的 ccdrawu 列讀的是載入的外掛的 `plugin.json`：接真的 `~/.claude` 時載的是裝好的那份（`make plugin` 的 `.local/plugin`），版號會是上次 `make plugin` 的；你裝的其他外掛也不會在畫面上留下訊息。發版時先改好 `plugin.json` 的版號再錄，tape 等的是 `ccdrawu 1.0` 這幾個字。
 - settings.gif 不按 Statusline 的開關、Refresh、Claude theme、Plugin：它們寫的是 Claude Code 的設定，沙盒裡 `~/.claude` 是接到真的那一份。改了 TUI 的游標路徑就先在 tmux（獨立的 server，見「在真的 Claude Code 裡試」）用 `CLAUDE_CONFIG_DIR` 指到別處、照 tape 的按鍵走一遍，確認每次 `Enter` 落在哪裡再錄。
-- 沙盒照 sshu：`.local/demos/setup.sh` 每次重做 `.local/demos/home`（全新的 ccdrawu 設定、從快取目錄（`~/Library/Caches/ccdrawu`）複製的 catalog、重建的 `my-app`：一個 commit 加一處沒 commit 的改動），tape 再 `export HOME` 過去，畫面上的路徑就是 `~/my-app`、`~/.config/ccdrawu/config.json`，真正的設定不會被碰。Claude Code 的設定、外掛與登入用 symlink 接真的：`~/.claude`、`~/.claude.json`，還有 `~/Library`（登入在 keychain，macOS 從 `$HOME/Library` 找；沒接會是 Not logged in，而且沙盒裡會長出一個真的 `Library`，setup.sh 會換回 symlink）。
+- 沙盒照 sshu：`.local/demos/setup.sh` 每次重做 `.local/demos/home`（全新的 ccdrawu 設定、從快取目錄（`~/Library/Caches/ccdrawu`）複製的 catalog、重建的 `my-app`：一個 commit 加一處沒 commit 的改動），tape 再 `export HOME` 過去，畫面上的路徑就是 `~/my-app`、`~/.config/ccdrawu/config.yaml`，真正的設定不會被碰。Claude Code 的設定、外掛與登入用 symlink 接真的：`~/.claude`、`~/.claude.json`，還有 `~/Library`（登入在 keychain，macOS 從 `$HOME/Library` 找；沒接會是 Not logged in，而且沙盒裡會長出一個真的 `Library`，setup.sh 會換回 symlink）。
 - tape 要先 unset `XDG_CONFIG_HOME`／`XDG_DATA_HOME`／`XDG_STATE_HOME`（user 的環境有設，ccdrawu 照 tdp E3 先讀它，就會讀到真正的設定），以及從 Claude Code 裡跑 vhs 時繼承來的 `TMUX*`、`TERM_PROGRAM*`、`CLAUDECODE`、`CLAUDE_CODE_*`（留 `CLAUDE_CODE_NO_FLICKER`），否則畫面上有 tmux focus-events 與「Transcript saving is off」的提示。
 - `export HOME` 之後要 `cd $HOME/my-app`：這台的 bash 5.3 換了 `HOME` 之後 `~` 還是原本的家目錄。vhs 的 `Type` 字串不收 `\"`。
-- demo 會開真的 Claude Code（要 fullscreen、ccdrawu 外掛），送一個 prompt，花一點 token；問句要指定英文回答，否則照 user 的 CLAUDE.md 回繁中。`~/my-app` 第一次要先信任：`vhs .local/demos/trust.tape`（信任對話框預設是 No，要 `↓` 再 `Enter`）。
+- settings.gif 的 Items：清單第一列是 lib 加的 `Select all`，游標從它底下第一項開始；項目的順序跟著 catalog，catalog 加了項目就要重數 `Down` 幾下。
+- demo 會開真的 Claude Code（要 fullscreen），送一個 prompt，花一點 token；問句要指定英文回答，否則照 user 的 CLAUDE.md 回繁中。`~/my-app` 第一次要先信任：`vhs .local/demos/trust.tape`（信任對話框預設是 No，要 `↓` 再 `Enter`）。
 - splash 不錄進 gif：它是彩蛋，`V` 才開，tdp S2 不寫進 README。
 - 寵物的動作是隨機的，錄完要看；vhs 偶爾會漏幾秒畫面（一張 gif 停格好幾秒），重錄即可。
 
