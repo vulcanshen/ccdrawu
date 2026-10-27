@@ -27,8 +27,11 @@ func TestLocateFollowsE3(t *testing.T) {
 	if got != want {
 		t.Fatalf("defaults on macOS: %+v", got)
 	}
-	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "XDG_CACHE_HOME": "/xc", "CCDRAWU__CACHE": ""}), "/h", "linux")
-	want = Locations{ConfigFile: j("/x", "ccdrawu", "config.yaml"), Cache: j("/xc", "ccdrawu"), Claude: j("/h", ".claude"), Data: j("/h", ".ccdrawu")}
+	// XDG_CACHE_HOME is taken as an absolute path only, and /xc is none on
+	// Windows, with no drive: the test's own is, on every platform
+	xc, _ := filepath.Abs("/xc")
+	got = locate(env(map[string]string{"XDG_CONFIG_HOME": "/x", "XDG_CACHE_HOME": xc, "CCDRAWU__CACHE": ""}), "/h", "linux")
+	want = Locations{ConfigFile: j("/x", "ccdrawu", "config.yaml"), Cache: j(xc, "ccdrawu"), Claude: j("/h", ".claude"), Data: j("/h", ".ccdrawu")}
 	if got != want {
 		t.Fatalf("XDG: %+v", got)
 	}

@@ -432,7 +432,9 @@ func TestWhatCantBeRead(t *testing.T) {
 	}
 	d.app.Update(tea.WindowSizeMsg{Width: 100, Height: 30})
 	run(d, d.app.Start())
-	if text := frameText(d); !strings.Contains(text, "MOVE ASIDE") || !strings.Contains(text, "can't be read") {
+	// The question, not "can't be read": after a temp folder's long path, as
+	// on Windows, that wraps
+	if text := frameText(d); !strings.Contains(text, "MOVE ASIDE") || !strings.Contains(text, "Move it to config.yaml.bak") {
 		t.Fatalf("no MOVE ASIDE for the config:\n%s", text)
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEnter})
