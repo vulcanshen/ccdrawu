@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.0.0 — tdp v1.0.0
 
 - Your picks are in `~/.config/ccdrawu/config.yaml`, where they were in `config.json`; what the plugin writes for `ccdrawu`, the list of items and the status line's values, is in your system's cache folder (`~/Library/Caches/ccdrawu` on macOS, `~/.cache/ccdrawu` on Linux, `%LOCALAPPDATA%\ccdrawu\cache` on Windows), where it was in `~/.ccdrawu`. The first time you run `ccdrawu`, it moves them and says from where to where; where it can't, it names both places for you to move them, and goes on reading the old ones. A `config.json` left beside a `config.yaml` is named with it each time `ccdrawu` starts, until you merge what you want of it into `config.yaml` and remove it; `config.yaml` is what is read. Until then the drawer and the status line read the old places too. `CCDRAWU__CACHE` names another folder for the cache.
 - The Claude Code theme and status line you had before ccdrawu's, kept to put back, are in `~/.ccdrawu/originals.yaml` (`CCDRAWU__DATA` names another folder), where they were in the config as `theme.before` and `statusline.before`: they can't be made again, so they are kept apart from your picks. The first time you run `ccdrawu`, or `ccdrawu uninstall claude`, moves them, and `ccdrawu` says so; until then they are read where they were. The file is there only while ccdrawu's theme or status line is on.
