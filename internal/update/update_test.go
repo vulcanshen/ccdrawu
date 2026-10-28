@@ -35,6 +35,33 @@ func TestNewerComparesPartByPart(t *testing.T) {
 	}
 }
 
+// A beta is older than its release and newer than the one before: one on a
+// beta is never offered the stable release before it
+func TestNewerTakesPreReleases(t *testing.T) {
+	for _, c := range []struct {
+		a, b string
+		want bool
+	}{
+		{"1.0.0", "1.0.1-beta.1", false},
+		{"1.0.1-beta.1", "1.0.0", true},
+		{"1.0.1", "1.0.2-beta.1", false},
+		{"1.0.10-beta.1", "1.0.9", true},
+		{"1.0.1", "1.0.1-beta.1", true},
+		{"1.0.1-beta.1", "1.0.1", false},
+		{"1.1.0", "1.0.1-beta.1", true},
+		{"1.0.1-beta.2", "1.0.1-beta.1", true},
+		{"1.0.1-beta.10", "1.0.1-beta.9", true},
+		{"1.0.1-beta.1", "1.0.1-beta.1", false},
+		{"1.0.1-rc.1", "1.0.1-beta.2", true},
+		{"1.0.1-beta.1.1", "1.0.1-beta.1", true},
+		{"1.0.1-beta.1+dirty", "1.0.1-beta.1", false},
+	} {
+		if got := Newer(c.a, c.b); got != c.want {
+			t.Errorf("Newer(%q, %q) = %v, want %v", c.a, c.b, got, c.want)
+		}
+	}
+}
+
 func TestHowTellsTheMethodFromThePath(t *testing.T) {
 	for path, want := range map[string]Method{
 		"/opt/homebrew/Cellar/ccdrawu/0.1.2/bin/ccdrawu":              Homebrew,

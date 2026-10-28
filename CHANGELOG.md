@@ -2,9 +2,11 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.0.1-beta.1 — tdp v1.1.0-beta.2
 
-- Built on terminu-go v1.1.0-beta.1 (tdp v1.1.0-beta.1). The repo no longer tracks Claude Code's files: `.gitignore` is the tdp template's again, keeping `CLAUDE.md` and `.claude/` out of git, and the developer notes no longer point to notes kept off GitHub or to a path on one machine.
+- Built on terminu-go v1.1.0-beta.2 (tdp v1.1.0-beta.2). The repo no longer tracks Claude Code's files: `.gitignore` is the tdp template's again, keeping `CLAUDE.md` and `.claude/` out of git, and the developer notes no longer point to notes kept off GitHub or to a path on one machine.
+- `ccdrawu update` orders versions as semver does. On a beta it is never offered an older release: on 1.0.2-beta.1 it would have taken 1.0.1 for newer. The release a beta leads to counts as newer than the beta. The latest release it looks up is never a beta, so on a stable release you are never offered one.
+- A beta is a GitHub pre-release: Homebrew, Scoop and the install scripts stay on the latest stable release. A release's binaries no longer read `+dirty` in their build information (`go version -m`).
 
 ## v1.0.0 — tdp v1.0.0
 

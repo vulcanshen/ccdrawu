@@ -7,6 +7,7 @@ import (
 	"archive/tar"
 	"archive/zip"
 	"bytes"
+	"cmp"
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
@@ -42,6 +43,7 @@ var GitHub = Release{
 const maxDownload = 64 << 20
 
 // LatestVersion is the latest release's version, without its v: 0.1.3.
+// GitHub's latest is never a pre-release, so a beta is offered to no one.
 func (r Release) LatestVersion() (string, error) {
 	body, err := r.get(r.Latest)
 	if err != nil {
@@ -68,16 +70,64 @@ func (r Release) get(url string) ([]byte, error) {
 	return io.ReadAll(io.LimitReader(resp.Body, maxDownload))
 }
 
-// Newer reports whether version a is newer than b, part by numeric part:
-// 0.1.10 is newer than 0.1.9.
+// Newer reports whether version a is newer than b, as semver orders them:
+// part by numeric part, 0.1.10 newer than 0.1.9; a release newer than its
+// pre-releases, 1.0.1 than 1.0.1-beta.1, and those newer than 1.0.0.
 func Newer(a, b string) bool {
+	na, pa := split(a)
+	nb, pb := split(b)
+	if c := compareNumbers(na, nb); c != 0 {
+		return c > 0
+	}
+	if pa == "" || pb == "" {
+		return pa == "" && pb != ""
+	}
+	return comparePre(pa, pb) > 0
+}
+
+// split takes a version apart into its numbers and its pre-release, the
+// build metadata left out: 1.0.1-beta.1+dirty is 1.0.1 and beta.1.
+func split(v string) (numbers, pre string) {
+	v, _, _ = strings.Cut(v, "+")
+	numbers, pre, _ = strings.Cut(v, "-")
+	return numbers, pre
+}
+
+// compareNumbers compares dotted numbers part by part, a missing part 0
+func compareNumbers(a, b string) int {
 	pa, pb := strings.Split(a, "."), strings.Split(b, ".")
 	for i := range max(len(pa), len(pb)) {
-		if x, y := part(pa, i), part(pb, i); x != y {
-			return x > y
+		if c := cmp.Compare(part(pa, i), part(pb, i)); c != 0 {
+			return c
 		}
 	}
-	return false
+	return 0
+}
+
+// comparePre compares pre-releases identifier by identifier, as semver does:
+// numbers by value and before words, words by their bytes (beta before rc),
+// and where all are the same, the one with more is newer.
+func comparePre(a, b string) int {
+	pa, pb := strings.Split(a, "."), strings.Split(b, ".")
+	for i := range min(len(pa), len(pb)) {
+		x, errX := strconv.Atoi(pa[i])
+		y, errY := strconv.Atoi(pb[i])
+		c := 0
+		switch {
+		case errX == nil && errY == nil:
+			c = cmp.Compare(x, y)
+		case errX == nil:
+			c = -1
+		case errY == nil:
+			c = 1
+		default:
+			c = strings.Compare(pa[i], pb[i])
+		}
+		if c != 0 {
+			return c
+		}
+	}
+	return cmp.Compare(len(pa), len(pb))
 }
 
 func part(parts []string, i int) int {

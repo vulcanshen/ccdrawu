@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v1.1.0-beta.1；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v1.1.0-beta.2；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -279,6 +279,21 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   - **載入外掛不寫這台機器的路徑**：只跑一次的寫法改成在 repo 的根目錄跑 `claude --plugin-dir .`。`hooks/format.ts` 與
     `tests/ccdrawu.test.ts` 裡的 `~/sideproj/ccdrawu`、`/Users/me` 是範例值，留著。
 
+- **第一個 beta：v1.0.1-beta.1（terminu-go v1.1.0-beta.2，tdp v1.1.0-beta.2，2026-10-28）。** user 定的：stable v1.1.0 之前，
+  家族每個 app 都先發一個 beta，把發版流程完整跑過一遍；畫面與操作都沒變，所以版號只動 patch。
+  - **範本**（tdp project.7、project-38、project-39）：`.goreleaser.yaml` 加 `release.prerelease: auto`，tap 與 scoop bucket 加
+    `skip_upload: auto`，帶 `-beta.N` 的 tag 在 GitHub 上是 pre-release，brew、scoop、install 腳本（都拿 latest）留在 stable；
+    `release.yml` 把 release notes 寫到 `$RUNNER_TEMP`、拿掉 `--skip=validate`。原本寫在 checkout 裡，工作區變 dirty，v1.0.0 的
+    執行檔用 `go version -m` 看是 `+dirty`。只改範本允許的地方：`ccdrawu`、`# app:` 那幾行、Windows（bucket 的
+    `skip_upload` 跟著 Windows 那段打開）。
+  - **`ccdrawu update` 照 semver 比版號**（`update.Newer`）：原本照 `.` 切開逐段轉數字，`1.0.1-beta.1` 的 `1-beta` 轉不出來當 0，
+    讀成 1.0.0.1。這次的 beta 剛好比對得對，但等 v1.0.1 發了，`1.0.2-beta.1` 會被當成比 1.0.1 舊，`update` 會把它「更新」回
+    1.0.1。現在先比數字，同樣時正式版比 pre-release 新，pre-release 照 semver 一段一段比（數字照大小、排在字的前面，字照位元組，
+    其他都一樣時段多的新），`+` 後面的 build metadata 不算。裝正式版的人不會被提示 beta：`LatestVersion` 讀 GitHub 的
+    `releases/latest`，它從不回 pre-release。
+  - **外掛的版號**：`plugin.json` 寫 `1.0.1-beta.1`，`claude plugin validate` 收；`ccdrawu install claude` 裝 `#v1.0.1-beta.1`
+    這個 tag 上的外掛。drawer 的 Claude Code 版本列比的是 npm 的 `latest`，跟 ccdrawu 的 beta 無關。
+
 ## 已否決，不要重提
 
 理由寫在上面的設計決定，這裡只列出來。
@@ -328,7 +343,7 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v1.1.0-beta.1）。
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v1.1.0-beta.2）。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
 
 ## 建置與開發
@@ -394,4 +409,6 @@ Scoop bucket，再用 CHANGELOG 那一段蓋過 release 的內文。ccdrawu 多�
 
 - **外掛的版本**：`.claude-plugin/plugin.json` 的 `version` 改成同一個版號，跟 CHANGELOG 同一個 commit。`ccdrawu install claude`
   裝的是跟執行檔同一版的 tag 上的外掛，drawer 的 ccdrawu 列讀的也是它。
+- **beta**（tdp project.7）：tag `vX.Y.Z-beta.N`，CHANGELOG 標題 `## vX.Y.Z-beta.N — tdp vA.B.C`，步驟一樣；GitHub 上是
+  pre-release，tap 與 bucket 不動。之後的正式版那一段要寫上一個正式版以來的全部改動，beta 的也算。
 - `v0.1.4` 以前的標題是 `## [0.1.x] - 日期`（tdp v0.7.0 以前的寫法），照 tdp 不改。
