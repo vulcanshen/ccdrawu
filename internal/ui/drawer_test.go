@@ -294,7 +294,7 @@ func TestOldPlacesMoveOnTheFirstStart(t *testing.T) {
 	if _, err := os.Stat(filepath.Join(loc.Cache, "catalog.json")); err != nil {
 		t.Fatal("the catalog did not move to the cache:", err)
 	}
-	// The theme it replaced, data now, in the data folder (tdp E3, CD55)
+	// The theme it replaced, data now, in the data folder (tdp E3)
 	if d.orig.Theme != "dark" || d.cfg.Theme.Before != "" {
 		t.Fatalf("the theme kept as %+v, the config's as %+v", d.orig, d.cfg.Theme)
 	}
@@ -304,7 +304,7 @@ func TestOldPlacesMoveOnTheFirstStart(t *testing.T) {
 	}
 }
 
-// tdp E3, the new place has it already (CD56): a config.json left beside
+// tdp E3, the new place has it already: a config.json left beside
 // config.yaml is named, with it, in an error popup each start
 func TestConfigJSONBesideConfigYAMLSaysSo(t *testing.T) {
 	_, loc := newTestDrawer(t)

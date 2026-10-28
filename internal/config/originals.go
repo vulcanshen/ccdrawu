@@ -17,7 +17,7 @@ const originalsFile = "originals.yaml"
 // were: Theme is the theme selected until ccdrawu's was ("" when none was
 // set), Statusline the statusLine Claude Code had until ccdrawu's (JSON null
 // when it had none, nil while ccdrawu's is not set). Gone, they can't be found
-// again, so they are data (tdp E3, CD55): originals.yaml in the data folder.
+// again, so they are data (tdp E3): originals.yaml in the data folder.
 // The config kept them until then, as theme.before and statusline.before
 // (Theme.Before, Statusline.Before), and Move takes them from there.
 type Originals struct {

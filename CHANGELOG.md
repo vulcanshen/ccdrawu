@@ -2,6 +2,10 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- Built on terminu-go v1.1.0-beta.1 (tdp v1.1.0-beta.1). The repo no longer tracks Claude Code's files: `.gitignore` is the tdp template's again, keeping `CLAUDE.md` and `.claude/` out of git, and the developer notes no longer point to notes kept off GitHub or to a path on one machine.
+
 ## v1.0.0 — tdp v1.0.0
 
 - Your picks are in `~/.config/ccdrawu/config.yaml`, where they were in `config.json`; what the plugin writes for `ccdrawu`, the list of items and the status line's values, is in your system's cache folder (`~/Library/Caches/ccdrawu` on macOS, `~/.cache/ccdrawu` on Linux, `%LOCALAPPDATA%\ccdrawu\cache` on Windows), where it was in `~/.ccdrawu`. The first time you run `ccdrawu`, it moves them and says from where to where; where it can't, it names both places for you to move them, and goes on reading the old ones. A `config.json` left beside a `config.yaml` is named with it each time `ccdrawu` starts, until you merge what you want of it into `config.yaml` and remove it; `config.yaml` is what is read. Until then the drawer and the status line read the old places too. `CCDRAWU__CACHE` names another folder for the cache.

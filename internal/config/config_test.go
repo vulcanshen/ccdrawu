@@ -145,7 +145,7 @@ func TestMoveTakesTheOldPlaces(t *testing.T) {
 }
 
 // The theme and the status line ccdrawu replaced, which 0.1.4 kept in the
-// config, are data (tdp E3, CD55): Move takes each to originals.yaml in the
+// config, are data (tdp E3): Move takes each to originals.yaml in the
 // data folder, where the catalog no longer is; one there already the same
 // only leaves the config, one there otherwise stays and is read from it
 func TestOriginalsMoveToTheDataFolder(t *testing.T) {
@@ -227,7 +227,7 @@ func TestOriginalsMoveToTheDataFolder(t *testing.T) {
 	}
 }
 
-// tdp E3, the new place has it already (CD56): a config.json beside a
+// tdp E3, the new place has it already: a config.json beside a
 // config.yaml stays where it is, config.yaml read, and every Move names both
 // until the user merges them; the rest moves all the same
 func TestConfigJSONBesideConfigYAMLStays(t *testing.T) {

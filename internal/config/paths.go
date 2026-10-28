@@ -51,7 +51,7 @@ func locate(getenv func(string) string, home, goos string) Locations {
 // as os.UserCacheDir has it, ~/Library/Caches on macOS, else $XDG_CACHE_HOME
 // when it is an absolute path, else ~/.cache; on Windows the cache folder in
 // %LOCALAPPDATA%\ccdrawu, where install.ps1 puts ccdrawu.exe, so removing the
-// cache leaves the program (the user's choice, CD52).
+// cache leaves the program (the user's choice).
 func cacheDir(getenv func(string) string, home, goos string) string {
 	if dir := getenv("CCDRAWU__CACHE"); dir != "" {
 		return dir
