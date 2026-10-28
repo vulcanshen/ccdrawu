@@ -2,6 +2,14 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## v1.0.1 — tdp v1.1.0
+
+- Built on terminu-go v1.1.0 (tdp v1.1.0). Nothing on the screen or in the keys changes.
+- `ccdrawu update` orders versions as semver does: a beta, `1.0.2-beta.1`, is newer than the release before it, `1.0.1`, and older than its own, `1.0.2`, so on a beta it is never offered an older release. It took a version's parts as numbers alone, and read `1.0.1-beta.1` as 1.0.0.1. The latest release it looks up is never a beta, so on a stable release you are never offered one.
+- A beta is a GitHub pre-release: Homebrew, Scoop and the install scripts stay on the latest stable release. A release's binaries no longer read `+dirty` in their build information (`go version -m`), and the build takes the path it writes the version into from `go.mod`.
+- The repo no longer tracks Claude Code's files: `.gitignore` is the tdp template's again, keeping `CLAUDE.md` and `.claude/` out of git, and the developer notes no longer point to notes kept off GitHub or to a path on one machine.
+- The README's terminu family section links tdp, terminu-go and terminu-harness, where it listed the family's other apps.
+
 ## v1.0.1-beta.2 — tdp v1.1.0-beta.3
 
 - Built on terminu-go v1.1.0-beta.3 (tdp v1.1.0-beta.3). The release build takes the path it writes the version into from `go.mod`, as every app of the family now does; for ccdrawu, on v1, it is the same path, and `ccdrawu version` reads as it did.

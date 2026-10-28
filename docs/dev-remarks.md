@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v1.1.0-beta.3；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v1.1.0；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -299,6 +299,11 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   ldflags 改成 `-X {{ .ModulePath }}/internal/version.Version={{.Version}}`（module 路徑取自 go.mod），每個 app 都用最後的
   範本再發一次 beta。ccdrawu 還在 v1，module 路徑不用改；`.goreleaser.yaml` 的 ldflags 與上面的註解照範本抄，跟範本一字不差。
 
+- **v1.0.1（terminu-go v1.1.0，tdp v1.1.0，2026-10-28）。** 7 個 app 的 beta.2 都把發版流程完整跑過、全部通過，tdp 與
+  terminu-go 發了 v1.1.0。跟 beta.3 比，tdp 只多 `project/version.go` 範本的註解：ldflags 的路徑寫成 `<module>`（go.mod 的
+  module，v2 以後帶 `/vN`），`internal/version/version.go` 照抄。CHANGELOG 的 v1.0.1 那段照 project.6 寫 v1.0.0 以來的全部
+  改動，beta 的併進來；兩個 beta 的段落留著。這次會推共用的 tap 與 bucket，由 terminu 一個 app 一個 app 發。
+
 ## 已否決，不要重提
 
 理由寫在上面的設計決定，這裡只列出來。
@@ -348,7 +353,7 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v1.1.0-beta.3）。
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v1.1.0）。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
 
 ## 建置與開發
