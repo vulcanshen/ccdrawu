@@ -2,6 +2,10 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## v1.0.1-beta.2 — tdp v1.1.0-beta.3
+
+- Built on terminu-go v1.1.0-beta.3 (tdp v1.1.0-beta.3). The release build takes the path it writes the version into from `go.mod`, as every app of the family now does; for ccdrawu, on v1, it is the same path, and `ccdrawu version` reads as it did.
+
 ## v1.0.1-beta.1 — tdp v1.1.0-beta.2
 
 - Built on terminu-go v1.1.0-beta.2 (tdp v1.1.0-beta.2). The repo no longer tracks Claude Code's files: `.gitignore` is the tdp template's again, keeping `CLAUDE.md` and `.claude/` out of git, and the developer notes no longer point to notes kept off GitHub or to a path on one machine.
