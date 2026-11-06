@@ -98,6 +98,30 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
       - 真正的花色，每隻都跟主寵物、跟彼此不同（現在的做法）。每一版都先用 SVG 轉 PNG 預覽：30 欄的走道上，主寵物在中間、三隻小隻在兩邊和後面。
     - 狀態在 `$.state` 的 `kits` 陣列（`Kit`），跟主寵物分開。`kitsFor` 依 subagent 的 id 補進新的小隻（從走道兩端之一進來），也把結束的標成 `leaving`；`kitsTick` 跟主寵物共用 200ms 的 tick 走一步，到了目的地偶爾停一下再換下一個點，`leaving` 的走到近的那一端就移除。都是純函式，有測試。
     - 畫法：小隻是走道上 `position="absolute"` 的 Box，在 children 裡排在主寵物之前，所以主寵物畫在它們上面。主寵物透明的格子（空白 Box）不會蓋掉後面的小隻。這點 2026-10-16 在 tmux 沙盒裡用 3 個背景 subagent（各跑 `sleep 45`）實測過：`capture-pane -e` 逐格看顏色，重疊處是主寵物的彩色，主寵物透明的格子看得到後面灰色的小隻；subagent 結束後小隻都消失了。小隻的 `kits` 只在 sidebar 那條路徑讀，所以小隻走動不會讓輸入框上方的版面重畫。
+  - **git 紙箱，小隻會跳、會跳上紙箱（2026-11-06，user 的點子）**：
+    - 寵物走道的右端堆紙箱：每個還沒 commit 的檔案一個紙箱，每個還沒 push 的 commit 一個裡面是米白色的封箱。commit 之後
+      檔案的紙箱變成一個封箱，push 之後封箱不見。檔案數是 `git status --porcelain=v2` 的變更列加未追蹤列，一個檔一列（`parseStatusV2`
+      的 `files`；staged 又改過的檔同時算在 staged 與 unstaged，不能相加）；未追蹤的資料夾只有一列，算一個。commit 數是 upstream
+      的 ahead；沒有 upstream 的 branch 不知道哪些沒推，不畫封箱。最多 6 個，每層 3 個、疊兩層，從右邊排：封箱先排最下層靠右，最多
+      3 個，其他位置留給檔案的紙箱。純函式在 `hooks/pile.ts`（`pileOf`、`pileDrawing`、`pileHeights`、`groundUnder`），有測試。
+    - 畫法：4×4 px 方塊，箱子之間空一欄，四邊是近黑色（`#2b2320`）的外框，裡面 2×2 是紙箱色，封箱裡面是米白色；疊起來靠外框
+      分得出上下。整堆是一個 `position="absolute"` 的 Box，排在小隻與主寵物之前，兩者都畫在它上面。先畫的開口箱有兩片翻蓋、
+      裡面深色，user 說色塊太多，改成方形；方形的紙箱色跟橘貓、橘狗太近，寵物站在前面就混在一起。user 選了加外框（四種外框和四種
+      換色都畫了預覽：深棕外框跟深棕的花色近、米白外框跟白腳白肚子近，換成紫或青綠則是沒有寵物用的顏色）。一開始放在左端，
+      在沙盒的 Claude Code 裡看，主寵物一開始和閒著時常坐在左端，把紙箱擋住，改放右端。2026-11-06 沙盒實測：改 3 個檔加 1 個
+      沒推的 commit → 1 個封箱、3 個紙箱；commit → 2 個封箱；push → 全部不見，各在 5 秒內（git 每 5 秒讀一次）。
+    - 走道從 5 列加高到 7 列（`WALK_HEIGHT` 14 px，user 同意）：主寵物的框（10 px）在最下面，上面多 2 列，讓小隻站在兩層紙箱上
+      （8 px 加小隻 4 px，兔子 6 px）。高度固定，不隨 commit、push 變，下面的清單才不會跳。輸入框上方只有 14 欄，照舊只畫寵物。
+    - 小隻：到了目的地沒休息時，三分之一的機會原地跳 2 px、600 ms。路上遇到比腳下高的紙箱，先往上跳（每 tick 4 px）到箱頂再走
+      上去；走出紙箱外，每 tick 掉 4 px。紙箱冒出來在小隻腳下，直接站上去；push 後箱子不見，掉下來。腳離地時畫 walk2（雙腳張開，
+      跟主寵物跳一樣）。高度都是偶數 px，小隻站在紙箱上時不會跟紙箱共用一格（半格字元的另一半會蓋掉紙箱的像素）。user 原本說
+      「爬到邊上」；以前主寵物爬牆的三種畫法都否決了，問過 user 後改成跳上紙箱。
+    - `kitsTick` 多一個參數 `ground`：小隻在走道某一點時，腳下的紙箱多高。紙箱的位置是欄，小隻的位置是 0–TRACK，要用走道的寬度
+      換算（`kitLeft`，跟畫面用同一個式子）；寬度記在 module 的 `walkColumns`，sidebar 每次畫時更新。`Kit` 多了 `y`、`hopUntil`、
+      `air`；reload 前的小隻沒有這些欄位，`kitsTick` 補成 0。
+    - 跳上紙箱的畫面只有單元測試與 SVG 預覽，沒有在 Claude Code 裡用真的 subagent 看過（要花 token）。
+    - 否決：在走道上替 shell、monitor、workflow 放物件（有 `>_` 的小螢幕、會轉的雷達、齒輪；同種疊 3 個，或只畫一個標 x2、x3）。
+      畫了三版預覽，user 說太難表示，拿掉。
   - **物種在 TUI 設**：preferences 的 Pet（radio，畫在原地），放在 Bar 與 Plugin 之間，寫進 config.yaml 的 `pet.species`。Go 的 `config.PetSpecies` 要跟 `SPECIES` 同順序；mod 不認得的物種畫成貓。
   - **不給取名（2026-10-15）**：做過 Pet name（最多 16 字），user 拿掉：花色每個 session 隨機，每次開都不是同一隻，給名字很怪；留給之後的版本再看。台詞那一列只有台詞。
 - **不用 Fragment。** 這個 surface 把 `<>…</>` 當直排容器排版，放在 row 裡的「·」和 effort 會被疊成上下兩行。同一列的元素都直接放進 `flexDirection="row"` 的 Box。
@@ -331,6 +355,7 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
 - 顯示 vim 的 INSERT／NORMAL：要佔用 `statusLine`，Claude Code 輸入框下方本來就有。
 - drawer 自己畫底色：蓋不到引擎畫的外框，交給主題。
 - 寵物：ASCII、另外畫的跳格、爬牆、只有揮爪時才換色的手、從毛色算四肢色、Raster＋blit；取名（花色每個 session 換，之後的版本再看）。
+- 寵物走道：shell、monitor、workflow 的物件（小螢幕、雷達、齒輪）；有翻蓋的紙箱；沒有外框的紙箱（跟橘貓、橘狗混在一起）；紙箱放左端（被主寵物擋住）。
 - bar 用 `▰▱`（很多程式字型沒有）、`█░`（上下兩列黏在一起）、請使用者把 `▰▱` 指定給 Menlo（只有 macOS）。
 - Account 項目：自己裝的外掛拿不到 `$.session.identity()`；停用選項的做法也一起拿掉，等 API 開放再加回來。
 

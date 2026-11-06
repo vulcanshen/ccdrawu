@@ -430,7 +430,8 @@ export const PETS: Record<Species, Pet> = {
 }
 
 // Kits: a small one of the pet's kind, 6 x 4 pixels, so 6 columns by 2 rows, the rabbit two pixels
-// taller for its ears, in the same inks; they only walk (see kitsFor)
+// taller for its ears, in the same inks; they walk, and in a hop or a jump their legs are apart, as in
+// a stride (see kitsTick)
 export type KitPose = 'walk1' | 'walk2'
 export const KIT_WIDTH = 6
 export const KIT_HEIGHT = 6 // the box a kit stands in, as high as the rabbit
@@ -472,6 +473,9 @@ export const HEART_COLOR = '#f38ba8'
 export type Over = { text: string; color: string }
 export const PET_HEIGHT = 8 // a pet's pixels, high
 export const LIFT_ROOM = 2 // the pixels over it, beside the transcript, for it to jump into
+// The strip beside the transcript, in pixels: the pet's box (PET_HEIGHT and LIFT_ROOM) at its bottom,
+// and over it room for a kit on two layers of git boxes (hooks/pile.ts)
+export const WALK_HEIGHT = 14
 
 // The snore n steps along, from 1
 export function snore(n: number): Over {
@@ -804,8 +808,21 @@ export function petLook(s: PetState): { pose: Pose; over?: Over; lift: number } 
 // it; the pet goes on as before. A kit is in a coat of its kind's own colors, none the pet's and none
 // another kit's, so each reads apart (user: in the pet's colors it would not; in grey, or muted, they
 // ran together and looked dead). A kit comes in at an end of the walk as its subagent starts, wanders
-// while it runs, and walks off the nearer end once it is done.
+// while it runs, and walks off the nearer end once it is done. Where it gets to it now and then hops,
+// as the pet does; the git boxes in its way it jumps up onto and walks over, and off them it drops
+// (user, 2026-11-06: to climb up to the edge; climbing a wall was drawn three ways for the pet, and
+// every way looked odd).
 export const KIT_MAX = 3
+const KIT_HOP = 2 // pixels up in a hop: even, so a kit on the boxes never shares a cell with them
+const KIT_HOP_MS = JUMP_MS
+const KIT_HOP_CHANCE = 1 / 3 // of getting somewhere without a rest there
+const KIT_RISE = 4 // pixels a tick, jumping up onto the boxes
+const KIT_FALL = 4 // pixels a tick, dropping off them
+
+// A kit's columns from the left of a strip columns wide, at x along its walk
+export function kitLeft(x: number, columns: number): number {
+  return Math.round((x / TRACK) * Math.max(0, columns - KIT_WIDTH))
+}
 
 // The kits for the subagents running now: one comes in for each new one while there are fewer than
 // KIT_MAX, in a coat neither the pet (coat petCoat of species) nor another kit has, and one whose
@@ -826,43 +843,69 @@ export function kitsFor(kits: Kit[], running: readonly string[], species: Specie
     const target = nextTarget(x, rand)
     const free = Array.from({ length: coats }, (_, n) => n).filter(n => n !== worn(petCoat) && !next.some(k => worn(k.coat) === n))
     const coat = free[Math.floor(rand() * free.length)] ?? Math.floor(rand() * coats)
-    next.push({ id, coat, x, target, stride: 0, faceLeft: target < x, restUntil: 0, leaving: false })
+    next.push({ id, coat, x, target, stride: 0, faceLeft: target < x, restUntil: 0, leaving: false, y: 0, hopUntil: 0, air: false })
     changed = true
   }
   return changed ? next : kits
 }
 
-// The kits a tick later: a step towards where each goes, and there a rest now and then and the next
-// place; one leaving goes once it is at the end. The same array back when none moved
-export function kitsTick(kits: Kit[], now: number, rand: () => number = Math.random): Kit[] {
+// The kits a tick later: a step towards where each goes, and there a rest or a hop now and then and the
+// next place; one leaving goes once it is at the end. ground is how high the git boxes are under a kit
+// at a place along its walk, in pixels. The same array back when none moved
+export function kitsTick(kits: Kit[], now: number, rand: () => number = Math.random, ground: (x: number) => number = () => 0): Kit[] {
   let changed = false
   const next: Kit[] = []
-  for (const k of kits) {
-    if (k.leaving && k.x === k.target) {
+  for (const was of kits) {
+    if (was.leaving && was.x === was.target) {
       changed = true
       continue
     }
-    if (now < k.restUntil) {
-      next.push(k)
-      continue
-    }
-    if (k.x !== k.target) {
-      const faceLeft = k.target < k.x
-      next.push({ ...k, x: k.x + (faceLeft ? -1 : 1), faceLeft, stride: k.stride + 1 })
-    } else {
-      const restUntil = rand() < 0.4 ? now + 1_000 + Math.floor(rand() * 2_000) : 0
-      next.push({ ...k, target: nextTarget(k.x, rand), restUntil })
-    }
-    changed = true
+    // A kit from before a reload has no height yet: it stands where it is
+    const k = (was as Partial<Kit>).y === undefined ? { ...was, y: 0, hopUntil: 0, air: false } : was
+    const moved = kitStep(k, now, rand, ground)
+    if (moved !== was) changed = true
+    next.push(moved)
   }
   return changed ? next : kits
 }
 
-// The cells of a kit, standing on the bottom of its box, its legs taking turns as it goes
-export function kitCells(species: Species, k: Kit): Run[][] {
-  const pose: KitPose = k.stride % 2 === 0 ? 'walk1' : 'walk2'
+// A kit a tick later; the same object back when it holds still
+function kitStep(k: Kit, now: number, rand: () => number, ground: (x: number) => number): Kit {
+  const here = ground(k.x)
+  // Boxes came under it: up onto them at once
+  if (k.y < here) return { ...k, y: here, air: false }
+  // In a hop: up, standing, until it is over
+  if (now < k.hopUntil) return k.y === here + KIT_HOP && k.air ? k : { ...k, y: here + KIT_HOP, air: true }
+  const moving = k.x !== k.target && now >= k.restUntil
+  const faceLeft = moving ? k.target < k.x : k.faceLeft
+  const x = moving ? k.x + (faceLeft ? -1 : 1) : k.x
+  const there = ground(x)
+  if (moving && there > here) {
+    // Boxes in its way, higher than where it is: it jumps up first, then steps on
+    if (k.y < there) return { ...k, faceLeft, y: Math.min(there, k.y + KIT_RISE), air: true }
+    return { ...k, faceLeft, x, stride: k.stride + 1, air: k.y > there }
+  }
+  // Over less than it stood on (stepped off the boxes, a hop over, boxes gone): down a little a tick
+  if (k.y > here) {
+    const y = Math.max(here, k.y - KIT_FALL)
+    return { ...k, y, air: y > here }
+  }
+  // A step, off the boxes too: it drops once it is past them
+  if (moving) return { ...k, faceLeft, x, stride: k.stride + 1, air: k.y > there }
+  if (now < k.restUntil) return k
+  // There: a rest now and then, else now and then a hop, and the next place
+  const resting = rand() < 0.4
+  const restUntil = resting ? now + 1_000 + Math.floor(rand() * 2_000) : 0
+  const hopUntil = !resting && rand() < KIT_HOP_CHANCE ? now + KIT_HOP_MS : 0
+  return { ...k, target: nextTarget(k.x, rand), restUntil, hopUntil }
+}
+
+// The cells of a kit, standing on the bottom of a box height pixels high, y pixels up it, its legs
+// taking turns as it goes and apart in the air
+export function kitCells(species: Species, k: Kit, height = KIT_HEIGHT): Run[][] {
+  const pose: KitPose = k.air || k.stride % 2 !== 0 ? 'walk2' : 'walk1'
   const drawn = KITS[species][pose].map(r => (k.faceLeft ? [...r].reverse().join('') : r))
-  return drawnCells(drawn, petCoat(species, k.coat), KIT_HEIGHT)
+  return drawnCells(drawn, petCoat(species, k.coat), height, k.y)
 }
 
 // The pet the config names, cat when it names none or one there is not

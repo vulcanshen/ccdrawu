@@ -55,7 +55,8 @@ export function compact(n: number): string {
 }
 
 // What `git status --porcelain=v2 --branch` says: the commit, how far it is from its upstream (left out
-// without one), and the files staged, unstaged and untracked
+// without one), the files staged, unstaged and untracked, and the files changed in all, each once (one
+// staged and changed again is both staged and unstaged)
 export function parseStatusV2(text: string): {
   sha?: string
   ahead?: number
@@ -63,8 +64,9 @@ export function parseStatusV2(text: string): {
   staged: number
   unstaged: number
   untracked: number
+  files: number
 } {
-  const out: ReturnType<typeof parseStatusV2> = { staged: 0, unstaged: 0, untracked: 0 }
+  const out: ReturnType<typeof parseStatusV2> = { staged: 0, unstaged: 0, untracked: 0, files: 0 }
   for (const line of text.split('\n')) {
     if (line.startsWith('# branch.oid ')) {
       const oid = line.slice('# branch.oid '.length).trim()
@@ -79,8 +81,10 @@ export function parseStatusV2(text: string): {
       // XY: the index's change, then the working tree's; . is none
       if (line[2] !== '.') out.staged++
       if (line[3] !== '.') out.unstaged++
+      out.files++
     } else if (line.startsWith('? ')) {
       out.untracked++
+      out.files++
     }
   }
   return out

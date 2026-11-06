@@ -21,9 +21,9 @@ import {
   BALL_INK,
   BALL_LEFT,
   drawnCells,
-  KIT_HEIGHT,
   KIT_WIDTH,
   kitCells,
+  kitLeft,
   kitsFor,
   kitsTick,
   LIFT_ROOM,
@@ -37,9 +37,11 @@ import {
   petSpecies,
   petTick,
   TRACK,
+  WALK_HEIGHT,
   type PetEvent,
   type Run,
 } from './pets'
+import { BOX_INK, groundUnder, PILE_WIDTH, pileDrawing, pileHeights, pileOf } from './pile'
 import { registerCommands } from './commands'
 import {
   bar,
@@ -259,14 +261,20 @@ async function petShown($: Engine) {
   return showsAnywhere(await read($, config), 'pet')
 }
 
+// The strip's columns beside the transcript as last drawn, for where the git boxes are under a kit
+let walkColumns = 30
+
 // A tick of the pet and its kits: written only when what they show changed, worked out again on the
 // value there is then, so an event that came in between is kept
 async function stepPet($: Engine) {
   if (!(await petShown($))) return
   const t = await $.clock.now()
   const ks = await read($, kits)
-  const movedKits = kitsTick(ks, t)
-  if (movedKits !== ks) await update($, kits, current => (current === ks ? movedKits : kitsTick(current, t)))
+  // The boxes at the right end of the strip
+  const heights = pileHeights(pileOf(await read($, git)))
+  const ground = (x: number) => groundUnder(heights, kitLeft(x, walkColumns) - (walkColumns - PILE_WIDTH), KIT_WIDTH)
+  const movedKits = kitsTick(ks, t, Math.random, ground)
+  if (movedKits !== ks) await update($, kits, current => (current === ks ? movedKits : kitsTick(current, t, Math.random, ground)))
   const s = await read($, pet)
   const next = petTick(s, t)
   if (next === s) return
@@ -774,39 +782,59 @@ export const register: Register = on => {
     }
 
     const rows = []
-    // Read here, not above the prompt, where no kit is drawn: a kit's step redraws only the sidebar
+    // Read here, not above the prompt, where no kit or box is drawn: a kit's step redraws only the sidebar
     const ks = hasPet ? await read($, kits) : []
+    const pile = pileOf(hasPet ? await read($, git) : null)
+    // The pet's box at the bottom of the strip, the room over it for the boxes and a kit on them
+    const petTop = (WALK_HEIGHT - PET_HEIGHT - LIFT_ROOM) / 2
     // The pet over the rows: what it says, then the strip it walks along, its place along its walk spread
     // over the width there is
     if (hasPet) {
+      walkColumns = inner
       rows.push(
         <Box flexDirection="row" height={1} flexShrink={0}>
           {p.line === undefined ? null : <Text color={C.text}>{p.line.slice(0, inner)}</Text>}
         </Box>,
-        <Box flexDirection="row" height={(PET_HEIGHT + LIFT_ROOM) / 2} flexShrink={0}>
-          {/* The kits, out of the flow and first, so the pet goes over them: on the ground, along a
+        <Box key="walk" flexDirection="row" height={WALK_HEIGHT / 2} flexShrink={0}>
+          {/* The git boxes at the right end, out of the flow and first, so the kits and the pet go over them */}
+          {pile.packed + pile.loose === 0 ? null : (
+            <Box
+              key="pile"
+              position="absolute"
+              top={0}
+              left={Math.max(0, inner - PILE_WIDTH)}
+              width={PILE_WIDTH}
+              height={WALK_HEIGHT / 2}
+              flexDirection="column"
+            >
+              {cellRows(drawnCells(pileDrawing(pile), BOX_INK, WALK_HEIGHT))}
+            </Box>
+          )}
+          {/* The kits, out of the flow, so the pet goes over them: on the ground or on the boxes, along a
               walk as long as the pet's, spread over the width there is less their own */}
           {ks.map(k => (
             <Box
               key={'kit-' + k.id}
               position="absolute"
-              top={(PET_HEIGHT + LIFT_ROOM - KIT_HEIGHT) / 2}
-              left={Math.round((k.x / TRACK) * Math.max(0, inner - KIT_WIDTH))}
+              top={0}
+              left={kitLeft(k.x, inner)}
               width={KIT_WIDTH}
-              height={KIT_HEIGHT / 2}
+              height={WALK_HEIGHT / 2}
               flexDirection="column"
             >
-              {cellRows(kitCells(species, k))}
+              {cellRows(kitCells(species, k, WALK_HEIGHT))}
             </Box>
           ))}
           <Box width={along(p.x)} flexShrink={0} />
-          {drawPet(PET_HEIGHT + LIFT_ROOM)}
+          <Box flexDirection="column" marginTop={petTop} flexShrink={0}>
+            {drawPet(PET_HEIGHT + LIFT_ROOM)}
+          </Box>
           {/* A ball over the strip, out of the flow: where a pet at its place would have its middle */}
           {ball === undefined ? null : (
             <Box
               key="ball"
               position="absolute"
-              top={0}
+              top={petTop}
               left={along(ball.pos) + BALL_LEFT}
               width={4}
               height={(PET_HEIGHT + LIFT_ROOM) / 2}

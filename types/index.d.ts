@@ -13,8 +13,9 @@ export type Usage = {
 export type ModelInfo = { name: string; effort?: string }
 
 // The branch with its line counts; then, from `git status --porcelain=v2`, the commit, how far it is
-// from its upstream (none without one) and the files staged, unstaged and untracked; repo is origin's
-// owner/name, worktree the linked worktree's folder when the session is in one
+// from its upstream (none without one), the files staged, unstaged and untracked, and the files changed
+// in all, each once; repo is origin's owner/name, worktree the linked worktree's folder when the session
+// is in one
 export type GitInfo = {
   branch: string
   added: number
@@ -25,6 +26,7 @@ export type GitInfo = {
   staged?: number
   unstaged?: number
   untracked?: number
+  files?: number
   repo?: string
   worktree?: string
 }
@@ -107,6 +109,9 @@ export type Kit = {
   faceLeft: boolean
   restUntil: number
   leaving: boolean // its subagent is done: it heads for the nearer end, and goes there
+  y: number // how many pixels over the ground its feet are: on the git boxes, or in the air
+  hopUntil: number // hopping on the spot until then
+  air: boolean // off what is under it: in a hop, jumping up onto the boxes or dropping off them
 }
 
 declare module 'claude-code' {

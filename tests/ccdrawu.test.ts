@@ -36,6 +36,7 @@ import {
   KIT_HEIGHT,
   KIT_WIDTH,
   kitCells,
+  kitLeft,
   KIT_MAX,
   KITS,
   kitsFor,
@@ -59,11 +60,13 @@ import {
   SNORE_COLOR,
   SPECIES,
   TRACK,
+  WALK_HEIGHT,
   type Pose,
   type Run,
   type Species,
 } from '../hooks/pets'
-import type { Kit, PetState } from '../types'
+import { BOX_INK, groundUnder, PILE_WIDTH, pileDrawing, pileHeights, pileOf } from '../hooks/pile'
+import type { GitInfo, Kit, PetState } from '../types'
 
 const PANE = {
   title: 'Status',
@@ -261,9 +264,10 @@ test('counts read short, and git status, remotes and file counts are read as sho
     '1 MM N... 100644 100644 100644 aaa bbb tests/a.ts',
     '? notes.txt',
   ].join('\n')
-  expect(parseStatusV2(status)).toEqual({ sha: 'e73ac92', ahead: 2, behind: 3, staged: 2, unstaged: 2, untracked: 1 })
+  // files: each file changed once, staged and changed again or not, and each one not tracked
+  expect(parseStatusV2(status)).toEqual({ sha: 'e73ac92', ahead: 2, behind: 3, staged: 2, unstaged: 2, untracked: 1, files: 4 })
   // No upstream, no commit yet: no ahead or behind, no sha
-  expect(parseStatusV2('# branch.oid (initial)\n# branch.head main\n')).toEqual({ staged: 0, unstaged: 0, untracked: 0 })
+  expect(parseStatusV2('# branch.oid (initial)\n# branch.head main\n')).toEqual({ staged: 0, unstaged: 0, untracked: 0, files: 0 })
   for (const url of ['git@github.com:vulcanshen/ccdrawu.git', 'https://github.com/vulcanshen/ccdrawu', 'ssh://git@host:22/vulcanshen/ccdrawu.git\n']) {
     expect(repoFromRemote(url)).toBe('vulcanshen/ccdrawu')
   }
@@ -550,7 +554,7 @@ test("a kit of the pet's kind walks for each subagent running, three at most, ea
       }
     }
     const colors = new Set(Object.values(petCoat(species, 1)))
-    const cells = kitCells(species, { id: 'a', coat: 1, x: 0, target: 5, stride: 1, faceLeft: true, restUntil: 0, leaving: false })
+    const cells = kitCells(species, { id: 'a', coat: 1, x: 0, target: 5, stride: 1, faceLeft: true, restUntil: 0, leaving: false, y: 0, hopUntil: 0, air: false })
     expect(cells.length).toBe(KIT_HEIGHT / 2)
     for (const row of cells) {
       expect(cellsWide(row)).toBe(KIT_WIDTH)
@@ -597,6 +601,108 @@ test("a kit of the pet's kind walks for each subagent running, three at most, ea
     ['b', 2],
     ['d', 1],
   ])
+})
+
+test('a box for each file not committed and a taped one for each commit not pushed, six at most in two layers of three', async () => {
+  const git = (g: Partial<GitInfo>): GitInfo => ({ branch: 'main', added: 0, removed: 0, staged: 0, unstaged: 0, untracked: 0, ...g })
+  expect(pileOf(null)).toEqual({ packed: 0, loose: 0 })
+  expect(pileOf(git({ files: 3, ahead: 1 }))).toEqual({ packed: 1, loose: 3 })
+  // Full: the rest of the files leave no box; taped boxes take the bottom layer at most, so files still show
+  expect(pileOf(git({ files: 10, ahead: 0 }))).toEqual({ packed: 0, loose: 6 })
+  expect(pileOf(git({ files: 5, ahead: 5 }))).toEqual({ packed: 3, loose: 3 })
+  expect(pileOf(git({ files: 0, ahead: 4 }))).toEqual({ packed: 3, loose: 0 })
+  // No upstream: what is not pushed is not known, and no taped box shows; files not read yet: none
+  expect(pileOf(git({ files: 1 }))).toEqual({ packed: 0, loose: 1 })
+  expect(pileOf(git({ ahead: 2 }))).toEqual({ packed: 2, loose: 0 })
+
+  // Square boxes, a column apart, from the right: the taped ones first along the bottom, by the end, then
+  // the top layer; each outlined all round, cardboard inside, a taped one light inside
+  expect(pileDrawing({ packed: 1, loose: 3 })).toEqual([
+    '..........kkkk',
+    '..........kcck',
+    '..........kcck',
+    '..........kkkk',
+    'kkkk.kkkk.kkkk',
+    'kcck.kcck.kttk',
+    'kcck.kcck.kttk',
+    'kkkk.kkkk.kkkk',
+  ])
+  expect(pileDrawing({ packed: 0, loose: 2 })).toEqual(['kkkk.kkkk', 'kcck.kcck', 'kcck.kcck', 'kkkk.kkkk'].map(r => r.padStart(PILE_WIDTH, '.')))
+  expect(pileDrawing({ packed: 0, loose: 0 })).toEqual([])
+  for (const mark of new Set(pileDrawing({ packed: 3, loose: 3 }).join('').replace(/\./g, ''))) expect(BOX_INK[mark]).toBeDefined()
+  // How high it is over each column, and under a kit's six from a column (left of it: none)
+  const heights = pileHeights({ packed: 1, loose: 3 })
+  expect(heights).toEqual([4, 4, 4, 4, 0, 4, 4, 4, 4, 0, 8, 8, 8, 8])
+  expect(pileHeights({ packed: 0, loose: 0 })).toEqual(Array(PILE_WIDTH).fill(0))
+  expect(groundUnder(heights, 2, KIT_WIDTH)).toBe(4)
+  expect(groundUnder(heights, 6, KIT_WIDTH)).toBe(8)
+  expect(groundUnder(heights, -6, KIT_WIDTH)).toBe(0)
+  expect(groundUnder(heights, -3, KIT_WIDTH)).toBe(4)
+  // A kit's columns along a walk, as the pet's: spread over the width there is, less its own
+  expect([0, 10, TRACK].map(x => kitLeft(x, 30))).toEqual([0, 12, 24])
+  // The strip beside the transcript: the pet's box at its bottom, and room for a kit on two layers, hopping
+  expect(WALK_HEIGHT).toBe(PET_HEIGHT + LIFT_ROOM + 4)
+})
+
+test('a kit hops now and then, jumps up onto the boxes in its way and walks over them, and drops down off them', async () => {
+  const seq = (...values: number[]) => {
+    let i = 0
+    return () => values[i++ % values.length] ?? 0
+  }
+  const kit = (k: Partial<Kit>): Kit => ({ id: 'a', coat: 1, x: 0, target: 0, stride: 0, faceLeft: false, restUntil: 0, leaving: false, y: 0, hopUntil: 0, air: false, ...k })
+  const run = (k: Kit, ground: (x: number) => number, rand: () => number, n: number, from = 0) => {
+    const seen: Kit[] = []
+    let list = [k]
+    for (let i = 1; i <= n; i++) {
+      list = kitsTick(list, from + i * PET_TICK, rand, ground)
+      seen.push(list[0] as Kit)
+    }
+    return seen
+  }
+  // Boxes two layers high under the walk up to step 3
+  const pile = (x: number) => (x <= 3 ? 8 : 0)
+  const rest = seq(0.2)
+  // Towards them: two steps, then up 4 pixels a tick, in the air, before it steps on at their height
+  let seen = run(kit({ x: 6, target: 0 }), pile, rest, 6)
+  expect(seen.map(k => [k.x, k.y, k.air])).toEqual([
+    [5, 0, false],
+    [4, 0, false],
+    [4, 4, true],
+    [4, 8, true],
+    [3, 8, false],
+    [2, 8, false],
+  ])
+  expect(seen[2]?.faceLeft).toBe(true)
+  // Over them and off the other way: it steps off at their height, then drops 4 pixels a tick
+  seen = run(kit({ x: 2, target: 6, y: 8 }), pile, rest, 5)
+  expect(seen.map(k => [k.x, k.y, k.air])).toEqual([
+    [3, 8, false],
+    [4, 8, true],
+    [4, 4, true],
+    [4, 0, false],
+    [5, 0, false],
+  ])
+  // Boxes come under a kit: up onto them at once; they go: it drops
+  expect(kitsTick([kit({ x: 2, target: 2, restUntil: 9_999 })], 200, rest, pile)[0]).toMatchObject({ y: 8, air: false })
+  seen = run(kit({ x: 2, target: 2, restUntil: 9_999, y: 8 }), () => 0, rest, 2)
+  expect(seen.map(k => k.y)).toEqual([4, 0])
+  // There, not resting: now and then a hop, two pixels up, standing, until it is over; then on
+  seen = run(kit({ x: 5, target: 5 }), () => 0, seq(0.5, 0.2, 0.45), 5, 1_000)
+  expect(seen[0]).toMatchObject({ x: 5, target: 9, restUntil: 0, hopUntil: 1_800 })
+  expect(seen.slice(1).map(k => [k.x, k.y, k.air])).toEqual([
+    [5, 2, true],
+    [5, 2, true],
+    [5, 0, false],
+    [6, 0, false],
+  ])
+  // In a hop or in the air its legs are apart, as in a stride; a hop holds still: the same kits back
+  const up = kit({ x: 5, target: 9, y: 2, air: true, hopUntil: 2_000 })
+  expect(kitsTick([up], 1_600, rest, () => 0)[0]).toBe(up)
+  expect(kitCells('cat', up, WALK_HEIGHT)).toEqual(kitCells('cat', { ...up, stride: 1, air: false }, WALK_HEIGHT))
+  expect(kitCells('cat', up, WALK_HEIGHT).length).toBe(WALK_HEIGHT / 2)
+  // A kit from before a reload, with no height yet, stands where it is
+  const old = { id: 'a', coat: 1, x: 2, target: 2, stride: 0, faceLeft: false, restUntil: 9_999, leaving: false } as Kit
+  expect(kitsTick([old], 200, rest, pile)[0]).toMatchObject({ y: 8, air: false, hopUntil: 0 })
 })
 
 test('Claude Code and ccdrawu have a version row each', async () => {
@@ -760,6 +866,9 @@ test('the pane draws on the terminal before any figures arrive, a key on every r
   // The pet, on by default, in pixels in a box of 12 x 4 that keeps its height
   expect(await ui.find({ type: 'Text', text: /▀|▄/ })).toBeDefined()
   expect((await ui.find({ type: 'Box', key: 'pet' }))?.props).toMatchObject({ width: 12, height: 5 })
+  // in a strip 7 high, room over it for the boxes and a kit on them; no repo here, so no boxes
+  expect((await ui.find({ type: 'Box', key: 'walk' }))?.props).toMatchObject({ height: WALK_HEIGHT / 2 })
+  expect(await ui.find({ type: 'Box', key: 'pile' })).toBeUndefined()
   // One row after another: no blank row between groups
   expect(await ui.find({ type: 'Text', text: /^ $/ })).toBeUndefined()
   expect((await ui.find({ type: 'Box' }))?.props.backgroundColor).toBeUndefined()
