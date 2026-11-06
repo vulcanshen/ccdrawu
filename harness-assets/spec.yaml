@@ -63,14 +63,14 @@ tasks:
   - id: 10
     spec: 1
     request: ccdrawu 當 Claude Code 的狀態列（輸入框下方那一列），照使用者挑的項目、順序、寫法排成一列
-    tdp: [tdp P5, tdp E3]
+    tdp: [tdp P5, tdp E1, tdp E3]
     remark:
       - Claude Code 執行 ccdrawu statusline；太長時結尾截掉加 …；on when narrow 時，側邊欄在對話旁邊或終端機夠寬就整列收起來
       - config.yaml 讀不了時什麼都不印、不動檔、在 stderr 寫是哪個檔與原因（tdp E3）
   - id: 11
     spec: 1
     request: 在 ccdrawu 的 statusline 頁設定狀態列：開關（on、off、on when narrow）、項目、順序、寫法、顏色、分隔、重跑間隔
-    tdp: [tdp radio, tdp select, tdp text, tdp number, tdp confirm, tdp F6, tdp panel.12, tdp P5]
+    tdp: [tdp radio, tdp text, tdp number, tdp confirm, tdp F6, tdp panel.12, tdp P5]
     remark:
       - 打開時在 ~/.claude/settings.json 設成 ccdrawu statusline；原本就有狀態列的，先問過才換掉，並記下原本的，關掉或移除時換回去
       - Format：label、short、value；Color：highlighted、dimmed；Separator 沒設是 |；Refresh 沒設是 10 秒
@@ -95,7 +95,7 @@ tasks:
   - id: 15
     spec: 1
     request: 讓側邊欄的底色跟終端機一樣：選一個 Claude Code 內建主題當底，再選側邊欄的底色
-    tdp: [tdp P5, tdp select, tdp color-picker]
+    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker]
     remark:
       - ccdrawu 寫 ~/.claude/themes/ccdrawu.json 並在 Claude Code 選用；Claude theme 設回 off 或移除時換回原本的主題
       - Drawer background 上按 x 改回主題原本的底色（tdp P5 的領域熱鍵）
@@ -108,44 +108,44 @@ tasks:
   - id: 17
     spec: 1
     request: 在 ccdrawu 裡安裝外掛；外掛還沒寫出項目清單時，頁面說還沒有東西可以列、提示怎麼裝
-    tdp: [tdp confirm, tdp screen.8, tdp note.7]
+    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7]
     remark:
       - preferences 的 Plugin 上按 Enter 安裝外掛
   - id: 18
     spec: 1
     request: ccdrawu install claude 把同一版的外掛裝進 Claude Code，ccdrawu uninstall claude 拿掉它並換回原本的主題與狀態列
-    tdp: [tdp P5, tdp E3]
+    tdp: [tdp P5, tdp E1, tdp E2, tdp E3]
     remark:
       - 只用這兩個指令（或 ccdrawu update）裝外掛，不用 /plugin：外掛要跟指令同一版
       - uninstall 讀不了 config.yaml 或 originals.yaml 時停下來，什麼都不動，寫出是哪個檔與原因（tdp E3）
   - id: 19
     spec: 1
     request: ccdrawu update 照安裝的方式更新 ccdrawu，再把 Claude Code 裡的外掛更新成同一版
-    tdp: [tdp P5]
+    tdp: [tdp P5, tdp E1]
     remark:
       - Homebrew 裝的交給 Homebrew；安裝腳本裝的下載 release 的執行檔、用 checksum 驗過再換掉自己；Scoop 裝的說要跑什麼；資料夾不能寫入時說明原因後停下來
   - id: 20
     spec: 1
     request: ccdrawu version 印版本，ccdrawu help 印用法
-    tdp: [tdp E1]
+    tdp: [tdp E1, harness project.4]
   - id: 21
     spec: 1
     request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問
-    tdp: [tdp E2, tdp E3]
+    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6]
     remark:
       - ~/.config/ccdrawu/config.yaml（CCDRAWU__CONFIG、XDG_CONFIG_HOME）；系統快取資料夾裡的 ccdrawu（CCDRAWU__CACHE）；~/.ccdrawu/originals.yaml（CCDRAWU__DATA）
       - config.yaml 讀不了：寫出原因，Enter 改名成 config.yaml.bak、用預設值開始，Esc 離開
   - id: 22
     spec: 1
     request: ccdrawu 在至少 40 欄寬、12 列高、支援 truecolor 的終端機跑，要 Nerd Font；圖示佔的格數可以用環境變數設
-    tdp: [tdp L1, tdp E4, tdp E5]
+    tdp: [tdp L1, tdp E4, tdp E5, tdp E8]
     remark:
       - CCDRAWU__ICON_WIDTH、CCDRAWU__POWERLINE_WIDTH 只給 ccdrawu；TERMINU__ICON_WIDTH、TERMINU__POWERLINE_WIDTH 給整個家族
-      - README 寫的最低尺寸 40×12 比 tdp L1 的 60×32 小，review 判
+      - 最低尺寸 40×12：tdp L1 讓 app 自己決定要不要調低（不能高於 60×32）；ccdrawu 開在 Claude Code 旁邊的窄 pane 裡
   - id: 23
     spec: 1
     request: ccdrawu 有 splash，畫家族的 icon
-    tdp: [tdp S1, tdp S2, tdp S5]
+    tdp: [tdp S1, tdp S2, tdp S5, tdp E6]
   - id: 24
     spec: 1
     request: 側邊欄每 6 小時向 npm registry 查一次 Claude Code 的最新版本，打開 Status 時每 5 分鐘查一次 status.claude.com，其他時候不連網
@@ -159,4 +159,4 @@ tasks:
   - id: 26
     spec: 1
     request: README（英文與繁中）與 CHANGELOG
-    tdp: [tdp E7]
+    tdp: [tdp E7, harness project.6]
