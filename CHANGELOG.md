@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.1.0 — tdp v1.2.0
 
 - Git boxes: beside the transcript, a box stands at the right end of the pet's strip for each file not committed, and a box light inside, taped shut, for each commit not pushed, six at most in two layers. A commit turns boxes of files into a taped one; a push takes the taped ones away. With no upstream there are no taped boxes, as what is not pushed is not known.
 - Kits hop now and then, and jump up onto the boxes in their way, walk over them and drop off them.
@@ -11,6 +11,7 @@ Each release names the version of terminu design (tdp) it follows.
 - `ccdrawu statusline`, when `config.yaml` can't be read, writes which file and why to stderr; as before, it prints no line and exits non-zero.
 - `ccdrawu uninstall claude`, when `config.yaml` or `originals.yaml` can't be read, stops before it changes anything and says which file and why. It used to take the plugin out of Claude Code anyway and leave ccdrawu's theme and status line set there.
 - The repo's templates come from terminu-harness, where tdp v1.2.0 moved them; only their first comments change.
+- The developer notes give way to terminu-harness's record of the app, in `harness-assets/`.
 
 ## v1.0.1 — tdp v1.1.0
 
