@@ -1,0 +1,162 @@
+id: 1
+from: 0
+to: v1.2.0
+tasks:
+  - id: 1
+    spec: 1
+    request: 側邊欄一列一項，顯示用量上限、context、模型、花費、git、session 統計等；有些預設開、有些預設關，打開的列一定顯示，還沒有值時顯示 -
+    tdp: [tdp P5]
+    remark:
+      - 預設開：Pet、Model、Effort、Mode、Context、Session、Weekly、Cost、Uptime、Cache、Compact、Tasks、Git、Path、Claude、ccdrawu
+      - 預設關：Style、ID、Window、Spend、Rate、Tokens、Speed、Skills、Sync、Files、Commit、Repo、Directory、Status
+      - Context、Session、Weekly 畫 bar，50%、70%、90% 從綠變黃、橘、紅；Effort 從 low 綠到 max 紅
+      - 側邊欄是 Claude Code 的外掛畫的，不是 terminu-go 的畫面；列與顏色是 app 的功能邏輯（tdp P5）
+  - id: 2
+    spec: 1
+    request: 側邊欄在 session 開始時自動打開，放在對話旁邊或輸入框上方；兩個位置可以各自關掉
+    tdp: [tdp P5, tdp radio, tdp panel.12]
+    remark:
+      - 放哪裡由 Claude Code 決定：fullscreen 渲染、終端機夠寬（約 110～144 欄）時在對話旁邊，其他時候在輸入框上方
+      - 輸入框上方時項目排成好幾欄文字，不畫 bar
+      - ccdrawu 的 sidebar 頁與 inline 頁最上面各有 Drawer（on／off）；inline 設 off 時，終端機窄到放不下就收起來，不跑到輸入框上方
+  - id: 3
+    spec: 1
+    request: /ccdrawu 開關輸入它的這個 session 的側邊欄，Claude 回覆到一半也能用
+    tdp: [tdp P5]
+    remark:
+      - 打開後不管 Drawer 的設定都顯示；關掉後終端機拉寬縮窄都不再出現；之後改了 Drawer 就改回照設定走
+  - id: 4
+    spec: 1
+    request: 設一個比較短的別名指令，例如 /ccd，跟 /ccdrawu 一樣能用
+    tdp: [tdp P5, tdp text]
+    remark:
+      - 在 preferences 的 Alias 設；存在 config.yaml 的 alias，也可以直接改檔；改掉或拿掉的名字在 session 重開前都還能用
+  - id: 5
+    spec: 1
+    request: 側邊欄最上面有一隻像素寵物陪著：Claude 工作時走動、做完時坐下說一句、出錯時跳、閒著時趴下再睡著
+    tdp: [tdp P5]
+    remark:
+      - 在輸入框上方時佔最左邊一欄，不顯示台詞和球
+      - 台詞是固定的幾句，不花 token；花色每個 session 隨機
+  - id: 6
+    spec: 1
+    request: /ccdrawu pat 摸摸寵物，/ccdrawu ball 丟一顆球給牠玩
+    tdp: [tdp P5]
+  - id: 7
+    spec: 1
+    request: 有 subagent 在跑時，每個 subagent 有一隻同類的小隻在寵物後面走，最多三隻；小隻偶爾會跳，路上遇到 git 的紙箱會跳上去走過去
+    tdp: [tdp P5]
+    remark:
+      - 只畫在側邊欄；每隻的花色都不同，也不跟大隻的一樣；subagent 開始時從一端走進來，結束時走出去
+  - id: 8
+    spec: 1
+    request: 在 git repo 裡，寵物走道的右端堆紙箱：每個還沒 commit 的檔案一個紙箱，每個還沒 push 的 commit 一個封箱；commit 之後變成封箱，push 之後消失
+    tdp: [tdp P5]
+    remark:
+      - 只畫在側邊欄，最多 6 個；沒有上游分支的 branch 不畫封箱
+  - id: 9
+    spec: 1
+    request: 換寵物的動物：貓、狗、兔子、鴨子、企鵝
+    tdp: [tdp radio, tdp panel.12]
+    remark:
+      - 在 preferences 的 Pet 設，一秒內開著的 session 跟著換；不想要寵物就在項目清單取消勾選 Pet
+  - id: 10
+    spec: 1
+    request: ccdrawu 當 Claude Code 的狀態列（輸入框下方那一列），照使用者挑的項目、順序、寫法排成一列
+    tdp: [tdp P5, tdp E3]
+    remark:
+      - Claude Code 執行 ccdrawu statusline；太長時結尾截掉加 …；on when narrow 時，側邊欄在對話旁邊或終端機夠寬就整列收起來
+      - config.yaml 讀不了時什麼都不印、不動檔、在 stderr 寫是哪個檔與原因（tdp E3）
+  - id: 11
+    spec: 1
+    request: 在 ccdrawu 的 statusline 頁設定狀態列：開關（on、off、on when narrow）、項目、順序、寫法、顏色、分隔、重跑間隔
+    tdp: [tdp radio, tdp select, tdp text, tdp number, tdp confirm, tdp F6, tdp panel.12, tdp P5]
+    remark:
+      - 打開時在 ~/.claude/settings.json 設成 ccdrawu statusline；原本就有狀態列的，先問過才換掉，並記下原本的，關掉或移除時換回去
+      - Format：label、short、value；Color：highlighted、dimmed；Separator 沒設是 |；Refresh 沒設是 10 秒
+  - id: 12
+    spec: 1
+    request: 在 ccdrawu 挑側邊欄（或狀態列）顯示哪些項目
+    tdp: [tdp checkbox, tdp finder]
+    remark:
+      - Items 上按 Enter 開所有項目的清單：Space 勾、最上面 Select all 全選、Enter 套用、Esc 不改、/ 打字篩選；新勾的排在它前一項後面
+  - id: 13
+    spec: 1
+    request: 在 ccdrawu 排側邊欄（或狀態列）的項目順序
+    tdp: [tdp reorder]
+    remark:
+      - Order 上按 Enter：D 拿起一項、j k 移動、Enter 放下、再 Enter 存起來、Esc 放回原樣
+  - id: 14
+    spec: 1
+    request: ccdrawu 的畫面：左邊分組列出 Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences），右邊是選到的那一頁的值
+    tdp: [tdp screen.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13]
+    remark:
+      - 開著的 session 在一秒內跟著換
+  - id: 15
+    spec: 1
+    request: 讓側邊欄的底色跟終端機一樣：選一個 Claude Code 內建主題當底，再選側邊欄的底色
+    tdp: [tdp P5, tdp select, tdp color-picker]
+    remark:
+      - ccdrawu 寫 ~/.claude/themes/ccdrawu.json 並在 Claude Code 選用；Claude theme 設回 off 或移除時換回原本的主題
+      - Drawer background 上按 x 改回主題原本的底色（tdp P5 的領域熱鍵）
+  - id: 16
+    spec: 1
+    request: 終端機的字型畫不出 bar 時，把 Bar 換成 line
+    tdp: [tdp radio, tdp E4]
+    remark:
+      - 每個選項旁邊畫著它的 bar，終端機畫得出哪一種一看就知道
+  - id: 17
+    spec: 1
+    request: 在 ccdrawu 裡安裝外掛；外掛還沒寫出項目清單時，頁面說還沒有東西可以列、提示怎麼裝
+    tdp: [tdp confirm, tdp screen.8, tdp note.7]
+    remark:
+      - preferences 的 Plugin 上按 Enter 安裝外掛
+  - id: 18
+    spec: 1
+    request: ccdrawu install claude 把同一版的外掛裝進 Claude Code，ccdrawu uninstall claude 拿掉它並換回原本的主題與狀態列
+    tdp: [tdp P5, tdp E3]
+    remark:
+      - 只用這兩個指令（或 ccdrawu update）裝外掛，不用 /plugin：外掛要跟指令同一版
+      - uninstall 讀不了 config.yaml 或 originals.yaml 時停下來，什麼都不動，寫出是哪個檔與原因（tdp E3）
+  - id: 19
+    spec: 1
+    request: ccdrawu update 照安裝的方式更新 ccdrawu，再把 Claude Code 裡的外掛更新成同一版
+    tdp: [tdp P5]
+    remark:
+      - Homebrew 裝的交給 Homebrew；安裝腳本裝的下載 release 的執行檔、用 checksum 驗過再換掉自己；Scoop 裝的說要跑什麼；資料夾不能寫入時說明原因後停下來
+  - id: 20
+    spec: 1
+    request: ccdrawu version 印版本，ccdrawu help 印用法
+    tdp: [tdp E1]
+  - id: 21
+    spec: 1
+    request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問
+    tdp: [tdp E2, tdp E3]
+    remark:
+      - ~/.config/ccdrawu/config.yaml（CCDRAWU__CONFIG、XDG_CONFIG_HOME）；系統快取資料夾裡的 ccdrawu（CCDRAWU__CACHE）；~/.ccdrawu/originals.yaml（CCDRAWU__DATA）
+      - config.yaml 讀不了：寫出原因，Enter 改名成 config.yaml.bak、用預設值開始，Esc 離開
+  - id: 22
+    spec: 1
+    request: ccdrawu 在至少 40 欄寬、12 列高、支援 truecolor 的終端機跑，要 Nerd Font；圖示佔的格數可以用環境變數設
+    tdp: [tdp L1, tdp E4, tdp E5]
+    remark:
+      - CCDRAWU__ICON_WIDTH、CCDRAWU__POWERLINE_WIDTH 只給 ccdrawu；TERMINU__ICON_WIDTH、TERMINU__POWERLINE_WIDTH 給整個家族
+      - README 寫的最低尺寸 40×12 比 tdp L1 的 60×32 小，review 判
+  - id: 23
+    spec: 1
+    request: ccdrawu 有 splash，畫家族的 icon
+    tdp: [tdp S1, tdp S2, tdp S5]
+  - id: 24
+    spec: 1
+    request: 側邊欄每 6 小時向 npm registry 查一次 Claude Code 的最新版本，打開 Status 時每 5 分鐘查一次 status.claude.com，其他時候不連網
+    tdp: [tdp P5]
+  - id: 25
+    spec: 1
+    request: 用安裝腳本、Homebrew、Scoop 安裝與移除 ccdrawu；發 release 到 GitHub、tap 與 bucket
+    tdp: [tdp E6, harness project]
+    remark:
+      - 移除腳本先問過才刪設定與快取
+  - id: 26
+    spec: 1
+    request: README（英文與繁中）與 CHANGELOG
+    tdp: [tdp E7]

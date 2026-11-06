@@ -270,7 +270,6 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 ## 更多
 
 - [更新紀錄](CHANGELOG.md)
-- [開發者備忘](docs/dev-remarks.md)
 
 ## terminu 家族
 

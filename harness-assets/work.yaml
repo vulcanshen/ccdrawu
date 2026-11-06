@@ -1,0 +1,260 @@
+tasks:
+  - id: 1
+    spec: 1
+    implementation: |
+      外掛（hooks/）在 Claude Code 的 pane 裡畫：每列左邊是項目名（Blue），右邊是值；Context、Session、Weekly 畫 bar 與百分比，Session、Weekly 下面一列寫 resets 與倒數
+      打開的列一開始就畫，值還沒來時寫 -
+      不知道：每一列的值從 Claude Code 的哪個介面讀、多久更新一次
+    test:
+      - commit: a5a8c27
+      - commit: acc8e18
+      - commit: 6df08c2
+  - id: 2
+    spec: 1
+    implementation: |
+      外掛在 session 開始時打開 pane；Claude Code 把它放在對話旁邊或輸入框上方
+      輸入框上方：寵物佔最左 14 欄，項目排成好幾欄文字，欄數取放得下的最少列數
+      ccdrawu 的 sidebar 頁、inline 頁最上面的 Drawer 列：on／off，寫進 config.yaml；外掛一秒內讀到
+      不知道：Drawer 用的是 terminu-go 的哪一種 input
+    test:
+      - TestDrawerTurnsOffAndOn
+      - commit: 39d8059
+  - id: 3
+    spec: 1
+    implementation: |
+      外掛註冊 /ccdrawu：沒帶參數時開關這個 session 的 pane，記在 session 的狀態裡；config.yaml 的 Drawer 改了就清掉這個記錄
+    test:
+      - commit: 25ebd70
+  - id: 4
+    spec: 1
+    implementation: |
+      ccdrawu 的 preferences 頁 Alias 列：Enter 開 text input，照外掛收的規則檢查名字，存進 config.yaml 的 alias
+      外掛讀到 alias 就多註冊一個同樣的指令；註冊過的名字在 session 裡留著
+    test:
+      - TestAliasIsCheckedAndSaved
+      - TestCleanAliasTakesWhatTheModTakes
+      - TestConfigKeepsTheAliasAndPet
+  - id: 5
+    spec: 1
+    implementation: |
+      外掛畫在 pane 最上面：一列台詞，下面是寵物走的走道（側邊欄 7 列高，輸入框上方 4 列）；寵物 12×8 像素，用 ▀▄ 畫成 12 欄×4 列
+      Claude 工作時閒逛、休息、跳、跑、揮爪；一輪結束時坐下說一句；中斷時安靜坐下；回覆以錯誤結束或工具失敗時跳；壓縮後說一句；閒著 2 分鐘趴下、10 分鐘睡著（頭上 z、zz、zzZ）
+      每 200 ms 走一步；台詞固定，不叫模型
+    test:
+      - commit: 3c977dc
+  - id: 6
+    spec: 1
+    implementation: |
+      /ccdrawu pat：寵物停下來坐著，頭上冒出 ♥，說一句
+      /ccdrawu ball：球從遠的那一側彈進來滾到停，寵物跑過去揮爪玩一陣子後拿到、說一句；20 秒沒拿到球就消失
+    test:
+      - commit: 3c977dc
+  - id: 7
+    spec: 1
+    implementation: |
+      外掛每 5 秒、subagent 開始與每輪結束時讀跑著的 subagent，每個一隻小隻（最多三隻），從走道一端進來，結束的走到近的那一端離開
+      小隻 6×4 像素（兔子 6×6），畫在主寵物後面；花色從主寵物與其他小隻沒用的裡面抽
+      到了目的地偶爾原地跳；路上遇到比腳下高的紙箱，先跳上去再走過去，走出紙箱外就掉下來
+    test:
+      - commit: 627ab76
+      - commit: c0d27a4
+  - id: 8
+    spec: 1
+    implementation: |
+      外掛每 5 秒讀 git status --porcelain=v2 --branch：變更與未追蹤的檔一個檔一個紙箱，ahead 的 commit 一個封箱
+      紙箱 4×4 像素，近黑外框、裡面紙箱色，封箱裡面米白；最多 6 個，每層 3 個疊兩層，從右邊排，封箱先排最下層靠右（最多 3 個）
+      畫在走道右端，在小隻與寵物後面
+    test:
+      - commit: c0d27a4
+  - id: 9
+    spec: 1
+    implementation: |
+      ccdrawu 的 preferences 頁 Pet 列：五種動物，畫在原地選，寫進 config.yaml 的 pet.species；外掛一秒內換
+    test:
+      - TestPetIsPicked
+      - TestConfigKeepsTheAliasAndPet
+  - id: 10
+    spec: 1
+    implementation: |
+      ccdrawu statusline：從 stdin 讀 Claude Code 給的 session，讀外掛寫在快取資料夾 sessions/ 的那個 session 的值；沒有的話只畫 Model、Context、Cost
+      照 config.yaml 的項目、順序、Format、Color、Separator 排成一列，截到 COLUMNS 減 4 欄，結尾加 …
+      on when narrow 時側邊欄在對話旁邊、或終端機寬到 144 欄以上，印一個 reset 讓那一列收起來；沒有東西可畫也一樣
+      一週沒寫過的 session 檔刪掉
+      config.yaml 讀不了：不印、不動檔，stderr 寫 <路徑> can't be read: <原因>，exit 1
+    test:
+      - TestLineFormats
+      - TestLineOrderSeparatorAndGaps
+      - TestLineColors
+      - TestLineDimmedHasNoColorOfItsOwn
+      - TestLineIsCutToTheWidth
+      - TestRunReadsTheSessionsFile
+      - TestRunWithoutTheFileShowsWhatTheInputHas
+      - TestRunWithNoCatalogOrConfig
+      - TestRunStopsOnAConfigThatCantBeRead
+      - TestRunRemovesFilesOfSessionsLongQuiet
+      - TestRunOnWhenNarrow
+      - TestRunHidesTheRow
+  - id: 11
+    spec: 1
+    implementation: |
+      ccdrawu 的 statusline 頁：Statusline（on、off、on when narrow）、Items、Order、Format、Color、Separator（text）、Refresh（number，1–60 秒）
+      Statusline 設 on：settings.json 的 statusLine 已經是別的時，開 confirm 問過才換；原本的寫進 originals.yaml；設回 off 時換回去
+      改 settings.json 只動 statusLine 那個值，其他原樣
+    test:
+      - TestStatuslineReplacesTheUsersOnlyAfterAsking
+      - TestStatuslineOnWithoutAskingWhereThereWasNone
+      - TestStatuslineFormatAndItems
+      - TestStatuslineReplacedSinceReadsOff
+      - TestStatuslineOnWhenNarrow
+      - TestStatuslineReplacesAnotherAndPutsItBack
+      - TestStatuslineWhereThereWasNone
+      - TestStatuslineSetSinceIsLeftAlone
+  - id: 12
+    spec: 1
+    implementation: |
+      sidebar、inline、statusline 頁的 Items 列：Enter 開 checkbox popup，列出所有項目（組、key、名稱），最上面是 Select all；Space 勾、Enter 套用、Esc 不改、/ 篩選
+      存進 config.yaml；沒寫進去的 id 留著
+    test:
+      - TestEditPicksTheItemsInOnePopup
+      - TestConfigKeepsUnknownIDsAndWritesAllOff
+      - TestConfigDefaultsUntilChanged
+  - id: 13
+    spec: 1
+    implementation: |
+      Order 列：Enter 開 reorder popup，列出勾了的項目；D 拿起、j k 移動、Enter 放下、Enter 存、Esc 放回原樣
+      存進 config.yaml 的順序
+    test:
+      - TestOrderIsReordered
+      - TestConfigKeepsTheOrder
+      - TestConfigReordersInPlace
+      - TestWhatCantMoveARowEach
+  - id: 14
+    spec: 1
+    implementation: |
+      [1] 分組清單：Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences）；[2] 跟著 [1] 的 cursor 換成那一頁，一列一個值，Enter 進去
+      值上的 Enter 也在 Space menu 裡；不合法的值標出來；沒存的改動放回去
+    test:
+      - TestDetailFollowsTheSidebar
+      - TestEnterOnAValueIsInTheMenu
+      - TestWrongValuesAreMarked
+      - TestUnsavedChangeGoesBack
+      - TestTDP
+      - TestTDPTricky
+      - TestL4EveryRowFullWidth
+  - id: 15
+    spec: 1
+    implementation: |
+      preferences 頁 Claude theme：Enter 開 select，off 與六個內建主題；Drawer background：color picker，在 panel 上畫三格色塊與 hex，x 改回主題原本的底色
+      寫 <Claude 資料夾>/themes/ccdrawu.json，settings.json 的 theme 換成 custom:ccdrawu，原本的寫進 originals.yaml；設回 off 換回去，使用者之後在 /theme 換過的不動
+      改 settings.json 只動 theme 那個值，其他位元組原樣；Claude 資料夾照 CLAUDE_CONFIG_DIR
+    test:
+      - TestThemeGoesIntoClaudeCodeAndBack
+      - TestXResetsTheBackground
+      - TestThemeIsAppliedAndPutBack
+      - TestRestoreLeavesAThemeChosenSince
+      - TestSetStringChangesThatValueAlone
+      - TestSetStringPutsAMissingKeyFirst
+      - TestRemoveKeyTakesItsLineAndComma
+      - TestDirFollowsClaudeConfigDir
+      - TestKeptComesBackByteForByte
+  - id: 16
+    spec: 1
+    implementation: |
+      preferences 頁 Bar：squares（Nerd Font 的方塊）或 line，每個選項旁邊畫它的 bar；寫進 config.yaml 的 bar，外掛照它畫
+    test:
+      - TestBarIsSquaresUntilTheLineIsPicked
+  - id: 17
+    spec: 1
+    implementation: |
+      preferences 頁 Plugin：Enter 開 confirm 問過，再跑 ccdrawu install claude 那一套；Claude Code 印的字記進 App Log
+      外掛還沒寫出 catalog.json 時，sidebar、inline、statusline 頁寫還沒有東西可以列，提示在 Plugin 上按 Enter
+    test:
+      - TestPluginRowInstallsAfterAsking
+      - TestNoCatalogSaysWhatToDo
+      - TestClaudesLinesGoToTheAppLog
+  - id: 18
+    spec: 1
+    implementation: |
+      ccdrawu install claude：用 claude plugin 指令加市集、裝外掛，來源是 GitHub 上跟執行檔同一版的 tag（CCDRAWU__MARKETPLACE 可改）；已經裝了就更新、換到那個 tag；印 Claude Code 說的話
+      ccdrawu uninstall claude：先讀 config.yaml 與 originals.yaml，讀不了就停下來，stderr 寫 <路徑> can't be read: <原因>；讀得了才拿掉外掛與市集，換回原本的主題與狀態列，印做了什麼
+    test:
+      - TestInstallTakesTheMarketplaceItIsGiven
+      - TestSourceFromPinsTheReleaseTag
+      - TestInstallUpdatesThePluginThere
+      - TestInstallMovesThePluginToItsTag
+      - TestInstallSaysWhatClaudeCodeRefused
+      - TestUninstallRemovesThePluginThenItsMarketplace
+      - TestUninstallWithNothingThere
+      - TestInstalledFindsThePlugin
+      - TestPutBackGivesClaudeCodeItsOwnBack
+      - TestUninstallStopsOnAFileThatCantBeRead
+  - id: 19
+    spec: 1
+    implementation: |
+      ccdrawu update：查 GitHub 最新的 release，比版本；Homebrew 的 Cellar 底下跑 brew upgrade vulcanshen/tap/ccdrawu；安裝腳本或下載的：抓 release 的壓縮檔與 checksums.txt，驗 sha256，換掉自己（Windows 先把執行中的改名 .old）；Scoop 的印要跑的指令；資料夾不能寫入時下載前就停
+      之後 Claude Code 有外掛的話，用新的 ccdrawu 跑 install claude
+    test:
+      - TestNewerComparesPartByPart
+      - TestNewerTakesPreReleases
+      - TestHowTellsTheMethodFromThePath
+      - TestReplacePutsTheCheckedExecutableInPlace
+      - TestReplaceOnWindowsMovesTheRunningOneAside
+      - TestReplaceRefusesAnArchiveThatFailsItsChecksum
+      - TestReplaceStopsWhereItCannotWrite
+  - id: 20
+    spec: 1
+    implementation: |
+      ccdrawu version（--version、-v）印 ccdrawu 與版本；ccdrawu help（--help、-h）印用法與環境變數；不認得的指令印用法、exit 2
+    test:
+      - commit: 5de15c1
+  - id: 21
+    spec: 1
+    implementation: |
+      config.yaml 在 CCDRAWU__CONFIG、XDG_CONFIG_HOME/ccdrawu 或 ~/.config/ccdrawu；快取在 CCDRAWU__CACHE 或系統快取資料夾；originals.yaml 在 CCDRAWU__DATA 或 ~/.ccdrawu
+      第一次執行時把 config.json 與舊位置的檔搬過來並說；config.json 留在旁邊時每次啟動都說
+      config.yaml 或 originals.yaml 讀不了：畫面開在沒有東西的狀態，寫原因，Enter 改名 .bak、用預設值開始，Esc 離開、stderr 寫原因
+    test:
+      - TestLocateFollowsE3
+      - TestConfigIsYAML
+      - TestMoveTakesTheOldPlaces
+      - TestOriginalsMoveToTheDataFolder
+      - TestConfigJSONBesideConfigYAMLStays
+      - TestOldPlacesMoveOnTheFirstStart
+      - TestConfigJSONBesideConfigYAMLSaysSo
+      - TestOriginalsCantBeRead
+      - TestMovedAsideStartsAsTheFirstStart
+      - TestMovedAsideOriginalsStartAsTheFirstStart
+      - TestWhatCantBeRead
+  - id: 22
+    spec: 1
+    implementation: |
+      最低尺寸 40×12，比它小時只畫名稱與提示
+      圖示寬度讀 CCDRAWU__ICON_WIDTH、CCDRAWU__POWERLINE_WIDTH，沒有就讀 TERMINU__ 的，再沒有就問終端機
+    test:
+      - TestBelowTheLeastSize
+  - id: 23
+    spec: 1
+    implementation: |
+      V 開 splash，畫 docs/icon.svg（internal/ui/icon.svg 是它的複本，go:embed 讀）
+    test:
+      - TestSplashIconIsDocsIcon
+  - id: 24
+    spec: 1
+    implementation: |
+      外掛每 6 小時向 npm registry 查 Claude Code 的最新版本，Claude 那一列有新版時一併寫
+      Status 那一列在側邊欄或輸入框上方打開時，才每 5 分鐘向 status.claude.com 的 API 查服務狀態
+    test:
+      - commit: a5a8c27
+      - commit: 830e085
+  - id: 25
+    spec: 1
+    implementation: |
+      install.sh、install.ps1、uninstall.sh、uninstall.ps1；.goreleaser.yaml 與 .github/workflows/release.yml 在推 v* tag 時測試、發 GitHub release、推 Homebrew tap 與 Scoop bucket
+    test:
+      - check: repo
+  - id: 26
+    spec: 1
+    implementation: |
+      README.md 與 README-zh_TW.md；CHANGELOG.md 每一版的標題寫照的 tdp
+    test:
+      - commit: f6cf97f

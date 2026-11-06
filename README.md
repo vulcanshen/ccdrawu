@@ -270,7 +270,6 @@ Every 6 hours the drawer asks the npm registry for Claude Code's newest version.
 ## More
 
 - [Changelog](CHANGELOG.md)
-- [Developer notes](docs/dev-remarks.md)
 
 ## The terminu family
 
