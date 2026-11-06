@@ -2,6 +2,13 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- Built on terminu-go v1.2.0 (tdp v1.2.0). In `ccdrawu`, the App Log and the key reference (`?`) have `/` search, `n|N` going to the next and the previous hit.
+- `ccdrawu statusline`, when `config.yaml` can't be read, writes which file and why to stderr; as before, it prints no line and exits non-zero.
+- `ccdrawu uninstall claude`, when `config.yaml` or `originals.yaml` can't be read, stops before it changes anything and says which file and why. It used to take the plugin out of Claude Code anyway and leave ccdrawu's theme and status line set there.
+- The repo's templates come from terminu-harness, where tdp v1.2.0 moved them; only their first comments change.
+
 ## v1.0.1 — tdp v1.1.0
 
 - Built on terminu-go v1.1.0 (tdp v1.1.0). Nothing on the screen or in the keys changes.

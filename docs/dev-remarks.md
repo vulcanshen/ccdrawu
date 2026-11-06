@@ -1,7 +1,7 @@
 # ccdrawu 開發者備忘
 
 開發 ccdrawu 時要提醒自己、以及與 AI 協作時記下的決策。使用者要知道的在 README，這裡只放開發者需要的。設定 TUI 遵循
-[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v1.1.0；drawer 本身是 Claude Code 的 mod，
+[terminu design](https://github.com/vulcanshen/terminu)（tdp）的 principle，照 tdp v1.2.0；drawer 本身是 Claude Code 的 mod，
 畫在 Claude Code 裡，tdp 的畫面規定不套到它上面。
 
 ---
@@ -304,6 +304,23 @@ ccdrawu 是一個 Claude Code mod（function hooks 外掛）：`hooks/register.t
   module，v2 以後帶 `/vN`），`internal/version/version.go` 照抄。CHANGELOG 的 v1.0.1 那段照 project.6 寫 v1.0.0 以來的全部
   改動，beta 的併進來；兩個 beta 的段落留著。這次會推共用的 tap 與 bucket，由 terminu 一個 app 一個 app 發。
 
+- **跟上 tdp v1.2.0（terminu-go v1.2.0，terminu-harness v1.2.1，2026-11-06）。** v1.0.1 全部通過（terminu 驗的：CI、GitHub 上是
+  正式版、tap 與 scoop 1.0.1、build 資訊 `v1.0.1`、沒有 `+dirty`）。這一輪是 user 直接說的，user 也在這個 repo 裝了 terminu-harness。
+  - **範本搬到 harness**（tdp v1.2.0）：七個範本只有第一段註解變了，`tdp project/…` 改成 `harness project/…`（`family.mk` 多一句
+    「要改先改 terminu-harness」），照抄。這份文件現行的引用改成 `harness project`，舊輪次的紀錄留著當時的寫法。tdptest 不再查
+    repo，改由 harness 的 `check` 查；ccdrawu 還沒交給 harness 管（沒有 `harness-assets/`），`check` 只回報少了 `idea.md` 與
+    `spec.yaml`，沒有範本的問題。
+  - **沒有畫面時讀不了設定**（tdp E3、E3-27）：`ccdrawu statusline` 本來就什麼都不印、不動檔、exit 1，只是 stderr 沒寫是哪個檔；
+    現在照 TUI 按 `Esc` 的寫法，`<路徑> can't be read: <原因>`。`ccdrawu uninstall claude` 原本先把外掛從 Claude Code 拿掉才讀
+    config，讀不了就跳過換回主題與狀態列，還是 exit 0；現在先讀 config 與 originals，讀不了就停下來，什麼都不動。`install claude`、
+    `update`、`version` 不讀 ccdrawu 自己的檔。兩條都先寫了會失敗的測試。
+  - **其他新的 E3 項目都不適用**：不再讀的設定 key（E3-24）沒有，v0.1.0 起每一版的 key 都還在讀；不再用的快取（E3-25）也沒有，
+    0.1.4 的外掛寫在 `~/.ccdrawu/sessions` 的，狀態列還在讀；沒有只給這一次執行用的檔（E3-26）。
+  - **lib 帶來的**：App Log 與 `?` 有 `/` 搜尋（tdp note.3、note.5）、從 Space menu 執行 `/` 後 menu 收起（T1）、`PgUp|PgDn` 就是
+    `u|d`（K12）、選取模式的 `Cop[y]`（menu.4）。ccdrawu 沒有自己的 viewer、mode 或 panel 搜尋，不用改。
+  - `claude plugin validate`（Claude Code 2.1.318）多了 plugin directory 的警告：沒有 icon、磁碟上的 `.DS_Store`（git 不收）。不影響
+    `make check`，這輪沒處理。
+
 ## 已否決，不要重提
 
 理由寫在上面的設計決定，這裡只列出來。
@@ -353,20 +370,20 @@ ccdrawu 沒有另外的設計文件。
 
 - 使用者看得到的：`README.md`、`README-zh_TW.md`（內容對齊）；每一版改了什麼：`CHANGELOG.md`。
 - drawer 怎麼拿到每一個值、多久更新：本檔的「運作方式」；為什麼這樣做：「設計決定」。
-- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`、`project/`（tdp v1.1.0）。
+- 設定 TUI 照的規範：terminu 的 `principle/`、`components/`（tdp v1.2.0）；repo 的範本照 terminu-harness 的 `project/`（harness v1.2.1）。
 - 程式：mod 在 `hooks/`（`register.tsx` 是入口，`items.ts` 是項目的 catalog，`pets.ts` 是寵物），設定 TUI 在 `internal/ui`。
 
 ## 建置與開發
 
-目錄照 tdp project（`cmd/ccdrawu`、`internal/`、`docs/`、`family.mk`……）。ccdrawu 另有：
+目錄照 harness project（`cmd/ccdrawu`、`internal/`、`docs/`、`family.mk`……）。ccdrawu 另有：
 
 - `hooks/`：Claude Code 的 mod（TypeScript，hooks module 是 `hooks/register.tsx`，`hooks/hooks.json` 指向它）。
 - `tests/`：mod 的測試（`claude plugin test .` 跑 `tests/*.test.ts`）。
 - `types/`：mod 的 `$.state` 型別合約（`.claude-plugin/plugin.json` 的 `types`）。
 - `.claude-plugin/`：外掛的 `plugin.json` 與市集的 `marketplace.json`；Claude Code 載入時在裡面寫 `types/`（git 不收）。
 - `tsconfig.json`：Claude Code 載入外掛時寫的（git 不收），`tsc -p .` 用。
-- `install.ps1`、`uninstall.ps1`：Windows 的安裝與移除（tdp project 沒有範本，照 kbu）。
-- `.claude/`：git 不收，只留在維護者的機器上（tdp project.3），例如 social preview 的指令與 agent（見下面）。
+- `install.ps1`、`uninstall.ps1`：Windows 的安裝與移除（harness project 沒有範本，照 kbu）。
+- `.claude/`：git 不收，只留在維護者的機器上（harness project.3），例如 social preview 的指令與 agent（見下面）。
 
 ### 載入
 
@@ -401,7 +418,7 @@ ccdrawu 沒有另外的設計文件。
 
 ### 檢查
 
-- `make check`：gofmt、`go vet`、`go test -race`；有 `go.work` 時加 `check-lib`（關掉 `go.work`，照 go.mod 裡的 terminu-go 版本編譯、測試）；最後是 `make mod-check`（下面兩個 plugin 指令，Makefile 的 `CHECK`）。commit 前跑。家族共用的 target 在 `family.mk`（tdp project 的範本，照原樣複製、不在這裡改），`Makefile` 只設變數，ccdrawu 自己的 `plugin`、`mod-check` 放在最後一段。
+- `make check`：gofmt、`go vet`、`go test -race`；有 `go.work` 時加 `check-lib`（關掉 `go.work`，照 go.mod 裡的 terminu-go 版本編譯、測試）；最後是 `make mod-check`（下面兩個 plugin 指令，Makefile 的 `CHECK`）。commit 前跑。家族共用的 target 在 `family.mk`（harness project 的範本，照原樣複製、不在這裡改），`Makefile` 只設變數，ccdrawu 自己的 `plugin`、`mod-check` 放在最後一段。
 - `claude plugin validate .`：讀 manifest、市集檔和 hooks module，列出 hook、呼叫的 API 和引擎會拒絕的地方。
 - `claude plugin test .`：跑 `tests/*.test.ts`。
 - 型別檢查：Claude Code 載入外掛後會在 `.claude-plugin/types/` 放型別檔、在根目錄放 `tsconfig.json`（兩者都在 `.gitignore`），之後 `tsc -p .` 即可。
@@ -413,12 +430,12 @@ ccdrawu 沒有另外的設計文件。
 
 ## 發布
 
-照 tdp project 的「發布」：`make check` 通過，CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C`，commit，打 tag `vX.Y.Z`，
+照 harness project 的「發布」：`make check` 通過，CHANGELOG 的 `## Unreleased` 改成 `## vX.Y.Z — tdp vA.B.C`，commit，打 tag `vX.Y.Z`，
 push commit 與 tag，`release.yml` 接著測試（含 windows-latest，不帶 `-race`）、goreleaser 發 GitHub release、推 Homebrew tap 與
 Scoop bucket，再用 CHANGELOG 那一段蓋過 release 的內文。ccdrawu 多一步：
 
 - **外掛的版本**：`.claude-plugin/plugin.json` 的 `version` 改成同一個版號，跟 CHANGELOG 同一個 commit。`ccdrawu install claude`
   裝的是跟執行檔同一版的 tag 上的外掛，drawer 的 ccdrawu 列讀的也是它。
-- **beta**（tdp project.7）：tag `vX.Y.Z-beta.N`，CHANGELOG 標題 `## vX.Y.Z-beta.N — tdp vA.B.C`，步驟一樣；GitHub 上是
+- **beta**（harness project.7）：tag `vX.Y.Z-beta.N`，CHANGELOG 標題 `## vX.Y.Z-beta.N — tdp vA.B.C`，步驟一樣；GitHub 上是
   pre-release，tap 與 bucket 不動。之後的正式版那一段要寫上一個正式版以來的全部改動，beta 的也算。
 - `v0.1.4` 以前的標題是 `## [0.1.x] - 日期`（tdp v0.7.0 以前的寫法），照 tdp 不改。

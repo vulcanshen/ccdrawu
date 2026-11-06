@@ -86,25 +86,40 @@ func integrate(install bool) error {
 		fmt.Println("Run ccdrawu to pick what it shows.")
 		return nil
 	}
-	msg, ok, err := claude.Uninstall(claude.Exec)
-	if err != nil {
-		return err
-	}
-	if ok {
-		fmt.Println(msg)
-	} else {
-		fmt.Println("The ccdrawu plugin is not in Claude Code.")
-	}
 	loc, err := config.UserLocations()
 	if err != nil {
 		return err
 	}
-	// With the plugin gone already too: a status line left set would run a ccdrawu that the
-	// uninstall script is about to remove
-	if err := putBack(loc, os.Stdout); err != nil {
+	return uninstall(loc, claude.Exec, os.Stdout)
+}
+
+// uninstall takes the plugin out of Claude Code and gives Claude Code the
+// user's own theme and status line back, saying so on out. A config or
+// originals that can't be read stops it before it touches anything: with no
+// screen to ask on, it does what the TUI's Esc does (tdp E3, can't be read).
+func uninstall(loc config.Locations, run claude.Run, out io.Writer) error {
+	cfg, err := config.ReadConfig(loc.ConfigFile)
+	if err != nil {
+		return fmt.Errorf("%s can't be read: %w", config.Source(loc.ConfigFile), err)
+	}
+	if _, err := config.ReadOriginals(loc.Originals(), cfg); err != nil {
+		return fmt.Errorf("%s can't be read: %w", loc.Originals(), err)
+	}
+	msg, ok, err := claude.Uninstall(run)
+	if err != nil {
 		return err
 	}
-	fmt.Printf("Your picks stay in %s, what the plugin wrote for ccdrawu in %s.\n", loc.ConfigFile, loc.Cache)
+	if ok {
+		fmt.Fprintln(out, msg)
+	} else {
+		fmt.Fprintln(out, "The ccdrawu plugin is not in Claude Code.")
+	}
+	// With the plugin gone already too: a status line left set would run a ccdrawu that the
+	// uninstall script is about to remove
+	if err := putBack(loc, out); err != nil {
+		return err
+	}
+	fmt.Fprintf(out, "Your picks stay in %s, what the plugin wrote for ccdrawu in %s.\n", loc.ConfigFile, loc.Cache)
 	return nil
 }
 

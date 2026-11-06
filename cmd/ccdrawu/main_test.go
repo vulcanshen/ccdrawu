@@ -70,3 +70,42 @@ func TestPutBackGivesClaudeCodeItsOwnBack(t *testing.T) {
 		t.Fatalf("again: %q %v", out.String(), err)
 	}
 }
+
+// tdp E3, can't be read, with no screen: uninstall claude stops on a config or
+// originals that can't be read before it touches anything, Claude Code's
+// plugin included, the error naming the file and why
+func TestUninstallStopsOnAFileThatCantBeRead(t *testing.T) {
+	dir := t.TempDir()
+	loc := config.Locations{Cache: filepath.Join(dir, "cache"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude"), Data: filepath.Join(dir, ".ccdrawu")}
+	run := func(name string, args ...string) ([]byte, error) {
+		t.Fatalf("ran %s %v", name, args)
+		return nil, nil
+	}
+	write := func(path, text string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	write(loc.ConfigFile, "drawer: [oops\n")
+	var out bytes.Buffer
+	if err := uninstall(loc, run, &out); err == nil || !strings.HasPrefix(err.Error(), loc.ConfigFile+" can't be read: ") {
+		t.Fatalf("config: %v", err)
+	}
+
+	write(loc.ConfigFile, "theme:\n  base: dark-ansi\n")
+	write(loc.Originals(), "theme: [oops\n")
+	if err := uninstall(loc, run, &out); err == nil || !strings.HasPrefix(err.Error(), loc.Originals()+" can't be read: ") {
+		t.Fatalf("originals: %v", err)
+	}
+	if out.Len() != 0 {
+		t.Errorf("printed %q", out.String())
+	}
+	if bak, _ := filepath.Glob(filepath.Join(dir, "*", "*.bak*")); len(bak) != 0 {
+		t.Errorf("moved aside: %v", bak)
+	}
+}

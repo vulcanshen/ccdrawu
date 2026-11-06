@@ -92,7 +92,9 @@ func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now tim
 	}
 	cfg, err := config.ReadConfig(loc.ConfigFile)
 	if err != nil {
-		return err
+		// With no screen to ask on: nothing printed, no file touched, the file
+		// and why on stderr (tdp E3, can't be read)
+		return fmt.Errorf("%s can't be read: %w", config.Source(loc.ConfigFile), err)
 	}
 	cat, ok, err := config.ReadCatalog(loc.Catalog())
 	if err != nil || !ok {

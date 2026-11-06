@@ -176,6 +176,39 @@ func TestRunWithNoCatalogOrConfig(t *testing.T) {
 	}
 }
 
+// tdp E3, can't be read, with no screen: a config that can't be read stops
+// the line before it prints anything or touches a file, the error naming the
+// file and why
+func TestRunStopsOnAConfigThatCantBeRead(t *testing.T) {
+	loc, sessions := setup(t)
+	loc.Data = filepath.Join(filepath.Dir(loc.Cache), ".ccdrawu")
+	if err := os.WriteFile(loc.ConfigFile, []byte("drawer: [oops\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	old := filepath.Join(sessions, "old.json")
+	if err := os.WriteFile(old, []byte(`{"items": {}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now()
+	if err := os.Chtimes(old, now.Add(-keep-time.Hour), now.Add(-keep-time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	var out bytes.Buffer
+	err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, loc, 0, now)
+	if err == nil || !strings.HasPrefix(err.Error(), loc.ConfigFile+" can't be read: ") {
+		t.Fatalf("error: %v", err)
+	}
+	if out.Len() != 0 {
+		t.Errorf("printed %q", out.String())
+	}
+	if _, err := os.Stat(old); err != nil {
+		t.Errorf("a session's file went: %v", err)
+	}
+	if bak, _ := filepath.Glob(loc.ConfigFile + ".bak*"); len(bak) != 0 {
+		t.Errorf("moved aside: %v", bak)
+	}
+}
+
 func TestRunRemovesFilesOfSessionsLongQuiet(t *testing.T) {
 	loc, sessions := setup(t)
 	now := time.Now()
