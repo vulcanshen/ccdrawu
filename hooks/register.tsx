@@ -23,6 +23,7 @@ import {
   drawnCells,
   KIT_WIDTH,
   kitCells,
+  kitDrawing,
   kitLeft,
   kitsFor,
   kitsTick,
@@ -40,6 +41,7 @@ import {
   WALK_HEIGHT,
   type PetEvent,
   type Run,
+  type Under,
 } from './pets'
 import { BOX_INK, groundUnder, PILE_WIDTH, pileDrawing, pileHeights, pileOf } from './pile'
 import { registerCommands } from './commands'
@@ -694,10 +696,10 @@ export const register: Register = on => {
           )}
         </Box>
       ))
-    const drawPet = (pixels: number) => (
+    const drawPet = (pixels: number, under?: Under) => (
       <Box key="pet" flexDirection="column" width={12} height={pixels / 2} flexShrink={0}>
         {cellRows(
-          petCells(species, look.pose, petCoat(species, p.coat), p.faceLeft, look.over, pixels, pixels > PET_HEIGHT ? look.lift : 0),
+          petCells(species, look.pose, petCoat(species, p.coat), p.faceLeft, look.over, pixels, pixels > PET_HEIGHT ? look.lift : 0, under),
         )}
       </Box>
     )
@@ -787,6 +789,20 @@ export const register: Register = on => {
     const pile = pileOf(hasPet ? await read($, git) : null)
     // The pet's box at the bottom of the strip, the room over it for the boxes and a kit on them
     const petTop = (WALK_HEIGHT - PET_HEIGHT - LIFT_ROOM) / 2
+    // What the strip has drawn by a pixel's row and column under the first n kits, all of them when n is
+    // left out, the pet and the ball aside: those kits, the last over the others, then the boxes. A kit,
+    // the pet and the ball show it in the halves of their cells they leave empty
+    const box = { art: pileDrawing(pile), coat: BOX_INK, left: Math.max(0, inner - PILE_WIDTH), lift: 0 }
+    const drawnKits = ks.map(k => ({ art: kitDrawing(species, k), coat: petCoat(species, k.coat), left: kitLeft(k.x, inner), lift: k.y }))
+    const strip =
+      (n = drawnKits.length) =>
+      (y: number, x: number) => {
+        for (const d of [...drawnKits.slice(0, n).reverse(), box]) {
+          const color = d.coat[d.art[y - (WALK_HEIGHT - d.art.length - d.lift)]?.[x - d.left] ?? '.']
+          if (color !== undefined) return color
+        }
+        return undefined
+      }
     // The pet over the rows: what it says, then the strip it walks along, its place along its walk spread
     // over the width there is
     if (hasPet) {
@@ -811,23 +827,29 @@ export const register: Register = on => {
             </Box>
           )}
           {/* The kits, out of the flow, so the pet goes over them: on the ground or on the boxes, along a
-              walk as long as the pet's, spread over the width there is less their own */}
-          {ks.map(k => (
-            <Box
-              key={'kit-' + k.id}
-              position="absolute"
-              top={0}
-              left={kitLeft(k.x, inner)}
-              width={KIT_WIDTH}
-              height={WALK_HEIGHT / 2}
-              flexDirection="column"
-            >
-              {cellRows(kitCells(species, k, WALK_HEIGHT))}
-            </Box>
-          ))}
+              walk as long as the pet's, spread over the width there is less their own; coming in or going,
+              the columns of one inside the strip */}
+          {ks.map((k, i) => {
+            const left = kitLeft(k.x, inner)
+            const from = Math.max(0, -left)
+            const to = Math.min(KIT_WIDTH, inner - left)
+            return to <= from ? null : (
+              <Box
+                key={'kit-' + k.id}
+                position="absolute"
+                top={0}
+                left={left + from}
+                width={to - from}
+                height={WALK_HEIGHT / 2}
+                flexDirection="column"
+              >
+                {cellRows(kitCells(species, k, WALK_HEIGHT, (y, x) => strip(i)(y, left + from + x), from, to))}
+              </Box>
+            )
+          })}
           <Box width={along(p.x)} flexShrink={0} />
           <Box flexDirection="column" marginTop={petTop} flexShrink={0}>
-            {drawPet(PET_HEIGHT + LIFT_ROOM)}
+            {drawPet(PET_HEIGHT + LIFT_ROOM, (y, x) => strip()(petTop * 2 + y, along(p.x) + x))}
           </Box>
           {/* A ball over the strip, out of the flow: where a pet at its place would have its middle */}
           {ball === undefined ? null : (
@@ -840,7 +862,11 @@ export const register: Register = on => {
               height={(PET_HEIGHT + LIFT_ROOM) / 2}
               flexDirection="column"
             >
-              {cellRows(drawnCells(BALL, BALL_INK, PET_HEIGHT + LIFT_ROOM, ball.lift))}
+              {cellRows(
+                drawnCells(BALL, BALL_INK, PET_HEIGHT + LIFT_ROOM, ball.lift, undefined, false, (y, x) =>
+                  strip()(petTop * 2 + y, along(ball.pos) + BALL_LEFT + x),
+                ),
+              )}
             </Box>
           )}
         </Box>,

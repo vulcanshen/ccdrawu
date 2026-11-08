@@ -2,6 +2,14 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- The git boxes look more like boxes, and are a darker brown, so orange and brown pets read apart from them: a column wider, lighter inside, with a frame round the sides and the bottom, darker. A box for a file is open in the middle of the top; a taped one is shut under a lid, with a pixel of it down the middle where the flaps meet, and no longer told apart by being light inside.
+- The git boxes pile three layers high, nine at most, in the room over them in the strip that stood empty.
+- A kit walks in from beyond an end of the pet's strip as its subagent starts, and off past one when it is done; it was there all at once, and gone all at once.
+- Where the git boxes get higher or lower, and now and then at a step among them, a kit picks a layer of them at random, the ground in front of them too, and walks along it, in front of the boxes on it; it went up onto the top of them and walked over the outside of the pile alone. The layers are counted from the boxes there, up to the highest with room over it for a kit: the second, and a kit walks in front of the third.
+- The pet, a kit and the ball, in front of the boxes or a kit, no longer leave black around their feet: where they take only half a cell, the other half shows what is behind them.
+
 ## v1.1.0 — tdp v1.2.0
 
 - Git boxes: beside the transcript, a box stands at the right end of the pet's strip for each file not committed, and a box light inside, taped shut, for each commit not pushed, six at most in two layers. A commit turns boxes of files into a taped one; a push takes the taped ones away. With no upstream there are no taped boxes, as what is not pushed is not known.

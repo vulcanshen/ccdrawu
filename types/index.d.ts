@@ -112,6 +112,7 @@ export type Kit = {
   y: number // how many pixels over the ground its feet are: on the git boxes, or in the air
   hopUntil: number // hopping on the spot until then
   air: boolean // off what is under it: in a hop, jumping up onto the boxes or dropping off them
+  level: number // how high the layer of boxes it goes on at is, picked where they get higher or lower; 0 the ground
 }
 
 declare module 'claude-code' {
