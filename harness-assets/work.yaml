@@ -43,6 +43,7 @@ tasks:
       每 200 ms 走一步；台詞固定，不叫模型
     test:
       - commit: 3c977dc
+      - commit: c9ca750
   - id: 6
     spec: 1
     implementation: |
@@ -61,6 +62,7 @@ tasks:
     test:
       - commit: 627ab76
       - commit: c0d27a4
+      - commit: c9ca750
   - id: 8
     spec: 2
     implementation: |
@@ -69,6 +71,7 @@ tasks:
       畫在走道右端，在小隻與寵物後面
     test:
       - commit: c0d27a4
+      - commit: c9ca750
   - id: 9
     spec: 1
     implementation: |

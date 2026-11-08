@@ -93,13 +93,13 @@ tasks:
   - id: 14
     spec: 1
     request: ccdrawu 的畫面：左邊分組列出 Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences），右邊是選到的那一頁的值
-    tdp: [tdp screen.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13]
+    tdp: [tdp screen.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp M3]
     remark:
       - 開著的 session 在一秒內跟著換
   - id: 15
     spec: 1
     request: 讓側邊欄的底色跟終端機一樣：選一個 Claude Code 內建主題當底，再選側邊欄的底色
-    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker]
+    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker, tdp M2, tdp M3]
     remark:
       - ccdrawu 寫 ~/.claude/themes/ccdrawu.json 並在 Claude Code 選用；Claude theme 設回 off 或移除時換回原本的主題
       - Drawer background 上按 x 改回主題原本的底色（tdp P5 的領域熱鍵）
@@ -112,7 +112,7 @@ tasks:
   - id: 17
     spec: 1
     request: 在 ccdrawu 裡安裝外掛；外掛還沒寫出項目清單時，頁面說還沒有東西可以列、提示怎麼裝
-    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7]
+    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3]
     remark:
       - preferences 的 Plugin 上按 Enter 安裝外掛
   - id: 18
