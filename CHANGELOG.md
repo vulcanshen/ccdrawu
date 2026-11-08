@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.1.1 — tdp v1.2.0
 
 - The git boxes look more like boxes, and are a darker brown, so orange and brown pets read apart from them: a column wider, lighter inside, with a frame round the sides and the bottom, darker. A box for a file is open in the middle of the top; a taped one is shut under a lid, with a pixel of it down the middle where the flaps meet, and no longer told apart by being light inside.
 - The git boxes pile three layers high, nine at most, in the room over them in the strip that stood empty.
