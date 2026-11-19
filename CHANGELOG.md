@@ -2,6 +2,10 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## v1.2.1 — tdp v1.2.17
+
+- The release is tagged as an annotated tag, its message this heading, as the family releases now (harness project.7). The tags of v1.2.0 and before stay as they were.
+
 ## v1.2.0 — tdp v1.2.17
 
 - Snails and owls: beside the transcript, a snail crawls onto the pet's strip for each shell left running in the background, and an owl flies down onto it for each monitor, each in colors picked at random; an owl now and then flies off, its wings beating, to perch somewhere else, on the git boxes too. While Claude is idle the pet now and then goes over to one on the ground and paws at it, and a snail draws into its shell, an owl spreads its wings; with them about it does not fall asleep. Once its task is done, a snail crawls off and an owl flies off.
