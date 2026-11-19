@@ -189,7 +189,7 @@ tasks:
   - id: 28
     spec: 6
     request: ccdrawu doctor 不用打開 ccdrawu，就把側邊欄與狀態列說 config.yaml 有問題的地方修好；側邊欄與狀態列的紅字提示使用者執行它
-    tdp: [tdp E1, tdp E3, tdp E3-27, tdp E3-31, tdp E3-37, tdp E3-38, tdp P5]
+    tdp: [tdp E1, tdp E3, tdp E3-27, tdp E3-31, tdp E3-37, tdp E3-38, tdp P5, tdp E3-24, tdp E3-32]
     remark:
       - 做的事跟打開 ccdrawu 時一樣，只是沒有畫面（tdp E3「沒有畫面時」、E3-31）：搬舊位置的檔、用不了的值先複製成 .bak 再換成預設寫回；要說的寫到 stderr，一件一行，照發生的順序（tdp E3-37）。沒有 App Log 可看，所以每個值也各寫一行，跟 TUI 的 App Log 同一句：key、原本寫的、現在用的
       - config.yaml 或 originals.yaml 讀不了：照 Esc 做，不動檔，stderr 寫路徑與原因，再一句 Open ccdrawu to move it aside and start fresh, or set it right by hand.，exit 1（tdp E3-27）；沒有畫面，問不了要不要移到 .bak
