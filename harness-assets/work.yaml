@@ -86,7 +86,7 @@ tasks:
       - TestPetIsPicked
       - TestConfigKeepsTheAliasAndPet
   - id: 10
-    spec: 4
+    spec: 5
     implementation: |
       ccdrawu statusline：從 stdin 讀 Claude Code 給的 session，讀外掛寫在快取資料夾 sessions/ 的那個 session 的值；沒有的話只畫 Model、Context、Cost
       照 config.yaml 的項目、順序、Format、Color、Separator 排成一列，截到 COLUMNS 減 4 欄，結尾加 …
@@ -229,7 +229,7 @@ tasks:
     test:
       - commit: 5de15c1
   - id: 21
-    spec: 4
+    spec: 5
     implementation: |
       config.yaml 在 CCDRAWU__CONFIG、XDG_CONFIG_HOME/ccdrawu 或 ~/.config/ccdrawu；快取在 CCDRAWU__CACHE 或系統快取資料夾；originals.yaml 在 CCDRAWU__DATA 或 ~/.ccdrawu
       啟動時把 config.json 與舊位置的檔搬到新位置，搬了的用 Info toast 說「Moved <從> to <到>」
