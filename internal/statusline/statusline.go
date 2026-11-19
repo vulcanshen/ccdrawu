@@ -97,13 +97,14 @@ func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now tim
 	if err := json.NewDecoder(in).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
-	// The mark, the longer first: the shorter where it leaves the items no room
+	// The mark, the longer first: the shorter where it leaves the items no room. One that can't be read keeps
+	// why (tdp E3-36): the items make room for it, and it is cut at its end where even that is not enough
 	var marks []string
 	cfg, misfits, err := config.Check(loc)
 	file := filepath.Base(config.Source(loc.ConfigFile))
 	switch keys := config.Keys(misfits); {
 	case err != nil:
-		cfg, marks = config.Config{}, []string{file + " can't be read: " + firstLine(err.Error()), file + " can't be read"}
+		cfg, marks = config.Config{}, []string{file + " can't be read: " + firstLine(err.Error())}
 	case len(keys) == 1:
 		marks = []string{file + ": " + keys[0] + " did not fit", file + ": 1 value did not fit"}
 	case len(keys) > 1:

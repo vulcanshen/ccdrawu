@@ -212,23 +212,27 @@ async function refreshConfig($: Engine) {
   }
   if (stamp === configStamp) return
   const text = stamp === 0 ? '' : await $.fs.read(file)
-  const parsed = stamp === 0 ? {} : parseConfig(text, file === oldConfigFile)
-  // Outside the TUI, the file is never touched, and the pane says what is wrong with it (tdp E3; user,
-  // 2026-11-19, tdp #23). Half written: keep what shows and read it again next second; still so a second on,
-  // it can't be read: which file and why, the pane going on with what it had. Values that do not fit: their
-  // defaults, which keys. ccdrawu, when it opens, asks about the one and writes the other again
+  let parsed = stamp === 0 ? {} : parseConfig(text, file === oldConfigFile)
+  // Outside the TUI, the file is never touched, the defaults are used for this run, and the pane says what
+  // is wrong with it (tdp E3; user, 2026-11-19, tdp #23). Half written: keep what shows and read it again
+  // next second; still so a second on, it can't be read: the defaults, and which file and why. Values that
+  // do not fit: their defaults, and which keys. ccdrawu, when it opens, asks about the one and writes the
+  // other again
   const where = shortPath(file, home)
-  const say = async (issue: string | null) => {
-    if ((await read($, configIssue)) !== issue) await update($, configIssue, () => issue)
-  }
+  let issue: string | null = null
   if (parsed === undefined) {
-    if (unreadStamp === stamp) await say(`${where} can't be read: ${unreadReason(text, file === oldConfigFile) ?? 'not a config'}`)
-    unreadStamp = stamp
-    return
+    if (unreadStamp !== stamp) {
+      unreadStamp = stamp
+      return
+    }
+    issue = `${where} can't be read: ${unreadReason(text, file === oldConfigFile) ?? 'not a config'}`
+    parsed = {}
+  } else {
+    unreadStamp = undefined
+    const misfits = stamp === 0 ? [] : configMisfits(text, file === oldConfigFile)
+    if (misfits.length > 0) issue = `${where}: ${misfits.join(', ')} did not fit`
   }
-  unreadStamp = undefined
-  const misfits = stamp === 0 ? [] : configMisfits(text, file === oldConfigFile)
-  await say(misfits.length === 0 ? null : `${where}: ${misfits.join(', ')} did not fit`)
+  if ((await read($, configIssue)) !== issue) await update($, configIssue, () => issue)
   configStamp = stamp
   await update($, config, () => parsed)
   await registerCommands(spec => $.command.register(spec), commands, parsed.alias)

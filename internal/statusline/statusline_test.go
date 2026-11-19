@@ -215,6 +215,10 @@ func TestRunMarksAConfigThatCantBeRead(t *testing.T) {
 	if !strings.HasPrefix(got, "Model claude-opus-5-5") || !strings.Contains(got, " | config.yaml can't be read: ") {
 		t.Errorf("%q", got)
 	}
+	// Narrow: why kept, the items making room, cut at its end
+	if got := ansi.Strip(run(t, loc, input, 50, time.Now())); !strings.HasPrefix(got, "config.yaml can't be read: ") || !strings.HasSuffix(got, "…\n") {
+		t.Errorf("narrow: %q", got)
+	}
 	if data, _ := os.ReadFile(loc.ConfigFile); string(data) != "drawer: [oops\n" {
 		t.Errorf("the file touched:\n%s", data)
 	}

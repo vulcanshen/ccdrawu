@@ -14,7 +14,7 @@ Each release names the version of terminu design (tdp) it follows.
 - What one start has to say, a move and values that did not fit, comes in one toast, a row each, and the App Log has an entry for each.
 - An item id in `config.yaml` that the plugin's list of items does not have is taken out at the start, as a value that does not fit.
 - A key in `config.yaml` that ccdrawu does not read, one mistyped or one it read once, stays in the file when `ccdrawu` writes it, where it was taken out, and each start has an INFO of it in the App Log (tdp E3).
-- The drawer and the status line change no file when `config.yaml` can't be read or has values they can't use (tdp E3, outside the TUI): they use the defaults, the drawer what it read last when the file can't be read, and say which file has what wrong in red, the drawer at its top, the status line at its end; `ccdrawu` sets it right when it next opens. The drawer said nothing, and the status line printed nothing at all for a file it could not read.
+- The drawer and the status line change no file when `config.yaml` can't be read or has values they can't use (tdp E3, outside the TUI): they use the defaults and say which file has what wrong in red, the drawer at its top, the status line at its end; `ccdrawu` sets it right when it next opens. The drawer said nothing, and the status line printed nothing at all for a file it could not read.
 - Built on terminu-go v1.2.17 (tdp v1.2.16).
 
 ## v1.1.1 — tdp v1.2.0
