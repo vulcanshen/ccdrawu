@@ -52,7 +52,7 @@ func main() {
 			loc, err := config.UserLocations()
 			if err == nil {
 				columns, _ := strconv.Atoi(os.Getenv("COLUMNS"))
-				err = statusline.Run(os.Stdin, os.Stdout, os.Stderr, loc, columns, time.Now())
+				err = statusline.Run(os.Stdin, os.Stdout, loc, columns, time.Now())
 			}
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "ccdrawu:", err)

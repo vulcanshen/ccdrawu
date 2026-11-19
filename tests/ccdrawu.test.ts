@@ -26,7 +26,19 @@ import {
 } from '../hooks/format'
 import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
-import { cellWidth, columnRows, drawerShows, drawerWanted, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere, unreadReason } from '../hooks/layout'
+import {
+  cellWidth,
+  columnRows,
+  configMisfits,
+  drawerShows,
+  drawerWanted,
+  enabledItems,
+  inlineValue,
+  parseConfig,
+  segWidth,
+  showsAnywhere,
+  unreadReason,
+} from '../hooks/layout'
 import { locations } from '../hooks/paths'
 import { statuslineFile, statuslineItems } from '../hooks/statusline'
 import { parseYaml } from '../hooks/yaml'
@@ -986,6 +998,47 @@ test('files sit where tdp E3 puts them, unless CCDRAWU__ variables say otherwise
   expect(locations({ home: '/h', os: 'linux', xdgCache: 'rel' }).cache).toBe('/h/.cache/ccdrawu')
   expect(locations({ home: 'C:\\U', os: 'windows', localAppData: 'C:\\U\\AppData\\Local' }).cache).toBe('C:\\U\\AppData\\Local/ccdrawu/cache')
   expect(locations({ home: '/h', os: 'linux', xdgConfig: '/x', config: '/c', cache: '/k' })).toEqual({ ...config('/c'), cache: '/k' })
+})
+
+test('values the pane can not use read as ccdrawu reads them: their keys, once each, as the TUI has them (tdp E3, outside the TUI)', async () => {
+  // The same config as internal/config's TestValuesThatDoNotFitAreTheirDefaults
+  const misfitting = [
+    'alias: "a b!"',
+    'dock: [model, nope, 3]',
+    'inline: model',
+    'pet: {species: dragon}',
+    'bar: wavy',
+    'drawer: {sidebarOff: yes please}',
+    'theme: {background: zzz}',
+    'statusline:',
+    '  on: true',
+    '  when: sometimes',
+    '  items: [git]',
+    '  format: loud',
+    '  color: red',
+    '  separator: "\\x1b"',
+    '  refresh: ten',
+    '',
+  ].join('\n')
+  expect(configMisfits(misfitting)).toEqual([
+    'dock',
+    'inline',
+    'alias',
+    'pet.species',
+    'bar',
+    'drawer.sidebarOff',
+    'theme.background',
+    'statusline.when',
+    'statusline.format',
+    'statusline.color',
+    'statusline.separator',
+    'statusline.refresh',
+  ])
+  expect(configMisfits('theme: {base: neon}\nstatusline: {refresh: 61}\n')).toEqual(['theme.base', 'statusline.refresh'])
+  // All that fits, a key not read, nothing, and a file that can't be read: none
+  for (const text of ['alias: /ccd\ndock: [model, git]\npet: {species: duck}\nbar: line\ntheme: {base: dark, background: "#112233"}\nstatusline: {on: true, when: narrow, refresh: 30, separator: "·"}\n', 'refesh: 5\n', '', 'alias: [\n']) {
+    expect(configMisfits(text)).toEqual([])
+  }
 })
 
 test("a config the pane can't read says why: not YAML, or a list or a lone value, which is not a config (tdp E3)", async () => {

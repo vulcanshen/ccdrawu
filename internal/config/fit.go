@@ -224,6 +224,33 @@ func readFit(path string, known []string) (Config, []terminu.Misfit, error) {
 	return c, f.misfits, nil
 }
 
+// Check reads config.yaml as output printed for another program does (tdp E3,
+// outside the TUI): values that do not fit are their defaults for this run,
+// each a Misfit, and nothing is written; the next TUI start keeps the file
+// aside and writes it again. The error is a file that can't be read.
+func Check(loc Locations) (Config, []terminu.Misfit, error) {
+	var known []string
+	if cat, ok, err := ReadCatalog(loc.Catalog()); err == nil && ok {
+		for _, it := range cat.Items {
+			known = append(known, it.ID)
+		}
+	}
+	return readFit(loc.ConfigFile, known)
+}
+
+// Keys are the keys of misfits, once each, in order: an entry taken out of a
+// list is its list's ("dock").
+func Keys(misfits []terminu.Misfit) []string {
+	var keys []string
+	for _, m := range misfits {
+		key, _, _ := strings.Cut(m.Key, " ")
+		if !slices.Contains(keys, key) {
+			keys = append(keys, key)
+		}
+	}
+	return keys
+}
+
 // Settled is what a start found in config.yaml (tdp E3, a value that does not
 // fit): the values ccdrawu could not use, each now its default; Copy, where
 // the file was kept as it was before it was written again with them; and Err,

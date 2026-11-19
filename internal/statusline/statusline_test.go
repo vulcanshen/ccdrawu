@@ -3,7 +3,6 @@ package statusline
 import (
 	"bytes"
 	"encoding/json"
-	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -127,7 +126,7 @@ func setup(t *testing.T) (config.Locations, string) {
 func run(t *testing.T, loc config.Locations, input string, columns int, now time.Time) string {
 	t.Helper()
 	var out bytes.Buffer
-	if err := Run(strings.NewReader(input), &out, io.Discard, loc, columns, now); err != nil {
+	if err := Run(strings.NewReader(input), &out, loc, columns, now); err != nil {
 		t.Fatal(err)
 	}
 	return ansi.Strip(out.String())
@@ -177,58 +176,47 @@ func TestRunWithNoCatalogOrConfig(t *testing.T) {
 	}
 }
 
-// tdp E3-31: values that do not fit, with no screen, are their defaults, the
-// file kept aside and written again, the line printed all the same and the
-// sentence on stderr, not mixed with it
-func TestRunUsesTheDefaultsForValuesThatDoNotFit(t *testing.T) {
+// tdp E3-39: output for Claude Code to show, outside the TUI: values that do
+// not fit are their defaults for this run, the file untouched, and the line
+// ends with a mark naming the file and the keys, in red, however narrow
+func TestRunMarksValuesThatDoNotFit(t *testing.T) {
 	loc, _ := setup(t)
 	loc.Data = filepath.Join(filepath.Dir(loc.Cache), ".ccdrawu")
-	if err := os.WriteFile(loc.ConfigFile, []byte("statusline: {on: true, items: [model], format: loud, separator: \"\\x1b\"}\n"), 0o644); err != nil {
+	text := "statusline: {on: true, items: [model], format: loud, separator: \"\\x1b\"}\n"
+	if err := os.WriteFile(loc.ConfigFile, []byte(text), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	var out, errs bytes.Buffer
 	input := `{"session_id": "abc", "model": {"id": "claude-opus-5-5"}}`
-	if err := Run(strings.NewReader(input), &out, &errs, loc, 0, time.Now()); err != nil {
-		t.Fatal(err)
+	if got := ansi.Strip(run(t, loc, input, 0, time.Now())); got != "Model claude-opus-5-5 | config.yaml: statusline.format, statusline.separator did not fit\n" {
+		t.Errorf("%q", got)
 	}
-	if !strings.Contains(ansi.Strip(out.String()), "Model claude-opus-5-5") || strings.Contains(out.String(), "did not fit") {
-		t.Errorf("printed %q", out.String())
+	// Narrow: the items cut, the mark kept
+	if got := ansi.Strip(run(t, loc, input, 50, time.Now())); !strings.HasSuffix(got, " | config.yaml: 2 values did not fit\n") {
+		t.Errorf("narrow: %q", got)
 	}
-	if errs.String() != "ccdrawu: 2 values in config.yaml did not fit: defaults used, yours kept in config.yaml.bak\n" {
-		t.Errorf("stderr %q", errs.String())
+	if data, _ := os.ReadFile(loc.ConfigFile); string(data) != text {
+		t.Errorf("the file touched:\n%s", data)
 	}
-	if _, err := os.Stat(loc.ConfigFile + ".bak"); err != nil {
-		t.Error("not kept aside:", err)
+	if bak, _ := filepath.Glob(loc.ConfigFile + ".bak*"); len(bak) != 0 {
+		t.Errorf("kept aside: %v", bak)
 	}
 }
 
-// tdp E3, can't be read, with no screen: a config that can't be read stops
-// the line before it prints anything or touches a file, the error naming the
-// file and why
-func TestRunStopsOnAConfigThatCantBeRead(t *testing.T) {
-	loc, sessions := setup(t)
+// tdp E3-36: a config that can't be read, outside the TUI: the line takes the
+// defaults, the file untouched, and ends with which file and why
+func TestRunMarksAConfigThatCantBeRead(t *testing.T) {
+	loc, _ := setup(t)
 	loc.Data = filepath.Join(filepath.Dir(loc.Cache), ".ccdrawu")
 	if err := os.WriteFile(loc.ConfigFile, []byte("drawer: [oops\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	old := filepath.Join(sessions, "old.json")
-	if err := os.WriteFile(old, []byte(`{"items": {}}`), 0o644); err != nil {
-		t.Fatal(err)
+	input := `{"session_id": "abc", "model": {"id": "claude-opus-5-5"}}`
+	got := ansi.Strip(run(t, loc, input, 0, time.Now()))
+	if !strings.HasPrefix(got, "Model claude-opus-5-5") || !strings.Contains(got, " | config.yaml can't be read: ") {
+		t.Errorf("%q", got)
 	}
-	now := time.Now()
-	if err := os.Chtimes(old, now.Add(-keep-time.Hour), now.Add(-keep-time.Hour)); err != nil {
-		t.Fatal(err)
-	}
-	var out bytes.Buffer
-	err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, io.Discard, loc, 0, now)
-	if err == nil || !strings.HasPrefix(err.Error(), loc.ConfigFile+" can't be read: ") {
-		t.Fatalf("error: %v", err)
-	}
-	if out.Len() != 0 {
-		t.Errorf("printed %q", out.String())
-	}
-	if _, err := os.Stat(old); err != nil {
-		t.Errorf("a session's file went: %v", err)
+	if data, _ := os.ReadFile(loc.ConfigFile); string(data) != "drawer: [oops\n" {
+		t.Errorf("the file touched:\n%s", data)
 	}
 	if bak, _ := filepath.Glob(loc.ConfigFile + ".bak*"); len(bak) != 0 {
 		t.Errorf("moved aside: %v", bak)
@@ -304,7 +292,7 @@ func TestRunHidesTheRow(t *testing.T) {
 			t.Fatal(err)
 		}
 		var out bytes.Buffer
-		if err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, io.Discard, loc, 100, time.Now()); err != nil {
+		if err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, loc, 100, time.Now()); err != nil {
 			t.Fatal(err)
 		}
 		if got := out.String(); got != hidden+"\n" {

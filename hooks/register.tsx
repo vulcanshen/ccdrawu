@@ -14,7 +14,6 @@ import type {
   SkillsInfo,
   TokenInfo,
   Toy,
-  Unread,
   Usage,
   VersionInfo,
 } from '../types'
@@ -71,6 +70,7 @@ import {
   type Manual,
   parseConfig,
   unreadReason,
+  configMisfits,
   type Placement,
   segWidth,
   showsAnywhere,
@@ -103,7 +103,7 @@ const pet = atom({ plugin: 'ccdrawu', key: 'pet' } as const, PET_START)
 const kits = atom({ plugin: 'ccdrawu', key: 'kits' } as const, [] as Kit[])
 const toys = atom({ plugin: 'ccdrawu', key: 'toys' } as const, [] as Toy[])
 const monitors = atom({ plugin: 'ccdrawu', key: 'monitors' } as const, [] as string[])
-const unread = atom({ plugin: 'ccdrawu', key: 'unread' } as const, null as Unread | null)
+const configIssue = atom({ plugin: 'ccdrawu', key: 'configIssue' } as const, null as string | null)
 const config = atom({ plugin: 'ccdrawu', key: 'config' } as const, {} as Config)
 // Kept by the host, so a reload keeps what /ccdrawu set
 const manual = atom({ plugin: 'ccdrawu', key: 'manual' } as const, null as Manual)
@@ -213,22 +213,22 @@ async function refreshConfig($: Engine) {
   if (stamp === configStamp) return
   const text = stamp === 0 ? '' : await $.fs.read(file)
   const parsed = stamp === 0 ? {} : parseConfig(text, file === oldConfigFile)
-  // Half written: keep what shows and read it again next second. Still so a second on, it can't be read:
-  // the pane says which file and why, and goes on with what it had, the file as it is; ccdrawu asks about
-  // it when it opens (tdp E3, a screen not in the TUI)
-  // TODO(tdp #23): values that do not fit are drawn as their defaults, nothing said, the file left for the TUI
-  // and ccdrawu statusline to keep aside and write again
+  // Outside the TUI, the file is never touched, and the pane says what is wrong with it (tdp E3; user,
+  // 2026-11-19, tdp #23). Half written: keep what shows and read it again next second; still so a second on,
+  // it can't be read: which file and why, the pane going on with what it had. Values that do not fit: their
+  // defaults, which keys. ccdrawu, when it opens, asks about the one and writes the other again
+  const where = shortPath(file, home)
+  const say = async (issue: string | null) => {
+    if ((await read($, configIssue)) !== issue) await update($, configIssue, () => issue)
+  }
   if (parsed === undefined) {
-    if (unreadStamp === stamp) {
-      const why = unreadReason(text, file === oldConfigFile) ?? 'not a config'
-      const was = await read($, unread)
-      if (was?.why !== why) await update($, unread, () => ({ file: shortPath(file, home), why }))
-    }
+    if (unreadStamp === stamp) await say(`${where} can't be read: ${unreadReason(text, file === oldConfigFile) ?? 'not a config'}`)
     unreadStamp = stamp
     return
   }
   unreadStamp = undefined
-  if ((await read($, unread)) !== null) await update($, unread, () => null)
+  const misfits = stamp === 0 ? [] : configMisfits(text, file === oldConfigFile)
+  await say(misfits.length === 0 ? null : `${where}: ${misfits.join(', ')} did not fit`)
   configStamp = stamp
   await update($, config, () => parsed)
   await registerCommands(spec => $.command.register(spec), commands, parsed.alias)
@@ -717,9 +717,9 @@ export const register: Register = on => {
     const s = await readSnapshot($)
     const conf = await read($, config)
     const enabled = enabledItems(conf, placement)
-    // The config can't be read: which file and why, over the rows (tdp E3, a screen not in the TUI)
-    const problem = await read($, unread)
-    const unreadRow = problem === null ? null : <Text color={C.red}>{`${problem.file} can't be read: ${problem.why}`}</Text>
+    // What is wrong with the config, over the rows (tdp E3, outside the TUI)
+    const issue = await read($, configIssue)
+    const issueRow = issue === null ? null : <Text color={C.red}>{issue}</Text>
     // The pet is not a row: it is drawn on its own, over the rows or left of the columns
     const shown = enabled.flatMap(item => {
       const v = view(item.id, s)
@@ -806,7 +806,7 @@ export const register: Register = on => {
             </Box>
           ) : null}
           <Box flexDirection="column">
-            {unreadRow}
+            {issueRow}
             {lines}
           </Box>
         </Box>
@@ -961,7 +961,7 @@ export const register: Register = on => {
         </Box>,
       )
     }
-    if (unreadRow !== null) rows.push(unreadRow)
+    if (issueRow !== null) rows.push(issueRow)
     for (const { item, view: v } of shown) {
       rows.push(dockRow(item.label, v))
       if (v.below !== undefined) {

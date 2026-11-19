@@ -71,9 +71,7 @@ tasks:
     tdp: [tdp P5, tdp E1, tdp E3]
     remark:
       - Claude Code 執行 ccdrawu statusline；太長時結尾截掉加 …；on when narrow 時，側邊欄在對話旁邊或終端機夠寬就整列收起來
-      - config.yaml 讀不了時什麼都不印、不動檔、在 stderr 寫是哪個檔與原因（tdp E3）
-      - config.yaml 有用不了的值：複製成 .bak、那些值換成預設寫回、照樣印出那一列，那句寫到 stderr（tdp E3，值不合規則）
-      - {note: "Claude Code 不顯示 statusline 的 stderr，好幾個 session 同時跑會各做一份 .bak；暫時照 tdp 字面做", issue: "tdp #22"}
+      - 狀態列是印給 Claude Code 顯示的輸出，算 TUI 以外（tdp E3、P5）：config.yaml 讀不了、或有用不了的值時，不動檔（沒有 .bak、不重寫），這一次用預設值照樣畫，最後加一個紅色的標記寫出哪個檔有什麼問題；備份、重寫、跳 toast 留給下次打開的 TUI（tdp #22 定案，user 選 A，在 tdp main 391e78c，還沒發版）
   - id: 11
     spec: 1
     request: 在 ccdrawu 的 statusline 頁設定狀態列：開關（on、off、on when narrow）、項目、順序、寫法、顏色、分隔、重跑間隔
@@ -147,9 +145,8 @@ tasks:
       - config.yaml 讀不了：寫出原因，Enter 改名成 config.yaml.bak、用預設值開始，Esc 離開
       - 用不了的值（不認得的名字、不是 #rrggbb 的顏色、超過 60 或負的秒數、外掛不收的 alias、有控制字元的分隔、型別不對的值）：啟動時複製成 config.yaml.bak、換成預設寫回，跳 Warning toast，App Log 每個值一筆 WARN；備份做不出來時不寫回、跳 Error toast（tdp E3，值不合規則）
       - 同一次啟動有搬家又有不合的值：合成一個 toast，App Log 一件一筆（tdp E3，同一次啟動有好幾件）
-      - 外掛畫的側邊欄（不在 TUI 裡的畫面，tdp P5）讀不了 config.yaml：在面板上寫出哪個檔、為什麼，不動檔；值不合規則時照預設畫，備份與寫回交給 TUI 與 statusline（tdp E3、P5）
+      - 外掛畫的側邊欄（不在 TUI 裡的畫面，TUI 以外，tdp E3、P5）：config.yaml 讀不了、或有用不了的值時，不動檔，照預設（讀不了時照上一次讀到的）畫，在面板最上面用一列寫出哪個檔有什麼問題；備份、重寫、跳 toast 留給下次打開的 TUI（tdp #23 定案，user 選 A，在 tdp main 391e78c，還沒發版）
       - ccdrawu 不讀的 key（以前讀過的，或從來沒讀過的、例如打錯的）留在檔案裡，重寫時也留著，不跳 toast，每次啟動在 App Log 記一筆 INFO：以前讀過的寫 No longer used，其他寫 Not read（tdp E3；tdp #21 定案，user 選 A，在 tdp main 9b3fb2f，還沒發版）
-      - {note: "外掛的側邊欄讀到用不了的值怎麼做 tdp 沒寫；暫時照預設畫、不動檔、不顯示，備份與寫回交給 TUI 與 statusline", issue: "tdp #23"}
   - id: 22
     spec: 1
     request: ccdrawu 在至少 40 欄寬、12 列高、支援 truecolor 的終端機跑，要 Nerd Font；圖示佔的格數可以用環境變數設

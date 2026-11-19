@@ -5,6 +5,7 @@
 package statusline
 
 import (
+	"cmp"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -51,6 +52,8 @@ const (
 	lavenderColor = "#b4befe"
 	labelColor    = "#89b4fa"
 	sepColor      = "#45475a"
+	markColor     = "#f38ba8" // red: the config has something wrong
+	markRoom      = 20        // columns a mark leaves the items at least, if it can
 )
 
 // noValue is what an item on reads while it has no value, as in the drawer
@@ -84,24 +87,27 @@ const keep = 7 * 24 * time.Hour
 // when narrow, there is none while the drawer is beside the transcript, or the
 // terminal is wide enough for it; with nothing to show there is none either,
 // and the row goes (hidden). Files of sessions gone quiet for a week are
-// removed. Values in the config it can't use are their defaults, the file kept
-// aside and written again with them, said on errs (tdp E3).
-func Run(in io.Reader, out, errs io.Writer, loc config.Locations, columns int, now time.Time) error {
+// removed. Output for Claude Code to show, outside the TUI (tdp E3; user,
+// 2026-11-19, tdp #22): a config that can't be read, or values in it that do
+// not fit, touch no file; the line takes the defaults for this run and ends
+// with a mark saying which file has what wrong, which the TUI sets right the
+// next time it opens.
+func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now time.Time) error {
 	var input Input
 	if err := json.NewDecoder(in).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
-	cfg, settled, err := config.Settle(loc)
-	if err != nil {
-		// With no screen to ask on: nothing printed, no file touched, the file
-		// and why on stderr (tdp E3, can't be read)
-		return fmt.Errorf("%s can't be read: %w", config.Source(loc.ConfigFile), err)
-	}
-	// With no screen, on stderr, a line each, not mixed with the line printed
-	// (tdp E3, a value that does not fit). TODO(tdp #22): Claude Code shows
-	// none of its stderr, and the sessions open run it at once
-	for _, line := range settled.Lines(loc.ConfigFile) {
-		fmt.Fprintln(errs, "ccdrawu:", line)
+	// The mark, the longer first: the shorter where it leaves the items no room
+	var marks []string
+	cfg, misfits, err := config.Check(loc)
+	file := filepath.Base(config.Source(loc.ConfigFile))
+	switch keys := config.Keys(misfits); {
+	case err != nil:
+		cfg, marks = config.Config{}, []string{file + " can't be read: " + firstLine(err.Error()), file + " can't be read"}
+	case len(keys) == 1:
+		marks = []string{file + ": " + keys[0] + " did not fit", file + ": 1 value did not fit"}
+	case len(keys) > 1:
+		marks = []string{file + ": " + strings.Join(keys, ", ") + " did not fit", file + ": " + strconv.Itoa(len(keys)) + " values did not fit"}
 	}
 	cat, ok, err := config.ReadCatalog(loc.Catalog())
 	if err != nil || !ok {
@@ -122,6 +128,9 @@ func Run(in io.Reader, out, errs io.Writer, loc config.Locations, columns int, n
 		columns = max(1, columns-edge)
 	}
 	line := Line(cfg, cat, items, columns)
+	if marks != nil {
+		line = Marked(cfg, cat, items, columns, marks...)
+	}
 	if line == "" || cfg.Statusline.When == config.WhenNarrow && (docked || wide) {
 		line = hidden
 	}
@@ -170,6 +179,47 @@ func Line(cfg config.Config, cat config.Catalog, items map[string][]Seg, columns
 	if columns > 0 {
 		line = ansi.Truncate(line, columns, tail)
 	}
+	return line
+}
+
+// Marked is the line with a mark at its end, in red, past the separator: what
+// is wrong with the config (tdp E3, outside the TUI). marks are the ways to
+// say it, the longer first: the first that leaves the items room
+// (markRoom), else the last. The items are cut to leave it room, so it shows
+// however narrow; with no item on, the mark alone.
+func Marked(cfg config.Config, cat config.Catalog, items map[string][]Seg, columns int, marks ...string) string {
+	sep := cmp.Or(cfg.Statusline.Separator, "|")
+	mark := marks[len(marks)-1]
+	for _, m := range marks {
+		if columns == 0 || columns-ansi.StringWidth(m)-ansi.StringWidth(" "+sep+" ") >= markRoom {
+			mark = m
+			break
+		}
+	}
+	painted := paint(mark, markColor, false)
+	if cfg.Statusline.Color == "dimmed" {
+		painted = mark
+	}
+	room := 0
+	if columns > 0 {
+		room = columns - ansi.StringWidth(mark) - ansi.StringWidth(" "+sep+" ")
+		if room < 1 {
+			return ansi.Truncate(painted, columns, "…")
+		}
+	}
+	line := Line(cfg, cat, items, room)
+	if line == "" {
+		return painted
+	}
+	if cfg.Statusline.Color == "dimmed" {
+		return line + " " + sep + " " + painted
+	}
+	return line + paint(" "+sep+" ", sepColor, false) + painted
+}
+
+// firstLine is text up to its first line break.
+func firstLine(text string) string {
+	line, _, _ := strings.Cut(text, "\n")
 	return line
 }
 

@@ -4,9 +4,71 @@
 import type { Config } from '../types'
 import { truncateStart } from './format'
 import { C, ITEMS, NO_VALUE, type Item, type Seg, type View } from './items'
+import { SPECIES } from './pets'
 import { parseYaml } from './yaml'
 
 export type Placement = 'dock' | 'inline'
+
+// The keys of a config read as YAML whose values ccdrawu can't use, once each, as ccdrawu's own reading has
+// them (internal/config readFit): a name it does not know, an item the catalog does not have, a color that
+// is not #rrggbb, a refresh below 0 or past 60, an alias the mod does not take, a separator with a control
+// character, a value of the wrong kind. The pane draws their defaults, and says so (tdp E3, outside the TUI)
+export function configMisfits(text: string, json = false): string[] {
+  let raw: unknown
+  try {
+    raw = json ? JSON.parse(text) : parseYaml(text)
+  } catch {
+    return []
+  }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return []
+  const keys: string[] = []
+  const misfit = (key: string) => {
+    if (!keys.includes(key)) keys.push(key)
+  }
+  const ids = ITEMS.map(it => it.id)
+  const there = (v: unknown) => v !== null && v !== undefined
+  const object = (m: Record<string, unknown>, key: string, at: string): Record<string, unknown> => {
+    const v = m[key]
+    if (!there(v)) return {}
+    if (typeof v !== 'object' || Array.isArray(v)) {
+      misfit(at)
+      return {}
+    }
+    return v as Record<string, unknown>
+  }
+  const check = (m: Record<string, unknown>, key: string, at: string, fits: (v: unknown) => boolean) => {
+    if (there(m[key]) && !fits(m[key])) misfit(at)
+  }
+  const oneOf = (names: readonly string[]) => (v: unknown) => typeof v === 'string' && (v === '' || names.includes(v))
+  const list = (v: unknown) => Array.isArray(v) && v.every(id => typeof id === 'string' && ids.includes(id))
+  const flag = (v: unknown) => typeof v === 'boolean'
+  const top = raw as Record<string, unknown>
+  check(top, 'dock', 'dock', list)
+  check(top, 'inline', 'inline', list)
+  check(top, 'alias', 'alias', v => {
+    if (typeof v !== 'string') return false
+    const name = v.trim().replace(/^\/+/, '')
+    return name === '' || (name !== 'ccdrawu' && /^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(name))
+  })
+  check(object(top, 'pet', 'pet'), 'species', 'pet.species', oneOf(SPECIES))
+  check(top, 'bar', 'bar', oneOf(['squares', 'line']))
+  const drawer = object(top, 'drawer', 'drawer')
+  for (const key of ['sidebarOff', 'inlineOff', 'off']) check(drawer, key, `drawer.${key}`, flag)
+  const theme = object(top, 'theme', 'theme')
+  check(theme, 'base', 'theme.base', oneOf(['dark', 'light', 'dark-daltonized', 'light-daltonized', 'dark-ansi', 'light-ansi']))
+  check(theme, 'background', 'theme.background', v => typeof v === 'string' && (v === '' || /^#[0-9a-fA-F]{6}$/.test(v)))
+  check(theme, 'before', 'theme.before', v => typeof v === 'string')
+  const statusline = object(top, 'statusline', 'statusline')
+  check(statusline, 'on', 'statusline.on', flag)
+  check(statusline, 'when', 'statusline.when', oneOf(['narrow']))
+  check(statusline, 'items', 'statusline.items', list)
+  check(statusline, 'format', 'statusline.format', oneOf(['label', 'short', 'value']))
+  check(statusline, 'color', 'statusline.color', oneOf(['highlighted', 'dimmed']))
+  // eslint-disable-next-line no-control-regex
+  check(statusline, 'separator', 'statusline.separator', v => typeof v === 'string' && !/[\u0000-\u001f\u007f-\u009f]/.test(v))
+  check(statusline, 'refresh', 'statusline.refresh', v => typeof v === 'number' && Number.isInteger(v) && v >= 0 && v <= 60)
+  return keys
+}
 
 // Why parseConfig can't read text: the parser's words, or that it is not a config; undefined when it can
 export function unreadReason(text: string, json = false): string | undefined {
