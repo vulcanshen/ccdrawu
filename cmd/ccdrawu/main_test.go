@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -93,13 +94,13 @@ func TestUninstallStopsOnAFileThatCantBeRead(t *testing.T) {
 
 	write(loc.ConfigFile, "drawer: [oops\n")
 	var out bytes.Buffer
-	if err := uninstall(loc, run, &out); err == nil || !strings.HasPrefix(err.Error(), loc.ConfigFile+" can't be read: ") {
+	if err := uninstall(loc, run, &out, io.Discard); err == nil || !strings.HasPrefix(err.Error(), loc.ConfigFile+" can't be read: ") {
 		t.Fatalf("config: %v", err)
 	}
 
 	write(loc.ConfigFile, "theme:\n  base: dark-ansi\n")
 	write(loc.Originals(), "theme: [oops\n")
-	if err := uninstall(loc, run, &out); err == nil || !strings.HasPrefix(err.Error(), loc.Originals()+" can't be read: ") {
+	if err := uninstall(loc, run, &out, io.Discard); err == nil || !strings.HasPrefix(err.Error(), loc.Originals()+" can't be read: ") {
 		t.Fatalf("originals: %v", err)
 	}
 	if out.Len() != 0 {
@@ -107,5 +108,33 @@ func TestUninstallStopsOnAFileThatCantBeRead(t *testing.T) {
 	}
 	if bak, _ := filepath.Glob(filepath.Join(dir, "*", "*.bak*")); len(bak) != 0 {
 		t.Errorf("moved aside: %v", bak)
+	}
+}
+
+// tdp E3-31: values that do not fit, with no screen, are their defaults, the
+// file kept aside and written again, said on stderr; uninstall goes on
+func TestUninstallGoesOnWithValuesThatDoNotFit(t *testing.T) {
+	dir := t.TempDir()
+	loc := config.Locations{Cache: filepath.Join(dir, "cache"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude"), Data: filepath.Join(dir, ".ccdrawu")}
+	if err := os.MkdirAll(filepath.Dir(loc.ConfigFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(loc.ConfigFile, []byte("bar: wavy\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var ran bool
+	run := func(name string, args ...string) ([]byte, error) {
+		ran = true
+		return []byte("[]"), nil
+	}
+	var out, errs bytes.Buffer
+	if err := uninstall(loc, run, &out, &errs); err != nil {
+		t.Fatal(err)
+	}
+	if !ran || errs.String() != "ccdrawu: 1 value in config.yaml did not fit: defaults used, yours kept in config.yaml.bak\n" {
+		t.Fatalf("ran %v, stderr %q", ran, errs.String())
+	}
+	if _, err := os.Stat(loc.ConfigFile + ".bak"); err != nil {
+		t.Error("not kept aside:", err)
 	}
 }

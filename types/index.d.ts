@@ -133,6 +133,9 @@ export type Toy = {
   hitUntil: number // pawed at by the pet: a snail in its shell, an owl's wings out, until then
 }
 
+// The config the pane could not read: the file, shortened, and why (tdp E3, a screen not in the TUI)
+export type Unread = { file: string; why: string }
+
 // What ccdrawu keeps in $.state, named out here: inside the module block below a name is claude-code's
 // first, and one it comes to have too (SessionInfo, Claude Code 2.1.328) would stand in for ours. The
 // block lists each key again, as `claude plugin validate` reads the contract there
@@ -159,6 +162,7 @@ export type CcdrawuState = {
   kits: Kit[]
   toys: Toy[]
   monitors: string[] // the tasks the Monitor tool started, by id: a reply's end lists them as shells
+  unread: Unread | null
   manual: 'on' | 'off' | null
 }
 
@@ -187,6 +191,7 @@ declare module 'claude-code' {
       kits: CcdrawuState['kits']
       toys: CcdrawuState['toys']
       monitors: CcdrawuState['monitors']
+      unread: CcdrawuState['unread']
       manual: CcdrawuState['manual']
     }
   }

@@ -92,14 +92,14 @@ func moveOriginals(loc Locations, c Config) (*Moved, error) {
 	if err != nil {
 		return nil, cantMove(loc.ConfigFile, loc.Originals(), err)
 	}
-	var took, kept []string
+	var took, kept, gone []string
 	if b := c.Theme.Before; b != "" {
 		switch {
 		case o.Theme == "":
-			o.Theme, c.Theme.Before = b, ""
-			took = append(took, "theme.before")
+			o.Theme = b
+			took, gone = append(took, "theme.before"), append(gone, "theme.before")
 		case o.Theme == b:
-			c.Theme.Before = ""
+			gone = append(gone, "theme.before")
 		default:
 			kept = append(kept, "theme.before")
 		}
@@ -107,10 +107,10 @@ func moveOriginals(loc Locations, c Config) (*Moved, error) {
 	if b := c.Statusline.Before; b != nil {
 		switch {
 		case o.Statusline == nil:
-			o.Statusline, c.Statusline.Before = b, nil
-			took = append(took, "statusline.before")
+			o.Statusline = b
+			took, gone = append(took, "statusline.before"), append(gone, "statusline.before")
 		case bytes.Equal(o.Statusline, b):
-			c.Statusline.Before = nil
+			gone = append(gone, "statusline.before")
 		default:
 			kept = append(kept, "statusline.before")
 		}
@@ -121,7 +121,9 @@ func moveOriginals(loc Locations, c Config) (*Moved, error) {
 			return nil, cantMove(loc.ConfigFile, loc.Originals(), err)
 		}
 	}
-	if err := WriteConfig(loc.ConfigFile, c); err != nil {
+	// The rest of the config as it is, values that do not fit and all, for
+	// Settle (tdp E3)
+	if err := withoutKeys(loc.ConfigFile, gone...); err != nil {
 		return nil, cantMove(loc.ConfigFile, loc.Originals(), err)
 	}
 	if len(kept) > 0 {

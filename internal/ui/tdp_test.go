@@ -22,15 +22,19 @@ func TestTDP(t *testing.T) {
 // TestTDPTricky gives values that have broken screens (tdptest.Tricky) to
 // what ccdrawu draws from a config set by hand: the alias, the separator and
 // the drawer background. Every frame is checked for what reaches the
-// terminal (tdp components.5).
+// terminal (tdp components.5). Those that do not fit are their defaults at
+// the start, and the App Log has each as written, a colour code in it the
+// data's, as text (tdp E3; tdptest.App.Tricky).
 func TestTDPTricky(t *testing.T) {
 	for _, v := range []string{"\x1b[31mred\x1b[0m", "\x1b]52;c;aGk=\x07", "line\nbreak", "漢字かな한국어 wide"} {
-		tdptest.Check(t, app(t, func(home string) {
+		a := app(t, func(home string) {
 			cfg := config.Config{Alias: v, Theme: config.Theme{Base: "dark", Background: v}, Statusline: config.Statusline{Separator: v}}
 			if err := config.WriteConfig(filepath.Join(home, "config", "config.yaml"), cfg); err != nil {
 				t.Fatal(err)
 			}
-		}))
+		})
+		a.Tricky = true
+		tdptest.Check(t, a)
 	}
 }
 

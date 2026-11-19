@@ -8,10 +8,20 @@ import { parseYaml } from './yaml'
 
 export type Placement = 'dock' | 'inline'
 
+// Why parseConfig can't read text: the parser's words, or that it is not a config; undefined when it can
+export function unreadReason(text: string, json = false): string | undefined {
+  try {
+    const raw: unknown = json ? JSON.parse(text) : parseYaml(text)
+    return raw === null || raw === undefined || (typeof raw === 'object' && !Array.isArray(raw)) ? undefined : 'not a config'
+  } catch (e) {
+    return e instanceof Error ? e.message : String(e)
+  }
+}
+
 // ~/.config/ccdrawu/config.yaml: dock: [ids], inline: [ids], alias: name, pet: { species }, bar: style,
 // drawer: { sidebarOff, inlineOff }, statusline: { on, ... }; as JSON in the config.json of 0.1.4 and
 // before, until ccdrawu moves it (`json`). Undefined when it can't be read, as when caught half written:
-// read it again on the next tick
+// read it again on the next tick. A list or a lone value is not a config, as ccdrawu has it (tdp E3)
 export function parseConfig(text: string, json = false): Config | undefined {
   let raw: unknown
   try {
@@ -20,7 +30,8 @@ export function parseConfig(text: string, json = false): Config | undefined {
     return undefined
   }
   const config: Config = {}
-  if (typeof raw !== 'object' || raw === null) return config
+  if (raw === null || raw === undefined) return config
+  if (typeof raw !== 'object' || Array.isArray(raw)) return undefined
   for (const placement of ['dock', 'inline'] as const) {
     const ids = (raw as Record<string, unknown>)[placement]
     if (Array.isArray(ids)) config[placement] = ids.filter((id): id is string => typeof id === 'string')

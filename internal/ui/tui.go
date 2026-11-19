@@ -139,12 +139,15 @@ type opened struct {
 	statusTaken bool   // Claude Code has a status line of its own now
 	aside       string // one of ccdrawu's own files that can't be read
 	asideErr    error  // why
+	settled     config.Settled
 }
 
 // open reads what ccdrawu keeps, as it starts. A config or originals (data)
 // that can't be read is not worked on: nothing moves, the screen opens on
 // what can be read, and it is asked about first, one at a time; Enter moves
 // it aside and opens again, as on the first start (tdp E3, can't be read).
+// Values in the config it can't use are their defaults, the file kept aside
+// and written again with them (tdp E3, a value that does not fit).
 func (d *drawer) open() (opened, error) {
 	var o opened
 	cfg, cfgErr := config.ReadConfig(d.loc.ConfigFile)
@@ -152,7 +155,7 @@ func (d *drawer) open() (opened, error) {
 	if cfgErr == nil && origErr == nil {
 		// What 0.1.4 and before kept elsewhere, taken where tdp E3 has it now
 		o.moved, o.moveErr = config.Move(d.loc)
-		cfg, cfgErr = config.ReadConfig(d.loc.ConfigFile)
+		cfg, o.settled, cfgErr = config.Settle(d.loc)
 	}
 	if cfgErr != nil {
 		o.aside, o.asideErr, cfg = config.Source(d.loc.ConfigFile), cfgErr, config.Config{}
@@ -183,12 +186,13 @@ func (d *drawer) open() (opened, error) {
 }
 
 // say says what open found: a status line taken back, in the App Log; what
-// moved; and the question about a file that can't be read.
+// moved and values that did not fit, in one toast (tdp E3, several at one
+// start); and the question about a file that can't be read.
 func (d *drawer) say(o opened) tea.Cmd {
 	if o.statusTaken {
 		d.app.Log(terminu.Info, "Claude Code has a status line of its own now: ccdrawu's statusline is off")
 	}
-	cmd := d.sayMoved(o.moved, o.moveErr)
+	cmd := d.sayMoved(o.moved, o.moveErr, o.settled)
 	if o.asideErr != nil {
 		cmd = tea.Batch(cmd, d.app.MoveAside(o.aside, o.asideErr, d.reopen))
 	}
@@ -205,27 +209,42 @@ func (d *drawer) reopen() tea.Cmd {
 	return d.say(found)
 }
 
-// sayMoved says what moved where, in an Info toast; what could not move, with
+// sayMoved says what moved where, and the config's values that did not fit,
+// in one toast, a row each, the strongest its kind, each an entry of its own
+// in the App Log (tdp E3, several at one start); what could not move, with
 // both places, in an error popup, to be moved by hand (tdp E3, a place changed).
-func (d *drawer) sayMoved(moved []config.Moved, err error) tea.Cmd {
+func (d *drawer) sayMoved(moved []config.Moved, err error, settled config.Settled) tea.Cmd {
 	var cmds []tea.Cmd
 	if err != nil {
 		// Each says which place ccdrawu reads, and what to do by hand, a row
 		// of its own (tdp components.5)
 		cmds = append(cmds, d.app.Error("Can't move", rows(err)...))
 	}
-	var notes []string
+	var notices []terminu.Notice
 	for _, m := range moved {
 		what := shortHome(m.From)
 		if m.What != "" {
 			what = m.What + " in " + what
 		}
-		notes = append(notes, "Moved "+what+" to "+shortHome(m.To))
+		notices = append(notices, terminu.Notice{Kind: terminu.Info, Text: "Moved " + what + " to " + shortHome(m.To)})
 	}
-	if len(notes) > 0 {
-		cmds = append(cmds, d.app.Toast(terminu.Info, notes...))
+	notices = append(notices, misfitNotices(d.loc.ConfigFile, settled)...)
+	return tea.Batch(append(cmds, d.app.Notify(notices...))...)
+}
+
+// misfitNotices are the rows a start gives for the config's values that did
+// not fit: kept aside and written again with the defaults (a Warning, a WARN
+// for each value), or, the copy not made, the file left as it was (an Error,
+// the WARNs as well) (tdp E3, a value that does not fit).
+func misfitNotices(path string, s config.Settled) []terminu.Notice {
+	if len(s.Misfits) == 0 {
+		return nil
 	}
-	return tea.Batch(cmds...)
+	notices := []terminu.Notice{terminu.MisfitNotice(path, s.Copy, s.Misfits...)}
+	if s.Err != nil {
+		notices = append(notices, terminu.Notice{Kind: terminu.Error, Text: s.Err.Error()})
+	}
+	return notices
 }
 
 // rows is err a row at a time: each of errors.Join's on its own.
@@ -454,13 +473,9 @@ func (d *drawer) choices(p config.Placement) []config.Item {
 // aliasField is the alias row: one more name for /ccdrawu, set in an input
 // popup and checked as the mod reads it.
 func (d *drawer) aliasField() *terminu.Field {
+	// One set by hand in config.yaml that the mod does not take is none by now
+	// (config.Settle, tdp E3)
 	return &terminu.Field{Label: "Alias", Value: func() string { return d.cfg.Alias }, Empty: "none",
-		// One set by hand in config.yaml that the mod does not take (tdp
-		// panel.12: its label is Red)
-		Err: func() bool {
-			_, err := config.CleanAlias(d.cfg.Alias)
-			return err != nil
-		},
 		Edit: func() tea.Cmd {
 			return d.app.Text(terminu.TextInput{
 				Title: "Alias", Glyph: glyphPencil, Prompt: "One more name for /ccdrawu, such as ccd; empty for none",

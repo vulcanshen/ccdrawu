@@ -128,7 +128,11 @@ export function parseYaml(source: string): unknown {
     }
     while (open()) {
       const line = lines[at]
-      if (line === undefined || (line.text.trim() !== '' && line.indent <= indent)) throw new Error('unclosed')
+      if (line === undefined || (line.text.trim() !== '' && line.indent <= indent)) {
+        // Said on the pane when the config can't be read (tdp E3): which it is, and where it starts
+        const kind = src.startsWith('[') ? 'a list' : src.startsWith('{') ? 'a mapping' : 'a quote'
+        throw new Error(`${kind} unclosed: ${text.trim()}`)
+      }
       src += '\n' + line.text.trim()
       at++
     }

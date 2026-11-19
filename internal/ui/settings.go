@@ -65,8 +65,6 @@ func (d *drawer) backgroundField() *terminu.Field {
 			return terminu.ColorSpans(terminu.Hex(d.cfg.Theme.Background))
 		},
 		Disabled: func() bool { return d.cfg.Theme.Base == "" },
-		// Not a color: set by hand in config.yaml
-		Err: func() bool { return d.cfg.Theme.Background != "" && !hexColor.MatchString(d.cfg.Theme.Background) },
 		Edit: func() tea.Cmd {
 			var old terminu.Color
 			if hexColor.MatchString(d.cfg.Theme.Background) {

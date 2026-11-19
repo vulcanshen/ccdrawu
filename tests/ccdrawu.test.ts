@@ -26,7 +26,7 @@ import {
 } from '../hooks/format'
 import { registerCommands } from '../hooks/commands'
 import { ITEMS, view, type Snapshot } from '../hooks/items'
-import { cellWidth, columnRows, drawerShows, drawerWanted, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere } from '../hooks/layout'
+import { cellWidth, columnRows, drawerShows, drawerWanted, enabledItems, inlineValue, parseConfig, segWidth, showsAnywhere, unreadReason } from '../hooks/layout'
 import { locations } from '../hooks/paths'
 import { statuslineFile, statuslineItems } from '../hooks/statusline'
 import { parseYaml } from '../hooks/yaml'
@@ -977,6 +977,22 @@ test('files sit where tdp E3 puts them, unless CCDRAWU__ variables say otherwise
   expect(locations({ home: '/h', os: 'linux', xdgCache: 'rel' }).cache).toBe('/h/.cache/ccdrawu')
   expect(locations({ home: 'C:\\U', os: 'windows', localAppData: 'C:\\U\\AppData\\Local' }).cache).toBe('C:\\U\\AppData\\Local/ccdrawu/cache')
   expect(locations({ home: '/h', os: 'linux', xdgConfig: '/x', config: '/c', cache: '/k' })).toEqual({ ...config('/c'), cache: '/k' })
+})
+
+test("a config the pane can't read says why: not YAML, or a list or a lone value, which is not a config (tdp E3)", async () => {
+  for (const text of ['alias: "ccd\n', '- dock\n- inline\n', 'just words\n']) {
+    expect(parseConfig(text)).toBeUndefined()
+    expect(unreadReason(text)).toBeDefined()
+  }
+  expect(unreadReason('- dock\n')).toBe('not a config')
+  expect(unreadReason('alias: "ccd\n')).toBe('a quote unclosed: "ccd')
+  expect(parseConfig('{"dock": [', true)).toBeUndefined()
+  expect(unreadReason('{"dock": [', true)).toBeDefined()
+  // Empty, or a mapping: read, nothing to say
+  for (const text of ['', 'alias: ccd\n']) {
+    expect(parseConfig(text)).toBeDefined()
+    expect(unreadReason(text)).toBeUndefined()
+  }
 })
 
 test('config.yaml reads as the ccdrawu command writes it, and as a person writes YAML by hand', async () => {

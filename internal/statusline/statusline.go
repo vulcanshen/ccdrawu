@@ -84,17 +84,24 @@ const keep = 7 * 24 * time.Hour
 // when narrow, there is none while the drawer is beside the transcript, or the
 // terminal is wide enough for it; with nothing to show there is none either,
 // and the row goes (hidden). Files of sessions gone quiet for a week are
-// removed.
-func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now time.Time) error {
+// removed. Values in the config it can't use are their defaults, the file kept
+// aside and written again with them, said on errs (tdp E3).
+func Run(in io.Reader, out, errs io.Writer, loc config.Locations, columns int, now time.Time) error {
 	var input Input
 	if err := json.NewDecoder(in).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
-	cfg, err := config.ReadConfig(loc.ConfigFile)
+	cfg, settled, err := config.Settle(loc)
 	if err != nil {
 		// With no screen to ask on: nothing printed, no file touched, the file
 		// and why on stderr (tdp E3, can't be read)
 		return fmt.Errorf("%s can't be read: %w", config.Source(loc.ConfigFile), err)
+	}
+	// With no screen, on stderr, a line each, not mixed with the line printed
+	// (tdp E3, a value that does not fit). TODO(tdp #22): Claude Code shows
+	// none of its stderr, and the sessions open run it at once
+	for _, line := range settled.Lines(loc.ConfigFile) {
+		fmt.Fprintln(errs, "ccdrawu:", line)
 	}
 	cat, ok, err := config.ReadCatalog(loc.Catalog())
 	if err != nil || !ok {

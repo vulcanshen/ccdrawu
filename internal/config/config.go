@@ -203,30 +203,29 @@ func (c *Config) ids(p Placement) *[]string {
 
 // ReadConfig reads the config, config.yaml (tdp E3). Where there is none yet,
 // it reads the config.json 0.1.4 and before wrote beside it, until Move or
-// WriteConfig takes it to config.yaml; neither there is an empty config.
+// WriteConfig takes it to config.yaml; neither there is an empty config. A
+// value it can't use reads as its default (readFit); Settle, at a start, also
+// says so and writes the file again.
 func ReadConfig(path string) (Config, error) {
-	var c Config
+	c, _, err := readFit(path, nil)
+	return c, err
+}
+
+// configData is the config as JSON: config.yaml, else the config.json of
+// 0.1.4 and before; nil when neither is there.
+func configData(path string) ([]byte, error) {
 	data, err := os.ReadFile(path)
 	if errors.Is(err, fs.ErrNotExist) {
 		data, err = os.ReadFile(oldConfig(path))
 		if errors.Is(err, fs.ErrNotExist) {
-			return c, nil
+			return nil, nil
 		}
-	} else if err == nil {
-		data, err = jsonFromYAML(data)
+		return data, err
 	}
 	if err != nil {
-		return c, err
+		return nil, err
 	}
-	// A config that is not ours is not read and not overwritten blindly: the
-	// error says so.
-	if err := json.Unmarshal(data, &c); err != nil {
-		return c, err
-	}
-	if c.Drawer.Off {
-		c.Drawer = Drawer{SidebarOff: true, InlineOff: true}
-	}
-	return c, nil
+	return jsonFromYAML(data)
 }
 
 // On reports whether the item is on in p: the config's list when it has one,
@@ -326,6 +325,11 @@ func WriteConfig(path string, c Config) error {
 	if data, err = yamlFromJSON(data); err != nil {
 		return err
 	}
+	return writeConfigData(path, data)
+}
+
+// writeConfigData writes config.yaml as WriteConfig does, data its YAML.
+func writeConfigData(path string, data []byte) error {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}

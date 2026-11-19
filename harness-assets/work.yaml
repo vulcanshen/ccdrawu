@@ -86,14 +86,16 @@ tasks:
       - TestPetIsPicked
       - TestConfigKeepsTheAliasAndPet
   - id: 10
-    spec: 1
+    spec: 4
     implementation: |
       ccdrawu statusline：從 stdin 讀 Claude Code 給的 session，讀外掛寫在快取資料夾 sessions/ 的那個 session 的值；沒有的話只畫 Model、Context、Cost
       照 config.yaml 的項目、順序、Format、Color、Separator 排成一列，截到 COLUMNS 減 4 欄，結尾加 …
       on when narrow 時側邊欄在對話旁邊、或終端機寬到 144 欄以上，印一個 reset 讓那一列收起來；沒有東西可畫也一樣
       一週沒寫過的 session 檔刪掉
       config.yaml 讀不了：不印、不動檔，stderr 寫 <路徑> can't be read: <原因>，exit 1
+      config.yaml 有用不了的值：跟 TUI 一樣用 config.Settle（見 task 21）複製成 .bak、換成預設寫回，照樣印那一列；stderr 一行一句：terminu-go 的 DidNotFitText（「N values in config.yaml did not fit: defaults used, yours kept in config.yaml.bak」），備份做不出來時是那個錯誤
     test:
+      - TestRunUsesTheDefaultsForValuesThatDoNotFit
       - TestLineFormats
       - TestLineOrderSeparatorAndGaps
       - TestLineColors
@@ -122,11 +124,13 @@ tasks:
       - TestStatuslineWhereThereWasNone
       - TestStatuslineSetSinceIsLeftAlone
   - id: 12
-    spec: 1
+    spec: 4
     implementation: |
       sidebar、inline、statusline 頁的 Items 列：Enter 開 checkbox popup，列出所有項目（組、key、名稱），最上面是 Select all；Space 勾、Enter 套用、Esc 不改、/ 篩選
-      存進 config.yaml；沒寫進去的 id 留著
+      存進 config.yaml；勾的時候 catalog 沒有的 id 留著
+      啟動時 dock、inline、statusline.items 裡 catalog.json 沒有的 id（或不是字串的）照 E3 拿掉，WARN 寫「config.yaml: dock "<id>" did not fit; taken out」；還沒有 catalog.json 時不判斷
     test:
+      - TestValuesThatDoNotFitAreTheirDefaults
       - TestEditPicksTheItemsInOnePopup
       - TestConfigKeepsUnknownIDsAndWritesAllOff
       - TestConfigDefaultsUntilChanged
@@ -141,14 +145,15 @@ tasks:
       - TestConfigReordersInPlace
       - TestWhatCantMoveARowEach
   - id: 14
-    spec: 1
+    spec: 4
     implementation: |
       [1] 分組清單：Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences）；[2] 跟著 [1] 的 cursor 換成那一頁，一列一個值，Enter 進去
-      值上的 Enter 也在 Space menu 裡；不合法的值標出來；沒存的改動放回去
+      值上的 Enter 也在 Space menu 裡；沒存的改動放回去
+      手改 config.yaml 留下的不合的值啟動時就換成預設（task 21），畫面上沒有標 Red 的值；Plugin 列在 claude plugin list 查不出來時標 Red，App Log 記 WARN
     test:
       - TestDetailFollowsTheSidebar
       - TestEnterOnAValueIsInTheMenu
-      - TestWrongValuesAreMarked
+      - TestPluginRowIsMarkedWhenItCantTell
       - TestUnsavedChangeGoesBack
       - TestTDP
       - TestTDPTricky
@@ -186,12 +191,14 @@ tasks:
       - TestNoCatalogSaysWhatToDo
       - TestClaudesLinesGoToTheAppLog
   - id: 18
-    spec: 1
+    spec: 4
     implementation: |
       ccdrawu install claude：用 claude plugin 指令加市集、裝外掛，來源是 GitHub 上跟執行檔同一版的 tag（CCDRAWU__MARKETPLACE 可改）；已經裝了就更新、換到那個 tag；印 Claude Code 說的話
       外掛的 icon 是 .claude-plugin/icon.png：docs/icon.svg 轉成 1000×1000 的 PNG（claude plugin validate 要 512～2048 的正方形 PNG）
       ccdrawu uninstall claude：先讀 config.yaml 與 originals.yaml，讀不了就停下來，不動任何檔、什麼都不印，stderr 寫 <路徑> can't be read: <原因>，exit 1；讀得了才拿掉外掛與市集，換回原本的主題與狀態列，印做了什麼
+      uninstall 遇到 config.yaml 有用不了的值：config.Settle 複製成 .bak、換成預設寫回，那句寫到 stderr（同 task 10），照樣往下做
     test:
+      - TestUninstallGoesOnWithValuesThatDoNotFit
       - TestInstallTakesTheMarketplaceItIsGiven
       - TestSourceFromPinsTheReleaseTag
       - TestInstallUpdatesThePluginThere
@@ -223,7 +230,7 @@ tasks:
     test:
       - commit: 5de15c1
   - id: 21
-    spec: 1
+    spec: 4
     implementation: |
       config.yaml 在 CCDRAWU__CONFIG、XDG_CONFIG_HOME/ccdrawu 或 ~/.config/ccdrawu；快取在 CCDRAWU__CACHE 或系統快取資料夾；originals.yaml 在 CCDRAWU__DATA 或 ~/.ccdrawu
       啟動時把 config.json 與舊位置的檔搬到新位置，搬了的用 Info toast 說「Moved <從> to <到>」
@@ -232,7 +239,19 @@ tasks:
       搬不動（例：寫不進去）：照舊從舊位置讀，開 error popup「Can't move」寫出兩個位置，說在搬好之前照舊讀舊的那一個
       舊的資料夾搬空了就拿掉；還留著 originals.yaml 的不拿
       config.yaml 或 originals.yaml 讀不了：不動它，畫面開在沒有東西的狀態，開 terminu-go 的 MoveAside confirm，寫 <路徑> can't be read: <原因>；Enter 改名 .bak、用預設值開始，Esc 離開、stderr 寫路徑與原因
+      讀不了是 YAML 解不開，或最上層不是 mapping；讀得進來的檔一個值一個值讀（config.readFit），用不了的換成預設，記成 terminu.Misfit（key、原本寫的、現在用的）：alias 外掛不收→none；pet.species、bar、statusline.format、statusline.color、theme.base 不在選項裡→第一個選項（theme.base→off）；statusline.when 不是 narrow→always；theme.background 不是 #rrggbb→none；statusline.separator 有控制字元→|；statusline.refresh 小於 0 或超過 60→10；型別不對的值（例：refresh: ten）→預設；不是 mapping 的 pet、drawer、theme、statusline→全部預設
+      啟動時（搬家之後）config.Settle：有用不了的值就用 terminu.KeepAside 複製成 config.yaml.bak（有了就 .bak.1…），用預設值寫回；theme.base 不合時同時像 Claude theme 設 off 一樣換回 Claude Code 原本的主題，statusline.refresh 不合、狀態列是 ccdrawu 的時，Claude Code 的 refreshInterval 也換回 10；備份做不出來時不寫回，這一次用預設
+      搬家的 Info 與不合的值（terminu.MisfitNotice；備份做不出來時再加一列 Error）一起交給 App.Notify：一個 toast、一件一行、種類取最重的，App Log 一件一筆、每個值一筆 WARN
+      搬家（config.json → config.yaml、config 裡的 theme.before／statusline.before → originals.yaml）照原文寫，不合的值留給 Settle
+      外掛（hooks）每秒讀 config.yaml：解不開時當成寫到一半，下一秒還是一樣才算讀不了，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」，不動檔、照舊用上一次讀到的；讀得了就拿掉那一列；不合的值外掛照預設畫
     test:
+      - TestValuesThatDoNotFitAreTheirDefaults
+      - TestSettleKeepsTheFileAsideAndWritesItAgain
+      - TestSettleGivesClaudeCodeItsThemeBack
+      - TestSettleWithNoCopyLeavesTheFile
+      - TestMoveKeepsValuesThatDoNotFit
+      - TestValuesThatDoNotFitAreSaidInOneToast
+      - TestValuesThatDoNotFitWithNoCopy
       - TestLocateFollowsE3
       - TestConfigIsYAML
       - TestMoveTakesTheOldPlaces

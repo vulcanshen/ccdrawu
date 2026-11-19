@@ -690,12 +690,17 @@ func TestPetIsPicked(t *testing.T) {
 
 // tdp panel.12, one value per row: a value set by hand in
 // config.yaml that ccdrawu does not take turns its label Red
-func TestWrongValuesAreMarked(t *testing.T) {
-	d, loc := newTestDrawer(t)
+// tdp E3-28, E3-30, E3-37: values in config.yaml ccdrawu can't use are their
+// defaults at a start, the file kept aside and written again with them; what
+// moved and what did not fit are one toast, a row each, Warning its kind, and
+// each an entry of its own in the App Log
+func TestValuesThatDoNotFitAreSaidInOneToast(t *testing.T) {
+	_, loc := newTestDrawer(t)
 	if err := os.MkdirAll(filepath.Dir(loc.ConfigFile), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	wrong := `{"alias": "a b!", "theme": {"base": "dark-ansi", "background": "zzz"}, "statusline": {"refresh": 999, "separator": "\u001b"}}`
+	// theme.before, kept in the config by 0.1.1, moves to originals.yaml as it starts
+	wrong := `{"alias": "a b!", "theme": {"background": "zzz", "before": "light"}, "statusline": {"refresh": 999, "separator": "\u001b"}}`
 	if err := os.WriteFile(loc.ConfigFile, []byte(wrong), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -703,18 +708,63 @@ func TestWrongValuesAreMarked(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	marked := map[string]bool{}
-	for _, f := range append(d.pages[rowPreferences].Fields, d.statuslineFields()...) {
-		if f.Err != nil && f.Err() {
-			marked[f.Label] = true
+	d.app.Update(tea.WindowSizeMsg{Width: 200, Height: 40})
+	run(d, d.app.Start())
+	text := frameText(d)
+	if !strings.Contains(text, "Moved theme.before") || !strings.Contains(text, "4 values in config.yaml did not fit: defaults used, yours kept in config.yaml.bak") {
+		t.Fatalf("no one toast of the move and the values:\n%s", text)
+	}
+	if c := d.cfg; c.Alias != "" || c.Theme.Background != "" || c.Statusline.Refresh != 0 || c.Statusline.Separator != "" {
+		t.Fatalf("the values that did not fit are %+v", c)
+	}
+	if kept, err := os.ReadFile(loc.ConfigFile + ".bak"); err != nil || !strings.Contains(string(kept), `"a b!"`) {
+		t.Fatalf("not kept aside: %s, %v", kept, err)
+	}
+	press(d, key("!"))
+	log := frameText(d)
+	for _, entry := range []string{"INFO Moved theme.before", "WARN 4 values in config.yaml did not fit", `WARN config.yaml: alias "a b!" did not fit; using "none"`, `WARN config.yaml: statusline.refresh "999" did not fit; using "10"`} {
+		if !strings.Contains(log, entry) {
+			t.Errorf("no %q in the App Log:\n%s", entry, log)
 		}
 	}
-	for _, label := range []string{"Alias", "Drawer background", "Refresh", "Separator"} {
-		if !marked[label] {
-			t.Errorf("%s is not marked wrong: %v", label, marked)
-		}
+}
+
+// tdp E3-32: with no copy made, an Error toast, the file left as it was
+func TestValuesThatDoNotFitWithNoCopy(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Getuid() == 0 {
+		t.Skip("a folder that can't be written to")
 	}
-	if marked["Plugin"] {
+	_, loc := newTestDrawer(t)
+	if err := os.MkdirAll(filepath.Dir(loc.ConfigFile), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(loc.ConfigFile, []byte("bar: wavy\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Dir(loc.ConfigFile)
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o755) })
+	d, err := newDrawer(loc, (&claudeFake{}).run)
+	if err != nil {
+		t.Fatal(err)
+	}
+	d.app.Update(tea.WindowSizeMsg{Width: 200, Height: 40})
+	run(d, d.app.Start())
+	if text := frameText(d); !strings.Contains(text, "config.yaml.bak could not be made") || d.cfg.Bar != "" {
+		t.Fatalf("no Error toast, or the bar not the default:\n%s", text)
+	}
+	if data, _ := os.ReadFile(loc.ConfigFile); string(data) != "bar: wavy\n" {
+		t.Fatalf("the file written:\n%s", data)
+	}
+}
+
+// The plugin row is marked wrong while ccdrawu can't tell whether the plugin
+// is in Claude Code, and says so in the App Log
+func TestPluginRowIsMarkedWhenItCantTell(t *testing.T) {
+	d, _ := newTestDrawer(t)
+	if f := d.pages[rowPreferences].Fields[len(d.pages[rowPreferences].Fields)-1]; f.Label != "Plugin" || f.Err() {
 		t.Error("the plugin is marked wrong before it is looked for")
 	}
 	d.pluginChecked(pluginChecked{err: errors.New("no claude")})
@@ -820,7 +870,7 @@ func TestClaudesLinesGoToTheAppLog(t *testing.T) {
 func TestWhatCantMoveARowEach(t *testing.T) {
 	d, _ := newTestDrawer(t)
 	d.app.Update(tea.WindowSizeMsg{Width: 120, Height: 30})
-	run(d, d.sayMoved(nil, errors.Join(errors.New("The first can't move."), errors.New("The second can't move."))))
+	run(d, d.sayMoved(nil, errors.Join(errors.New("The first can't move."), errors.New("The second can't move.")), config.Settled{}))
 	first, second := -1, -1
 	for i, line := range strings.Split(frameText(d), "\n") {
 		if strings.Contains(line, "The first") {

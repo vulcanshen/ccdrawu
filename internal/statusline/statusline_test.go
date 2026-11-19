@@ -3,6 +3,7 @@ package statusline
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -126,7 +127,7 @@ func setup(t *testing.T) (config.Locations, string) {
 func run(t *testing.T, loc config.Locations, input string, columns int, now time.Time) string {
 	t.Helper()
 	var out bytes.Buffer
-	if err := Run(strings.NewReader(input), &out, loc, columns, now); err != nil {
+	if err := Run(strings.NewReader(input), &out, io.Discard, loc, columns, now); err != nil {
 		t.Fatal(err)
 	}
 	return ansi.Strip(out.String())
@@ -176,6 +177,31 @@ func TestRunWithNoCatalogOrConfig(t *testing.T) {
 	}
 }
 
+// tdp E3-31: values that do not fit, with no screen, are their defaults, the
+// file kept aside and written again, the line printed all the same and the
+// sentence on stderr, not mixed with it
+func TestRunUsesTheDefaultsForValuesThatDoNotFit(t *testing.T) {
+	loc, _ := setup(t)
+	loc.Data = filepath.Join(filepath.Dir(loc.Cache), ".ccdrawu")
+	if err := os.WriteFile(loc.ConfigFile, []byte("statusline: {on: true, items: [model], format: loud, separator: \"\\x1b\"}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	var out, errs bytes.Buffer
+	input := `{"session_id": "abc", "model": {"id": "claude-opus-5-5"}}`
+	if err := Run(strings.NewReader(input), &out, &errs, loc, 0, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(ansi.Strip(out.String()), "Model claude-opus-5-5") || strings.Contains(out.String(), "did not fit") {
+		t.Errorf("printed %q", out.String())
+	}
+	if errs.String() != "ccdrawu: 2 values in config.yaml did not fit: defaults used, yours kept in config.yaml.bak\n" {
+		t.Errorf("stderr %q", errs.String())
+	}
+	if _, err := os.Stat(loc.ConfigFile + ".bak"); err != nil {
+		t.Error("not kept aside:", err)
+	}
+}
+
 // tdp E3, can't be read, with no screen: a config that can't be read stops
 // the line before it prints anything or touches a file, the error naming the
 // file and why
@@ -194,7 +220,7 @@ func TestRunStopsOnAConfigThatCantBeRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	var out bytes.Buffer
-	err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, loc, 0, now)
+	err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, io.Discard, loc, 0, now)
 	if err == nil || !strings.HasPrefix(err.Error(), loc.ConfigFile+" can't be read: ") {
 		t.Fatalf("error: %v", err)
 	}
@@ -278,7 +304,7 @@ func TestRunHidesTheRow(t *testing.T) {
 			t.Fatal(err)
 		}
 		var out bytes.Buffer
-		if err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, loc, 100, time.Now()); err != nil {
+		if err := Run(strings.NewReader(`{"session_id": "abc"}`), &out, io.Discard, loc, 100, time.Now()); err != nil {
 			t.Fatal(err)
 		}
 		if got := out.String(); got != hidden+"\n" {

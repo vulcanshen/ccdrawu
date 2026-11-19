@@ -73,11 +73,18 @@ func TestConfigIsYAML(t *testing.T) {
 		t.Fatalf("read back %+v\nfrom\n%s", got, raw)
 	}
 	// Written by hand, in YAML's own ways
-	if err := os.WriteFile(path, []byte("# mine\nalias: 'cc d'\ndock: [model, git]\nstatusline: {on: true}\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("# mine\nalias: 'cc-d'\ndock: [model, git]\nstatusline: {on: true}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if got, err = ReadConfig(path); err != nil || got.Alias != "cc d" || !slices.Equal(got.Dock, []string{"model", "git"}) {
+	if got, err = ReadConfig(path); err != nil || got.Alias != "cc-d" || !slices.Equal(got.Dock, []string{"model", "git"}) {
 		t.Fatalf("by hand: %+v, %v", got, err)
+	}
+	// An alias the mod does not take reads as none (tdp E3, a value that does not fit)
+	if err := os.WriteFile(path, []byte("alias: 'cc d'\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got, err = ReadConfig(path); err != nil || got.Alias != "" {
+		t.Fatalf("alias that does not fit: %+v, %v", got, err)
 	}
 }
 

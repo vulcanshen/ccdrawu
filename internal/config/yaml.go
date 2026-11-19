@@ -44,6 +44,67 @@ func block(n *yaml.Node) {
 	}
 }
 
+// withoutKeys writes config.yaml at path again without keys ("theme.before"),
+// the rest as it is, in its own order.
+func withoutKeys(path string, keys ...string) error {
+	if len(keys) == 0 {
+		return nil
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	var doc yaml.Node
+	if err := yaml.Unmarshal(data, &doc); err != nil {
+		return err
+	}
+	for _, key := range keys {
+		parent, name, _ := strings.Cut(key, ".")
+		if len(doc.Content) == 0 {
+			break
+		}
+		if m := valueAt(doc.Content[0], parent); m != nil {
+			drop(m, name)
+		}
+	}
+	var out bytes.Buffer
+	enc := yaml.NewEncoder(&out)
+	enc.SetIndent(2)
+	if err := enc.Encode(&doc); err != nil {
+		return err
+	}
+	if err := enc.Close(); err != nil {
+		return err
+	}
+	return writeConfigData(path, out.Bytes())
+}
+
+// valueAt is the node at key in mapping m, nil when there is none.
+func valueAt(m *yaml.Node, key string) *yaml.Node {
+	if m.Kind != yaml.MappingNode {
+		return nil
+	}
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			return m.Content[i+1]
+		}
+	}
+	return nil
+}
+
+// drop takes key and its value out of mapping m.
+func drop(m *yaml.Node, key string) {
+	if m.Kind != yaml.MappingNode {
+		return
+	}
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if m.Content[i].Value == key {
+			m.Content = append(m.Content[:i], m.Content[i+2:]...)
+			return
+		}
+	}
+}
+
 // jsonFromYAML reads a YAML document as JSON, for a Config to take.
 func jsonFromYAML(data []byte) ([]byte, error) {
 	var v any
@@ -89,9 +150,18 @@ func Move(loc Locations) ([]Moved, error) {
 			// merge, and says so each start until then (tdp E3)
 			errs = append(errs, fmt.Errorf("%s is there beside %s. ccdrawu reads config.yaml: put what you want of config.json in it yourself, then remove config.json.", old, loc.ConfigFile))
 		} else {
-			c, err := ReadConfig(loc.ConfigFile)
+			// Written again as it is, values that do not fit and all: Settle,
+			// after it, says so and keeps it aside (tdp E3)
+			_, _, err := readFit(loc.ConfigFile, nil)
+			var data []byte
 			if err == nil {
-				err = WriteConfig(loc.ConfigFile, c)
+				data, err = os.ReadFile(old)
+			}
+			if err == nil {
+				data, err = yamlFromJSON(data)
+			}
+			if err == nil {
+				err = writeConfigData(loc.ConfigFile, data)
 			}
 			if err != nil {
 				errs = append(errs, cantMove(old, loc.ConfigFile, err))

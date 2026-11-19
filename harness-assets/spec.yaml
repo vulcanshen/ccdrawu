@@ -1,6 +1,6 @@
-id: 3
+id: 4
 from: v1.2.0
-to: v1.2.0
+to: v1.2.16
 tasks:
   - id: 1
     spec: 1
@@ -66,12 +66,14 @@ tasks:
     remark:
       - 在 preferences 的 Pet 設，一秒內開著的 session 跟著換；不想要寵物就在項目清單取消勾選 Pet
   - id: 10
-    spec: 1
+    spec: 4
     request: ccdrawu 當 Claude Code 的狀態列（輸入框下方那一列），照使用者挑的項目、順序、寫法排成一列
     tdp: [tdp P5, tdp E1, tdp E3]
     remark:
       - Claude Code 執行 ccdrawu statusline；太長時結尾截掉加 …；on when narrow 時，側邊欄在對話旁邊或終端機夠寬就整列收起來
       - config.yaml 讀不了時什麼都不印、不動檔、在 stderr 寫是哪個檔與原因（tdp E3）
+      - config.yaml 有用不了的值：複製成 .bak、那些值換成預設寫回、照樣印出那一列，那句寫到 stderr（tdp E3，值不合規則）
+      - {note: "Claude Code 不顯示 statusline 的 stderr，好幾個 session 同時跑會各做一份 .bak；暫時照 tdp 字面做", issue: "tdp #22"}
   - id: 11
     spec: 1
     request: 在 ccdrawu 的 statusline 頁設定狀態列：開關（on、off、on when narrow）、項目、順序、寫法、顏色、分隔、重跑間隔
@@ -80,11 +82,12 @@ tasks:
       - 打開時在 ~/.claude/settings.json 設成 ccdrawu statusline；原本就有狀態列的，先問過才換掉，並記下原本的，關掉或移除時換回去
       - Format：label、short、value；Color：highlighted、dimmed；Separator 沒設是 |；Refresh 沒設是 10 秒
   - id: 12
-    spec: 1
+    spec: 4
     request: 在 ccdrawu 挑側邊欄（或狀態列）顯示哪些項目
-    tdp: [tdp checkbox, tdp finder]
+    tdp: [tdp checkbox, tdp finder, tdp E3]
     remark:
       - Items 上按 Enter 開所有項目的清單：Space 勾、最上面 Select all 全選、Enter 套用、Esc 不改、/ 打字篩選；新勾的排在它前一項後面
+      - config.yaml 裡外掛寫的項目清單沒有的 id 是「app 不認得的名字」，啟動時照 E3 拿掉；還沒有項目清單時無從判斷，不動
   - id: 13
     spec: 1
     request: 在 ccdrawu 排側邊欄（或狀態列）的項目順序
@@ -92,11 +95,12 @@ tasks:
     remark:
       - Order 上按 Enter：D 拿起一項、j k 移動、Enter 放下、再 Enter 存起來、Esc 放回原樣
   - id: 14
-    spec: 1
+    spec: 4
     request: ccdrawu 的畫面：左邊分組列出 Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences），右邊是選到的那一頁的值
-    tdp: [tdp screen.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp M3]
+    tdp: [tdp screen.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp M3, tdp E3]
     remark:
       - 開著的 session 在一秒內跟著換
+      - 手改 config.yaml 留下的不合的值，啟動時就換成預設（tdp E3），畫面上不再有標 Red 的值；只有 Plugin 列在查不到外掛時標 Red
   - id: 15
     spec: 1
     request: 讓側邊欄的底色跟終端機一樣：選一個 Claude Code 內建主題當底，再選側邊欄的底色
@@ -117,12 +121,13 @@ tasks:
     remark:
       - preferences 的 Plugin 上按 Enter 安裝外掛
   - id: 18
-    spec: 1
+    spec: 4
     request: ccdrawu install claude 把同一版的外掛裝進 Claude Code，ccdrawu uninstall claude 拿掉它並換回原本的主題與狀態列
     tdp: [tdp P5, tdp E1, tdp E2, tdp E3]
     remark:
       - 只用這兩個指令（或 ccdrawu update）裝外掛，不用 /plugin：外掛要跟指令同一版
       - uninstall 讀不了 config.yaml 或 originals.yaml 時停下來，什麼都不動，寫出是哪個檔與原因（tdp E3）
+      - uninstall 遇到 config.yaml 有用不了的值：複製成 .bak、換成預設寫回，那句寫到 stderr，照樣往下做（tdp E3，值不合規則）
   - id: 19
     spec: 1
     request: ccdrawu update 照安裝的方式更新 ccdrawu，再把 Claude Code 裡的外掛更新成同一版
@@ -134,12 +139,16 @@ tasks:
     request: ccdrawu version 印版本，ccdrawu help 印用法
     tdp: [tdp E1, harness project.4]
   - id: 21
-    spec: 1
-    request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問
+    spec: 4
+    request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問；讀得進來、只有用不了的值時，備份後換成預設
     tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6]
     remark:
       - ~/.config/ccdrawu/config.yaml（CCDRAWU__CONFIG、XDG_CONFIG_HOME）；系統快取資料夾裡的 ccdrawu（CCDRAWU__CACHE）；~/.ccdrawu/originals.yaml（CCDRAWU__DATA）
       - config.yaml 讀不了：寫出原因，Enter 改名成 config.yaml.bak、用預設值開始，Esc 離開
+      - 用不了的值（不認得的名字、不是 #rrggbb 的顏色、超過 60 或負的秒數、外掛不收的 alias、有控制字元的分隔、型別不對的值）：啟動時複製成 config.yaml.bak、換成預設寫回，跳 Warning toast，App Log 每個值一筆 WARN；備份做不出來時不寫回、跳 Error toast（tdp E3，值不合規則）
+      - 同一次啟動有搬家又有不合的值：合成一個 toast，App Log 一件一筆（tdp E3，同一次啟動有好幾件）
+      - 外掛畫的側邊欄（不在 TUI 裡的畫面，tdp P5）讀不了 config.yaml：在面板上寫出哪個檔、為什麼，不動檔；值不合規則時照預設畫，備份與寫回交給 TUI 與 statusline（tdp E3、P5）
+      - {note: "從來不是 ccdrawu 的 key（打錯的）tdp 沒寫怎麼辦；暫時照舊：重寫時不留，值不合規則而重寫時原本的在 .bak", issue: "tdp #21"}
   - id: 22
     spec: 1
     request: ccdrawu 在至少 40 欄寬、12 列高、支援 truecolor 的終端機跑，要 Nerd Font；圖示佔的格數可以用環境變數設

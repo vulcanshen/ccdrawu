@@ -139,8 +139,6 @@ func (d *drawer) colorField() *terminu.Field {
 // separatorField is what stands between the items, | when none is set.
 func (d *drawer) separatorField() *terminu.Field {
 	return &terminu.Field{Label: "Separator", Value: func() string { return d.cfg.Statusline.Separator }, Empty: "|",
-		// Control characters set by hand in config.yaml
-		Err: func() bool { return strings.ContainsFunc(d.cfg.Statusline.Separator, unicode.IsControl) },
 		Edit: func() tea.Cmd {
 			return d.app.Text(terminu.TextInput{
 				Title: "Separator", Glyph: glyphPencil, Prompt: "What stands between the items, such as | or ·; empty for |",
@@ -167,8 +165,6 @@ func (d *drawer) separatorField() *terminu.Field {
 func (d *drawer) refreshField() *terminu.Field {
 	// The value and its unit, a whole word (tdp input.10)
 	return &terminu.Field{Label: "Refresh", Value: func() string { return strconv.Itoa(refresh(d.cfg.Statusline)) + " seconds" },
-		// Past 60, set by hand in config.yaml
-		Err: func() bool { return refresh(d.cfg.Statusline) > 60 },
 		Edit: func() tea.Cmd {
 			// The unit on a row of its own under the value (tdp number.2)
 			return d.app.Number(terminu.NumberInput{

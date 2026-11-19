@@ -14,6 +14,7 @@ import type {
   SkillsInfo,
   TokenInfo,
   Toy,
+  Unread,
   Usage,
   VersionInfo,
 } from '../types'
@@ -69,6 +70,7 @@ import {
   inlineValue,
   type Manual,
   parseConfig,
+  unreadReason,
   type Placement,
   segWidth,
   showsAnywhere,
@@ -101,6 +103,7 @@ const pet = atom({ plugin: 'ccdrawu', key: 'pet' } as const, PET_START)
 const kits = atom({ plugin: 'ccdrawu', key: 'kits' } as const, [] as Kit[])
 const toys = atom({ plugin: 'ccdrawu', key: 'toys' } as const, [] as Toy[])
 const monitors = atom({ plugin: 'ccdrawu', key: 'monitors' } as const, [] as string[])
+const unread = atom({ plugin: 'ccdrawu', key: 'unread' } as const, null as Unread | null)
 const config = atom({ plugin: 'ccdrawu', key: 'config' } as const, {} as Config)
 // Kept by the host, so a reload keeps what /ccdrawu set
 const manual = atom({ plugin: 'ccdrawu', key: 'manual' } as const, null as Manual)
@@ -186,6 +189,8 @@ async function installCatalog($: Engine) {
 // a change at once. Where there is none, the config.json of 0.1.4 and before, until the TUI moves it; a
 // file not there means the catalog's defaults
 let configStamp: number | undefined
+// The config's stamp when it last could not be read: still so a second on, it is not one caught half written
+let unreadStamp: number | undefined
 let statusWasShown = false // whether the config read last had the Status row on
 // Where the config read last let the drawer show, before the first read
 let drawerWas: { dock: boolean; inline: boolean } | undefined
@@ -206,9 +211,22 @@ async function refreshConfig($: Engine) {
     stamp = await mtime(file)
   }
   if (stamp === configStamp) return
-  const parsed = stamp === 0 ? {} : parseConfig(await $.fs.read(file), file === oldConfigFile)
-  // Half written: keep what shows and read it again next second
-  if (parsed === undefined) return
+  const text = stamp === 0 ? '' : await $.fs.read(file)
+  const parsed = stamp === 0 ? {} : parseConfig(text, file === oldConfigFile)
+  // Half written: keep what shows and read it again next second. Still so a second on, it can't be read:
+  // the pane says which file and why, and goes on with what it had, the file as it is; ccdrawu asks about
+  // it when it opens (tdp E3, a screen not in the TUI)
+  if (parsed === undefined) {
+    if (unreadStamp === stamp) {
+      const why = unreadReason(text, file === oldConfigFile) ?? 'not a config'
+      const was = await read($, unread)
+      if (was?.why !== why) await update($, unread, () => ({ file: shortPath(file, home), why }))
+    }
+    unreadStamp = stamp
+    return
+  }
+  unreadStamp = undefined
+  if ((await read($, unread)) !== null) await update($, unread, () => null)
   configStamp = stamp
   await update($, config, () => parsed)
   await registerCommands(spec => $.command.register(spec), commands, parsed.alias)
@@ -697,6 +715,9 @@ export const register: Register = on => {
     const s = await readSnapshot($)
     const conf = await read($, config)
     const enabled = enabledItems(conf, placement)
+    // The config can't be read: which file and why, over the rows (tdp E3, a screen not in the TUI)
+    const problem = await read($, unread)
+    const unreadRow = problem === null ? null : <Text color={C.red}>{`${problem.file} can't be read: ${problem.why}`}</Text>
     // The pet is not a row: it is drawn on its own, over the rows or left of the columns
     const shown = enabled.flatMap(item => {
       const v = view(item.id, s)
@@ -782,7 +803,10 @@ export const register: Register = on => {
               {drawPet(PET_HEIGHT)}
             </Box>
           ) : null}
-          <Box flexDirection="column">{lines}</Box>
+          <Box flexDirection="column">
+            {unreadRow}
+            {lines}
+          </Box>
         </Box>
       )
     }
@@ -935,6 +959,7 @@ export const register: Register = on => {
         </Box>,
       )
     }
+    if (unreadRow !== null) rows.push(unreadRow)
     for (const { item, view: v } of shown) {
       rows.push(dockRow(item.label, v))
       if (v.below !== undefined) {

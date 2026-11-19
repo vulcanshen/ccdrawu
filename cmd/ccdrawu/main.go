@@ -52,7 +52,7 @@ func main() {
 			loc, err := config.UserLocations()
 			if err == nil {
 				columns, _ := strconv.Atoi(os.Getenv("COLUMNS"))
-				err = statusline.Run(os.Stdin, os.Stdout, loc, columns, time.Now())
+				err = statusline.Run(os.Stdin, os.Stdout, os.Stderr, loc, columns, time.Now())
 			}
 			if err != nil {
 				fmt.Fprintln(os.Stderr, "ccdrawu:", err)
@@ -90,17 +90,23 @@ func integrate(install bool) error {
 	if err != nil {
 		return err
 	}
-	return uninstall(loc, claude.Exec, os.Stdout)
+	return uninstall(loc, claude.Exec, os.Stdout, os.Stderr)
 }
 
 // uninstall takes the plugin out of Claude Code and gives Claude Code the
 // user's own theme and status line back, saying so on out. A config or
 // originals that can't be read stops it before it touches anything: with no
 // screen to ask on, it does what the TUI's Esc does (tdp E3, can't be read).
-func uninstall(loc config.Locations, run claude.Run, out io.Writer) error {
-	cfg, err := config.ReadConfig(loc.ConfigFile)
+// Values in the config it can't use are their defaults, the file kept aside
+// and written again with them, said on errs (tdp E3, a value that does not
+// fit).
+func uninstall(loc config.Locations, run claude.Run, out, errs io.Writer) error {
+	cfg, settled, err := config.Settle(loc)
 	if err != nil {
 		return fmt.Errorf("%s can't be read: %w", config.Source(loc.ConfigFile), err)
+	}
+	for _, line := range settled.Lines(loc.ConfigFile) {
+		fmt.Fprintln(errs, "ccdrawu:", line)
 	}
 	if _, err := config.ReadOriginals(loc.Originals(), cfg); err != nil {
 		return fmt.Errorf("%s can't be read: %w", loc.Originals(), err)
