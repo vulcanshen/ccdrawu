@@ -7,6 +7,9 @@ Each release names the version of terminu design (tdp) it follows.
 - Snails and owls: beside the transcript, a snail crawls onto the pet's strip for each shell left running in the background, and an owl flies down onto it for each monitor, each in colors picked at random; an owl now and then flies off to perch somewhere else, on the git boxes too. While Claude is idle the pet now and then goes over to one on the ground and paws at it, and a snail draws into its shell, an owl spreads its wings; with them about it does not fall asleep. Once its task is done, a snail crawls off and an owl flies off.
 - Left alone, the pet now and then strolls, looks around or swipes, as it was meant to; it hardly ever did. The same went for a kit's hops and rests, which came less often than meant.
 - **Tasks** counts a monitor the Monitor tool started as a monitor; it counted it as a shell.
+- In the Claude desktop app, a drawer minimized to a widget shows as it does above the prompt: the pet and columns of text.
+- Follows Claude Code 2.1.328's plugin API, which named a type of its own as ccdrawu had named one, and seats a pane in a third place, the desktop app's widget.
+- The plugin has an icon, the one `ccdrawu` shows at its start.
 
 ## v1.1.1 — tdp v1.2.0
 

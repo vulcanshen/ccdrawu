@@ -212,7 +212,7 @@ Inside tmux, Claude Code limits itself to 256 colors, so a color like `#11111b` 
 
 ### The drawer sits above the prompt
 
-Claude Code decides where the drawer goes, not ccdrawu: beside the transcript only in fullscreen rendering and in a terminal about 110–144 columns wide or more, above the prompt otherwise.
+Claude Code decides where the drawer goes, not ccdrawu: beside the transcript only in fullscreen rendering and in a terminal about 110–144 columns wide or more, above the prompt otherwise. In the Claude desktop app, a drawer you minimize to a widget shows as it does above the prompt.
 
 - Run `/tui fullscreen`. Claude Code restarts, picks your conversation up where it was, and keeps the choice for later sessions. `/tui default` goes back.
 - If `/tui fullscreen` says Claude Code already uses it but the drawer still sits above the prompt, quit Claude Code and start it again: `claude -c` continues the conversation.

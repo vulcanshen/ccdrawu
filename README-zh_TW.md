@@ -212,7 +212,7 @@ ccdrawu 會寫一份自己的主題，就是那個內建主題加上你選的底
 
 ### 面板在輸入框上方
 
-面板放哪裡是 Claude Code 決定的，不是 ccdrawu：只有在 fullscreen 渲染模式、而且終端機寬到大約 110～144 欄以上時，才會放在對話旁邊，其他時候都放在輸入框上方。
+面板放哪裡是 Claude Code 決定的，不是 ccdrawu：只有在 fullscreen 渲染模式、而且終端機寬到大約 110～144 欄以上時，才會放在對話旁邊，其他時候都放在輸入框上方。在 Claude 桌面版把面板最小化成小卡片（widget）時，顯示的樣子跟放在輸入框上方時一樣。
 
 - 執行 `/tui fullscreen`。Claude Code 會重開並接回你的對話，之後的 session 也會沿用。要換回來就執行 `/tui default`。
 - 如果 `/tui fullscreen` 說已經在用了，面板卻還在輸入框上方，就關掉 Claude Code 再重新啟動：`claude -c` 可以接著原本的對話。

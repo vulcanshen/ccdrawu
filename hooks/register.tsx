@@ -448,9 +448,9 @@ async function readSnapshot($: Engine): Promise<Snapshot> {
 // `ccdrawu statusline` to lay out, written only when it changed. The id is asked each time: after /clear
 // the session goes on under a new one, and Claude Code hands the command that one
 let statuslineWritten: { file: string; text: string } | undefined
-// Where the pane was drawn last: dock, beside the transcript, or inline, above the prompt; undefined
-// once ccdrawu closes it
-let placedAs: Placement | undefined
+// Where the pane was drawn last: dock, beside the transcript, inline, above the prompt, or widget, the
+// desktop app's minimized pane (keepPlace leaves that one be); undefined once ccdrawu closes it
+let placedAs: string | undefined
 
 async function writeStatusline($: Engine) {
   if (cacheDir === undefined || !(await read($, config)).statusline?.on) return
@@ -682,11 +682,15 @@ export const register: Register = on => {
     const { Box, Text } = $.ui.resolve(e)
     // Leave out the paddingX on either side, or a row runs past the width and wraps
     const inner = Math.max(22, e.props.bodyColumns - 2)
-    const placement = e.props.placement
+    // The desktop app's widget, a pane the person minimized, read at a glance, is drawn as above the
+    // prompt: the pet and columns of text (Claude Code 2.1.328). A seat Claude Code adds later, as it
+    // says to, as beside the transcript
+    const seat: string = e.props.placement
+    const placement: Placement = seat === 'inline' || seat === 'widget' ? 'inline' : 'dock'
     fullscreen = e.viewport?.isFullscreen === true
     // Drawn somewhere new: out of it if the drawer does not belong there
-    if (placement !== placedAs) {
-      placedAs = placement
+    if (seat !== placedAs) {
+      placedAs = seat
       quietly(keepPlace($))
     }
 

@@ -133,32 +133,61 @@ export type Toy = {
   hitUntil: number // pawed at by the pet: a snail in its shell, an owl's wings out, until then
 }
 
+// What ccdrawu keeps in $.state, named out here: inside the module block below a name is claude-code's
+// first, and one it comes to have too (SessionInfo, Claude Code 2.1.328) would stand in for ours. The
+// block lists each key again, as `claude plugin validate` reads the contract there
+export type CcdrawuState = {
+  usage: Usage | null
+  model: ModelInfo | null
+  git: GitInfo | null
+  path: string
+  turns: number
+  cache: CacheInfo | null
+  tokens: TokenInfo
+  session: SessionInfo
+  status: ServiceStatus | null
+  skills: SkillsInfo
+  compacts: number
+  agents: number
+  background: Background
+  version: VersionInfo | null
+  drawer: string | null
+  modes: Modes
+  now: number
+  config: Config
+  pet: PetState
+  kits: Kit[]
+  toys: Toy[]
+  monitors: string[] // the tasks the Monitor tool started, by id: a reply's end lists them as shells
+  manual: 'on' | 'off' | null
+}
+
 declare module 'claude-code' {
   interface PluginState {
     ccdrawu: {
-      usage: Usage | null
-      model: ModelInfo | null
-      git: GitInfo | null
-      path: string
-      turns: number
-      cache: CacheInfo | null
-      tokens: TokenInfo
-      session: SessionInfo
-      status: ServiceStatus | null
-      skills: SkillsInfo
-      compacts: number
-      agents: number
-      background: Background
-      version: VersionInfo | null
-      drawer: string | null
-      modes: Modes
-      now: number
-      config: Config
-      pet: PetState
-      kits: Kit[]
-      toys: Toy[]
-      monitors: string[] // the tasks the Monitor tool started, by id: a reply's end lists them as shells
-      manual: 'on' | 'off' | null
+      usage: CcdrawuState['usage']
+      model: CcdrawuState['model']
+      git: CcdrawuState['git']
+      path: CcdrawuState['path']
+      turns: CcdrawuState['turns']
+      cache: CcdrawuState['cache']
+      tokens: CcdrawuState['tokens']
+      session: CcdrawuState['session']
+      status: CcdrawuState['status']
+      skills: CcdrawuState['skills']
+      compacts: CcdrawuState['compacts']
+      agents: CcdrawuState['agents']
+      background: CcdrawuState['background']
+      version: CcdrawuState['version']
+      drawer: CcdrawuState['drawer']
+      modes: CcdrawuState['modes']
+      now: CcdrawuState['now']
+      config: CcdrawuState['config']
+      pet: CcdrawuState['pet']
+      kits: CcdrawuState['kits']
+      toys: CcdrawuState['toys']
+      monitors: CcdrawuState['monitors']
+      manual: CcdrawuState['manual']
     }
   }
 }

@@ -1129,7 +1129,7 @@ test('the pane draws on the terminal before any figures arrive, a key on every r
   await ui.unmount()
 })
 
-test('above the prompt the pane draws columns of text with no bars', async $ => {
+test("above the prompt, and in the desktop app's widget, the pane draws columns of text with no bars", async $ => {
   const ui = await $.ui.mount({ ...MOUNT, props: { ...PANE, placement: 'inline', bodyColumns: 100 } })
   expect(await ui.find({ type: 'Text', text: /│/ })).toBeDefined()
   expect(await ui.find({ type: 'Text', text: /\u{F445}|\u{F51D}/u })).toBeUndefined()
@@ -1137,6 +1137,12 @@ test('above the prompt the pane draws columns of text with no bars', async $ => 
   // and the pet left of the columns
   expect((await ui.find({ type: 'Box', key: 'pet' }))?.props).toMatchObject({ width: 12, height: 4 })
   await ui.unmount()
+  // The desktop app's widget, a minimized pane, is drawn the same way (Claude Code 2.1.328)
+  const widget = await $.ui.mount({ ...MOUNT, props: { ...PANE, placement: 'widget', bodyColumns: 100 } })
+  expect(await widget.find({ type: 'Text', text: /│/ })).toBeDefined()
+  expect(await widget.find({ type: 'Text', text: /\u{F445}|\u{F51D}/u })).toBeUndefined()
+  expect((await widget.find({ type: 'Box', key: 'pet' }))?.props).toMatchObject({ width: 12, height: 4 })
+  await widget.unmount()
 })
 
 // Waits for the drawing to hold a Text that reads text, once the work a hook left running wrote it

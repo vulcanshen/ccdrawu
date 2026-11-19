@@ -13,10 +13,11 @@ tasks:
       - commit: 6df08c2
       - commit: 7eb5a51
   - id: 2
-    spec: 1
+    spec: 3
     implementation: |
       外掛在 session 開始時打開 pane；Claude Code 把它放在對話旁邊或輸入框上方
       輸入框上方：寵物佔最左 14 欄，項目排成好幾欄文字，欄數取放得下的最少列數
+      Pane 的 placement 是 widget（桌面版最小化的面板）時照輸入框上方畫、用 inline 的項目；keepPlace 只看 dock 與 inline，不關 widget；Claude Code 以後新加的值照它文件說的當成 dock
       ccdrawu 的 sidebar 頁、inline 頁最上面的 Drawer 列：radio（off、on），畫在原地選，寫進 config.yaml 的 drawer；外掛一秒內讀到
     test:
       - TestDrawerTurnsOffAndOn
@@ -187,6 +188,7 @@ tasks:
     spec: 1
     implementation: |
       ccdrawu install claude：用 claude plugin 指令加市集、裝外掛，來源是 GitHub 上跟執行檔同一版的 tag（CCDRAWU__MARKETPLACE 可改）；已經裝了就更新、換到那個 tag；印 Claude Code 說的話
+      外掛的 icon 是 .claude-plugin/icon.png：docs/icon.svg 轉成 1000×1000 的 PNG（claude plugin validate 要 512～2048 的正方形 PNG）
       ccdrawu uninstall claude：先讀 config.yaml 與 originals.yaml，讀不了就停下來，不動任何檔、什麼都不印，stderr 寫 <路徑> can't be read: <原因>，exit 1；讀得了才拿掉外掛與市集，換回原本的主題與狀態列，印做了什麼
     test:
       - TestInstallTakesTheMarketplaceItIsGiven

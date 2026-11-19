@@ -12,11 +12,12 @@ tasks:
       - Context、Session、Weekly 畫 bar，50%、70%、90% 從綠變黃、橘、紅；Effort 從 low 綠到 max 紅
       - 側邊欄是 Claude Code 的外掛畫的，不是 terminu-go 的畫面；列與顏色是 app 的功能邏輯（tdp P5）
   - id: 2
-    spec: 1
+    spec: 3
     request: 側邊欄在 session 開始時自動打開，放在對話旁邊或輸入框上方；兩個位置可以各自關掉
     tdp: [tdp P5, tdp radio, tdp panel.12]
     remark:
       - 放哪裡由 Claude Code 決定：fullscreen 渲染、終端機夠寬（約 110～144 欄）時在對話旁邊，其他時候在輸入框上方
+      - Claude 桌面版把面板最小化成小卡片（widget，Claude Code 2.1.328 起）時，畫成輸入框上方的樣子；Drawer 的設定不關掉它（使用者 2026-11-19：Claude Code 更新帶來的警告要處理）
       - 輸入框上方時項目排成好幾欄文字，不畫 bar
       - ccdrawu 的 sidebar 頁與 inline 頁最上面各有 Drawer（on／off）；inline 設 off 時，終端機窄到放不下就收起來，不跑到輸入框上方
   - id: 3
