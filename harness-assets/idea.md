@@ -22,6 +22,9 @@ commit、還沒 push 的東西在牠的走道上堆成紙箱。
 趴著，偶爾起來去抓一下；Claude 工作時寵物照常閒逛，不特別去抓。貓頭鷹偶爾會飛一下，也會停在箱子上；貓頭鷹飛起來的時候翅膀打開但是沒有振翅，要振翅。Claude Code 更新帶來的
 警告要處理：我們是 mod，目前可能隨時 Claude 都會更新。
 
+使用者 2026-11-19（看到側邊欄紅字「config.yaml: dock did not fit」）：添加小提示；添加 subcommand，ccdrawu doctor，所以小提示
+會是請使用者執行 ccdrawu doctor。
+
 不能發生的事：
 
 - 換成 ccdrawu 的主題與狀態列之後，使用者原本的找不回來：換之前先記下來，關掉或移除時放回去。

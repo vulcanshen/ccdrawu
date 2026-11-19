@@ -138,3 +138,89 @@ func TestUninstallGoesOnWithValuesThatDoNotFit(t *testing.T) {
 		t.Error("not kept aside:", err)
 	}
 }
+
+// doctor sets right what the drawer and the status line say is wrong, as a
+// start of ccdrawu does with no screen (tdp E3-31): an item the plugin does not
+// have taken out and a value that does not fit its default, the file kept
+// aside and written again, each said on stderr with what it was; a key ccdrawu
+// does not read stays (tdp E3-38). Run again, there is nothing to set right
+func TestDoctorSetsRightWhatDoesNotFit(t *testing.T) {
+	dir := t.TempDir()
+	loc := config.Locations{Cache: filepath.Join(dir, "cache"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude"), Data: filepath.Join(dir, ".ccdrawu")}
+	for path, text := range map[string]string{
+		loc.ConfigFile: "dock:\n  - pet\n  - account\nbar: wavy\nrefesh: 5\n",
+		loc.Catalog():  `{"items": [{"id": "pet"}, {"id": "model"}]}`,
+	} {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	var out, errs bytes.Buffer
+	if status := doctor(loc, &out, &errs); status != 0 {
+		t.Fatalf("exit %d, stderr %q", status, errs.String())
+	}
+	want := "ccdrawu: 1 value and 1 entry in config.yaml did not fit: defaults used and entries taken out, yours kept in config.yaml.bak\n" +
+		"ccdrawu: config.yaml: dock \"account\" did not fit; taken out\n" +
+		"ccdrawu: config.yaml: bar \"wavy\" did not fit; using \"squares\"\n" +
+		"ccdrawu: Not read: refesh in " + loc.ConfigFile + "; delete it if you don't need it\n"
+	if errs.String() != want || out.Len() != 0 {
+		t.Fatalf("stderr:\n%s\nwant:\n%s\nstdout %q", errs.String(), want, out.String())
+	}
+	if kept, _ := os.ReadFile(loc.ConfigFile + ".bak"); !strings.Contains(string(kept), "account") {
+		t.Errorf("not kept aside: %q", kept)
+	}
+	c, misfits, err := config.Check(loc)
+	if err != nil || len(misfits) != 0 || strings.Join(c.Dock, ",") != "pet" {
+		t.Fatalf("written again: %+v %v %v", c, misfits, err)
+	}
+	if text, _ := os.ReadFile(loc.ConfigFile); !strings.Contains(string(text), "refesh") {
+		t.Errorf("the key not read is gone:\n%s", text)
+	}
+
+	out.Reset()
+	errs.Reset()
+	if status := doctor(loc, &out, &errs); status != 0 || out.String() != "Nothing to set right in "+loc.ConfigFile+".\n" {
+		t.Fatalf("again: exit %d, stdout %q", status, out.String())
+	}
+	if bak, _ := filepath.Glob(loc.ConfigFile + ".bak.*"); len(bak) != 0 {
+		t.Errorf("kept aside again: %v", bak)
+	}
+}
+
+// tdp E3, can't be read, with no screen: doctor leaves a config or originals
+// that can't be read as it is, as Esc does, says which, why and what to do,
+// and exits 1
+func TestDoctorLeavesAFileThatCantBeRead(t *testing.T) {
+	dir := t.TempDir()
+	loc := config.Locations{Cache: filepath.Join(dir, "cache"), ConfigFile: filepath.Join(dir, "config", "config.yaml"), Claude: filepath.Join(dir, "claude"), Data: filepath.Join(dir, ".ccdrawu")}
+	write := func(path, text string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(text), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, c := range []struct{ file, text string }{{loc.ConfigFile, "drawer: [oops\n"}, {loc.Originals(), "theme: [oops\n"}} {
+		write(loc.ConfigFile, "bar: wavy\n")
+		write(c.file, c.text)
+		var out, errs bytes.Buffer
+		if status := doctor(loc, &out, &errs); status != 1 || out.Len() != 0 {
+			t.Fatalf("%s: exit %d, stdout %q", c.file, status, out.String())
+		}
+		lines := strings.Split(strings.TrimSuffix(errs.String(), "\n"), "\n")
+		if len(lines) != 2 || !strings.HasPrefix(lines[0], "ccdrawu: "+c.file+" can't be read: ") || lines[1] != "ccdrawu: Open ccdrawu to move it aside and start fresh, or set it right by hand." {
+			t.Fatalf("%s: stderr %q", c.file, errs.String())
+		}
+		if got, _ := os.ReadFile(c.file); string(got) != c.text {
+			t.Errorf("%s changed: %q", c.file, got)
+		}
+		if bak, _ := filepath.Glob(filepath.Join(dir, "*", "*.bak*")); len(bak) != 0 {
+			t.Errorf("%s: moved aside: %v", c.file, bak)
+		}
+	}
+}

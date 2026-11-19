@@ -1,4 +1,4 @@
-id: 5
+id: 6
 from: v1.2.16
 to: v1.2.17
 tasks:
@@ -66,12 +66,13 @@ tasks:
     remark:
       - 在 preferences 的 Pet 設，一秒內開著的 session 跟著換；不想要寵物就在項目清單取消勾選 Pet
   - id: 10
-    spec: 5
+    spec: 6
     request: ccdrawu 當 Claude Code 的狀態列（輸入框下方那一列），照使用者挑的項目、順序、寫法排成一列
     tdp: [tdp P5, tdp E1, tdp E3, tdp E3-36, tdp E3-39]
     remark:
       - Claude Code 執行 ccdrawu statusline；太長時結尾截掉加 …；on when narrow 時，側邊欄在對話旁邊或終端機夠寬就整列收起來
       - 狀態列是印給 Claude Code 顯示的輸出，算 TUI 以外（tdp E3、P5）：config.yaml 讀不了、或有用不了的值時，不動檔（沒有 .bak、不重寫），這一次用預設值照樣畫，最後加一個紅色的標記寫出哪個檔有什麼問題；備份、重寫、跳 toast 留給下次打開的 TUI（tdp E3-36、E3-39；tdp #22，tdp v1.2.17）
+      - 標記後面接「; run ccdrawu doctor」，提示怎麼修（task 28；使用者 2026-11-19）；放不下時先把 key 的清單改成幾個值，再拿掉提示；讀不了的一定留原因，提示先讓位
   - id: 11
     spec: 1
     request: 在 ccdrawu 的 statusline 頁設定狀態列：開關（on、off、on when narrow）、項目、順序、寫法、顏色、分隔、重跑間隔
@@ -137,7 +138,7 @@ tasks:
     request: ccdrawu version 印版本，ccdrawu help 印用法
     tdp: [tdp E1, harness project.4]
   - id: 21
-    spec: 5
+    spec: 6
     request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問；讀得進來、只有用不了的值時，備份後換成預設
     tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6, tdp note.7, tdp P5, tdp E3-36, tdp E3-38, tdp E3-39]
     remark:
@@ -146,6 +147,7 @@ tasks:
       - 用不了的值（不認得的名字、不是 #rrggbb 的顏色、超過 60 或負的秒數、外掛不收的 alias、有控制字元的分隔、型別不對的值）：啟動時複製成 config.yaml.bak、換成預設寫回，跳 Warning toast，App Log 每個值一筆 WARN；備份做不出來時不寫回、跳 Error toast（tdp E3，值不合規則）
       - 同一次啟動有搬家又有不合的值：合成一個 toast，App Log 一件一筆（tdp E3，同一次啟動有好幾件）
       - 外掛畫的側邊欄（不在 TUI 裡的畫面，TUI 以外，tdp E3、P5）：config.yaml 讀不了、或有用不了的值時，不動檔，照預設畫，在面板最上面用一列寫出哪個檔有什麼問題；備份、重寫、跳 toast 留給下次打開的 TUI（tdp E3-36、E3-39；tdp #23，tdp v1.2.17）
+      - 側邊欄那一列後面接「; run ccdrawu doctor」，提示怎麼修（task 28；使用者 2026-11-19），提示用一般文字的顏色，跟紅色的問題分開
       - ccdrawu 不讀的 key（以前讀過的，或從來沒讀過的、例如打錯的）留在檔案裡，重寫時也留著，不跳 toast，每次啟動在 App Log 記一筆 INFO：以前讀過的寫 No longer used，其他寫 Not read（tdp E3-38；tdp #21，tdp v1.2.17）
   - id: 22
     spec: 1
@@ -184,3 +186,13 @@ tasks:
       - 貓頭鷹飛的時候振翅：翅膀上、平、下、平一輪（方案 2）
       - 場上有它們時寵物不睡，最多趴著；Claude 工作時寵物照常閒逛，不特別去抓
       - 取代 2026-11-06 的小螢幕（shell）與雷達（monitor），那次因為太難表示而取消
+  - id: 28
+    spec: 6
+    request: ccdrawu doctor 不用打開 ccdrawu，就把側邊欄與狀態列說 config.yaml 有問題的地方修好；側邊欄與狀態列的紅字提示使用者執行它
+    tdp: [tdp E1, tdp E3, tdp E3-27, tdp E3-31, tdp E3-37, tdp E3-38, tdp P5]
+    remark:
+      - 做的事跟打開 ccdrawu 時一樣，只是沒有畫面（tdp E3「沒有畫面時」、E3-31）：搬舊位置的檔、用不了的值先複製成 .bak 再換成預設寫回；要說的寫到 stderr，一件一行，照發生的順序（tdp E3-37）。沒有 App Log 可看，所以每個值也各寫一行，跟 TUI 的 App Log 同一句：key、原本寫的、現在用的
+      - config.yaml 或 originals.yaml 讀不了：照 Esc 做，不動檔，stderr 寫路徑與原因，再一句 Open ccdrawu to move it aside and start fresh, or set it right by hand.，exit 1（tdp E3-27）；沒有畫面，問不了要不要移到 .bak
+      - ccdrawu 不讀的 key 留著，每個一行 Not read，以前讀過的寫 No longer used（tdp E3-38）
+      - 沒有要修的：stdout 印 Nothing to set right in <路徑>.，exit 0；搬不動、備份或寫回失敗 exit 1
+      - 只管 ccdrawu 自己的檔（設定、原值、搬家），不查外掛裝了沒、版本對不對：使用者要的是紅字的修法（使用者 2026-11-19）；指令是 app 自行決定的（tdp E1）

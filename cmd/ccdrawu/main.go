@@ -20,6 +20,7 @@ import (
 	"github.com/vulcanshen/ccdrawu/internal/ui"
 	"github.com/vulcanshen/ccdrawu/internal/update"
 	"github.com/vulcanshen/ccdrawu/internal/version"
+	"github.com/vulcanshen/terminu-go"
 )
 
 func main() {
@@ -47,6 +48,13 @@ func main() {
 				os.Exit(1)
 			}
 			return
+		case "doctor":
+			loc, err := config.UserLocations()
+			if err != nil {
+				fmt.Fprintln(os.Stderr, "ccdrawu:", err)
+				os.Exit(1)
+			}
+			os.Exit(doctor(loc, os.Stdout, os.Stderr))
 		case "statusline":
 			// Claude Code runs it with the session on stdin and the terminal's width in COLUMNS
 			loc, err := config.UserLocations()
@@ -127,6 +135,88 @@ func uninstall(loc config.Locations, run claude.Run, out, errs io.Writer) error 
 	}
 	fmt.Fprintf(out, "Your picks stay in %s, what the plugin wrote for ccdrawu in %s.\n", loc.ConfigFile, loc.Cache)
 	return nil
+}
+
+// doctor sets right what the drawer and the status line say is wrong with
+// ccdrawu's own files, as ccdrawu does when it opens, with no screen to ask on
+// (tdp E3): what 0.1.4 and before kept elsewhere moves where it is now; values
+// in config.yaml ccdrawu can't use are their defaults, the file copied aside
+// and written again with them. What it did goes to errs, a line each, each
+// value with what it was and what is used now, as the App Log has them; keys
+// ccdrawu does not read stay, a line each. A config or originals that can't
+// be read it leaves as it is, as Esc does: it says which, why and what to do
+// (tdp E3, can't be read). The result is the exit status: 1 where it could
+// not set a file right, else 0. With nothing to set right, it says so on out.
+func doctor(loc config.Locations, out, errs io.Writer) int {
+	say := func(line string) { fmt.Fprintln(errs, "ccdrawu: "+line) }
+	cantRead := func(path string, err error) int {
+		say(fmt.Sprintf("%s can't be read: %v", path, err))
+		say("Open ccdrawu to move it aside and start fresh, or set it right by hand.")
+		return 1
+	}
+	if _, err := config.ReadConfig(loc.ConfigFile); err != nil {
+		return cantRead(config.Source(loc.ConfigFile), err)
+	}
+	if _, err := config.ReadOriginals(loc.Originals(), config.Config{}); err != nil {
+		return cantRead(loc.Originals(), err)
+	}
+	status := 0
+	moved, moveErr := config.Move(loc)
+	for _, m := range moved {
+		what := m.From
+		if m.What != "" {
+			what = m.What + " in " + what
+		}
+		say("Moved " + what + " to " + m.To)
+	}
+	if moveErr != nil {
+		// Each of errors.Join's says which place ccdrawu reads, and what to do by hand
+		errs := []error{moveErr}
+		if joined, ok := moveErr.(interface{ Unwrap() []error }); ok {
+			errs = joined.Unwrap()
+		}
+		for _, err := range errs {
+			say(err.Error())
+		}
+		status = 1
+	}
+	_, settled, err := config.Settle(loc)
+	if err != nil {
+		return cantRead(config.Source(loc.ConfigFile), err)
+	}
+	// As a start says them (tdp E3, several at one start): the copy not made
+	// first, then the values; written again, the values, then what failed after
+	file := filepath.Base(loc.ConfigFile)
+	if settled.Copy == "" && settled.Err != nil {
+		say(settled.Err.Error())
+	}
+	if text := terminu.DidNotFitText(loc.ConfigFile, settled.Copy, settled.Misfits...); text != "" {
+		say(text)
+	}
+	for _, m := range settled.Misfits {
+		if m.Now == "" {
+			say(file + ": " + m.Key + " did not fit; taken out")
+		} else {
+			say(file + ": " + m.Key + " " + strconv.Quote(m.Was) + " did not fit; using " + strconv.Quote(m.Now))
+		}
+	}
+	if settled.Copy != "" && settled.Err != nil {
+		say(settled.Err.Error())
+	}
+	if settled.Err != nil {
+		status = 1
+	}
+	for _, key := range settled.Unread {
+		what := "Not read"
+		if config.UsedToRead(key) {
+			what = "No longer used"
+		}
+		say(what + ": " + key + " in " + loc.ConfigFile + "; delete it if you don't need it")
+	}
+	if len(moved) == 0 && moveErr == nil && len(settled.Misfits) == 0 {
+		fmt.Fprintf(out, "Nothing to set right in %s.\n", loc.ConfigFile)
+	}
+	return status
 }
 
 // selfUpdate brings ccdrawu to its latest release the way it was installed,
@@ -245,6 +335,9 @@ Usage:
   ccdrawu uninstall claude    take it out again
   ccdrawu update              update ccdrawu to its latest release, the way it
                               was installed, and the plugin in Claude Code with it
+  ccdrawu doctor              set right what the drawer or the status line says
+                              is wrong with config.yaml, as ccdrawu does when
+                              it opens
   ccdrawu statusline          Claude Code's status line, as set in ccdrawu
                               (Claude Code runs it; the session on stdin)
   ccdrawu version             print the version (also --version, -v)

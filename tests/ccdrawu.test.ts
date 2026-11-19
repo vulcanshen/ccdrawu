@@ -25,7 +25,7 @@ import {
   usageColor,
 } from '../hooks/format'
 import { registerCommands } from '../hooks/commands'
-import { ITEMS, view, type Snapshot } from '../hooks/items'
+import { C, ITEMS, view, type Snapshot } from '../hooks/items'
 import {
   cellWidth,
   columnRows,
@@ -1272,5 +1272,30 @@ test('after /clear the drawer reads the new session again, as it did when the fi
   claude = '2.1.302'
   await $.classic.SessionStart({ source: 'clear' })
   await drawn(ui, '2.1.302')
+  await ui.unmount()
+})
+
+test('the pane says in red which file has what wrong, and that ccdrawu doctor sets it right (tdp E3, outside the TUI)', async ($, on) => {
+  const file = '/home/u/.config/ccdrawu/config.yaml'
+  const text = 'bar: wavy\n'
+  on('command.register', (_, e) => ({ value: { command: e.name } }))
+  on('clock.now', () => ({ value: 0 }))
+  on('clock.every', () => ({ deny: 'no timers here' }))
+  on('ui.open', () => ({ value: { isPlaced: true } }))
+  on('session.start', (_, e) => ({ cwd: e.cwd }))
+  // A home of its own: nothing of the user's is read
+  on('env.get', (_, e) => ({ value: e.name === 'HOME' ? '/home/u' : undefined }))
+  on('process.run', () => ({ deny: 'no processes here' }))
+  on('fs.stat', (_, e) => (e.path === file ? { value: { kind: 'file', size: text.length, mtimeMs: 1 } as never } : { deny: 'not there' }))
+  on('fs.read', (_, e) => (e.path === file ? { value: text } : { deny: 'not there' }))
+  on('fs.write', () => ({ deny: 'nothing written' }))
+  const ui = await $.ui.mount(MOUNT)
+  await $.session.start({ cwd: '/x', surface: 'terminal', isInteractive: true })
+  await drawn(ui, 'run ccdrawu doctor')
+  const issue = (await ui.findAll({ type: 'Text' })).find(t => /did not fit/.test(t.text ?? ''))
+  expect(issue?.text).toBe('~/.config/ccdrawu/config.yaml: bar did not fit; run ccdrawu doctor')
+  expect(issue?.props.color).toBe(C.red)
+  // The hint inside it, in the color of the text
+  expect((await ui.find({ type: 'Text', text: /^run ccdrawu doctor$/ }))?.props.color).toBe(C.text)
   await ui.unmount()
 })

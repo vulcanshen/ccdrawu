@@ -187,8 +187,12 @@ func TestRunMarksValuesThatDoNotFit(t *testing.T) {
 		t.Fatal(err)
 	}
 	input := `{"session_id": "abc", "model": {"id": "claude-opus-5-5"}}`
-	if got := ansi.Strip(run(t, loc, input, 0, time.Now())); got != "Model claude-opus-5-5 | config.yaml: statusline.format, statusline.separator did not fit\n" {
+	if got := ansi.Strip(run(t, loc, input, 0, time.Now())); got != "Model claude-opus-5-5 | config.yaml: statusline.format, statusline.separator did not fit; run ccdrawu doctor\n" {
 		t.Errorf("%q", got)
+	}
+	// Narrower: the keys go before the hint
+	if got := ansi.Strip(run(t, loc, input, 90, time.Now())); !strings.HasSuffix(got, " | config.yaml: 2 values did not fit; run ccdrawu doctor\n") {
+		t.Errorf("narrower: %q", got)
 	}
 	// Narrow: the items cut, the mark kept
 	if got := ansi.Strip(run(t, loc, input, 50, time.Now())); !strings.HasSuffix(got, " | config.yaml: 2 values did not fit\n") {
@@ -212,7 +216,7 @@ func TestRunMarksAConfigThatCantBeRead(t *testing.T) {
 	}
 	input := `{"session_id": "abc", "model": {"id": "claude-opus-5-5"}}`
 	got := ansi.Strip(run(t, loc, input, 0, time.Now()))
-	if !strings.HasPrefix(got, "Model claude-opus-5-5") || !strings.Contains(got, " | config.yaml can't be read: ") {
+	if !strings.HasPrefix(got, "Model claude-opus-5-5") || !strings.Contains(got, " | config.yaml can't be read: ") || !strings.HasSuffix(got, "; run ccdrawu doctor\n") {
 		t.Errorf("%q", got)
 	}
 	// Narrow: why kept, the items making room, cut at its end

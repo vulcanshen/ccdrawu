@@ -86,13 +86,13 @@ tasks:
       - TestPetIsPicked
       - TestConfigKeepsTheAliasAndPet
   - id: 10
-    spec: 5
+    spec: 6
     implementation: |
       ccdrawu statusline：從 stdin 讀 Claude Code 給的 session，讀外掛寫在快取資料夾 sessions/ 的那個 session 的值；沒有的話只畫 Model、Context、Cost
       照 config.yaml 的項目、順序、Format、Color、Separator 排成一列，截到 COLUMNS 減 4 欄，結尾加 …
       on when narrow 時側邊欄在對話旁邊、或終端機寬到 144 欄以上，印一個 reset 讓那一列收起來；沒有東西可畫也一樣
       一週沒寫過的 session 檔刪掉
-      config.yaml 讀不了或有用不了的值（TUI 以外）：用 config.Check 只讀不寫，不動檔、不寫 stderr、exit 0；這一次用預設值照樣排那一列，最後接分隔與紅色（#f38ba8，dimmed 時沒顏色）的標記：「config.yaml can't be read: <原因第一行>」或「config.yaml: <不合的 key>, … did not fit」；值不合的標記放不下（前面的項目剩不到 20 欄）時改短成「config.yaml: N values did not fit」；讀不了的標記一定帶原因（tdp E3-36）：前面的項目讓位，還放不下就截掉原因的結尾加 …；前面的項目截短留位置給標記
+      config.yaml 讀不了或有用不了的值（TUI 以外）：用 config.Check 只讀不寫，不動檔、不寫 stderr、exit 0；這一次用預設值照樣排那一列，最後接分隔與紅色（#f38ba8，dimmed 時沒顏色）的標記：「config.yaml can't be read: <原因第一行>」或「config.yaml: <不合的 key>, … did not fit」；值不合的標記放不下（前面的項目剩不到 20 欄）時改短成「config.yaml: N values did not fit」；讀不了的標記一定帶原因（tdp E3-36）：前面的項目讓位，還放不下就截掉原因的結尾加 …；前面的項目截短留位置給標記；標記後面接「; run ccdrawu doctor」，放不下時先把 key 的清單改成「N values did not fit」、再拿掉提示；讀不了的提示先讓位、原因留著
     test:
       - TestRunMarksValuesThatDoNotFit
       - TestRunMarksAConfigThatCantBeRead
@@ -229,7 +229,7 @@ tasks:
     test:
       - commit: 5de15c1
   - id: 21
-    spec: 5
+    spec: 6
     implementation: |
       config.yaml 在 CCDRAWU__CONFIG、XDG_CONFIG_HOME/ccdrawu 或 ~/.config/ccdrawu；快取在 CCDRAWU__CACHE 或系統快取資料夾；originals.yaml 在 CCDRAWU__DATA 或 ~/.ccdrawu
       啟動時把 config.json 與舊位置的檔搬到新位置，搬了的用 Info toast 說「Moved <從> to <到>」
@@ -243,7 +243,7 @@ tasks:
       搬家的 Info 與不合的值（terminu.MisfitNotice；備份做不出來時先一列 Error 寫原因，再接不帶那一句、只帶 WARN 的 MisfitNotice）一起交給 App.Notify：一個 toast、一件一行、種類取最重的，App Log 一件一筆、每個值一筆 WARN
       搬家（config.json → config.yaml、config 裡的 theme.before／statusline.before → originals.yaml）照原文寫，不合的值留給 Settle
       ccdrawu 不讀的 key（頂層，與 pet、drawer、theme、statusline 底下的）：WriteConfig 用 yaml.Node 把原檔裡這些 key 與值照原樣接在後面，存設定與 E3 重寫都留著；啟動時 Settle 列出來，TUI 每個記一筆 INFO「Not read: <key> in <路徑>; delete it if you don't need it」，ccdrawu 以前讀過的 input_tab_width 寫 No longer used；不跳 toast
-      外掛（hooks）每秒讀 config.yaml，TUI 以外，不動檔：解不開時當成寫到一半，下一秒還是一樣才算讀不了，這時用預設值，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」；讀得了但有用不了的值（configMisfits，規則與 config.readFit 一樣），照預設畫，那一列寫「<路徑>: <不合的 key>, … did not fit」；都沒有就拿掉那一列；那一列比面板寬時折成好幾行，路徑與原因整句都看得到（2026-11-19 在沙盒截圖驗過）
+      外掛（hooks）每秒讀 config.yaml，TUI 以外，不動檔：解不開時當成寫到一半，下一秒還是一樣才算讀不了，這時用預設值，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」；讀得了但有用不了的值（configMisfits，規則與 config.readFit 一樣），照預設畫，那一列寫「<路徑>: <不合的 key>, … did not fit」；都沒有就拿掉那一列；那一列比面板寬時折成好幾行，路徑與原因整句都看得到（2026-11-19 在沙盒截圖驗過）；那一列後面接「; 」與一般文字顏色（#cdd6f4）的「run ccdrawu doctor」
     test:
       - TestValuesThatDoNotFitAreTheirDefaults
       - TestSettleKeepsTheFileAsideAndWritesItAgain
@@ -310,3 +310,14 @@ tasks:
       場上有蝸牛或貓頭鷹時寵物不睡，最多趴著
     test:
       - commit: 7eb5a51
+  - id: 28
+    spec: 6
+    implementation: |
+      ccdrawu doctor（cmd/ccdrawu 的 doctor）：先讀 config.yaml 與 originals.yaml，讀不了就不動任何檔，stderr 寫「ccdrawu: <路徑> can't be read: <原因>」與「ccdrawu: Open ccdrawu to move it aside and start fresh, or set it right by hand.」，exit 1
+      都讀得了：config.Move 搬舊位置的檔，每件一行「ccdrawu: Moved <從> to <到>」，搬不動的每件一行、exit 1；config.Settle 把用不了的值複製成 .bak 後換成預設寫回，stderr 寫 terminu.DidNotFitText 那一句，接著每個值一行「config.yaml: <key> "<原本>" did not fit; using "<現在>"」（清單裡拿掉的一筆寫 taken out）；備份做不出來時先寫原因、不寫回、exit 1；寫回之後才失敗的接在最後、exit 1
+      ccdrawu 不讀的 key 每個一行「ccdrawu: Not read: <key> in <路徑>; delete it if you don't need it」，input_tab_width 寫 No longer used；檔案裡照樣留著
+      沒有搬、也沒有不合的值：stdout 印「Nothing to set right in <路徑>.」，exit 0
+      ccdrawu help 的用法裡有 doctor 一行
+    test:
+      - TestDoctorSetsRightWhatDoesNotFit
+      - TestDoctorLeavesAFileThatCantBeRead

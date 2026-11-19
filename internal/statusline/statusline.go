@@ -52,8 +52,9 @@ const (
 	lavenderColor = "#b4befe"
 	labelColor    = "#89b4fa"
 	sepColor      = "#45475a"
-	markColor     = "#f38ba8" // red: the config has something wrong
-	markRoom      = 20        // columns a mark leaves the items at least, if it can
+	markColor     = "#f38ba8"              // red: the config has something wrong
+	markRoom      = 20                     // columns a mark leaves the items at least, if it can
+	doctorHint    = "; run ccdrawu doctor" // after a mark: what sets the config right
 )
 
 // noValue is what an item on reads while it has no value, as in the drawer
@@ -90,25 +91,29 @@ const keep = 7 * 24 * time.Hour
 // removed. Output for Claude Code to show, outside the TUI (tdp E3; user,
 // 2026-11-19, tdp #22): a config that can't be read, or values in it that do
 // not fit, touch no file; the line takes the defaults for this run and ends
-// with a mark saying which file has what wrong, which the TUI sets right the
-// next time it opens.
+// with a mark saying which file has what wrong, and that ccdrawu doctor sets it
+// right, as the TUI does the next time it opens.
 func Run(in io.Reader, out io.Writer, loc config.Locations, columns int, now time.Time) error {
 	var input Input
 	if err := json.NewDecoder(in).Decode(&input); err != nil && !errors.Is(err, io.EOF) {
 		return err
 	}
-	// The mark, the longer first: the shorter where it leaves the items no room. One that can't be read keeps
-	// why (tdp E3-36): the items make room for it, and it is cut at its end where even that is not enough
+	// The mark, the longer first: the shorter where it leaves the items no room, the hint the first to go
+	// after the keys. One that can't be read keeps why (tdp E3-36): the items make room for it, and it is cut
+	// at its end where even that is not enough
 	var marks []string
 	cfg, misfits, err := config.Check(loc)
 	file := filepath.Base(config.Source(loc.ConfigFile))
 	switch keys := config.Keys(misfits); {
 	case err != nil:
-		cfg, marks = config.Config{}, []string{file + " can't be read: " + firstLine(err.Error())}
-	case len(keys) == 1:
-		marks = []string{file + ": " + keys[0] + " did not fit", file + ": 1 value did not fit"}
-	case len(keys) > 1:
-		marks = []string{file + ": " + strings.Join(keys, ", ") + " did not fit", file + ": " + strconv.Itoa(len(keys)) + " values did not fit"}
+		why := file + " can't be read: " + firstLine(err.Error())
+		cfg, marks = config.Config{}, []string{why + doctorHint, why}
+	case len(keys) > 0:
+		full, short := file+": "+strings.Join(keys, ", ")+" did not fit", file+": 1 value did not fit"
+		if len(keys) > 1 {
+			short = file + ": " + strconv.Itoa(len(keys)) + " values did not fit"
+		}
+		marks = []string{full + doctorHint, short + doctorHint, full, short}
 	}
 	cat, ok, err := config.ReadCatalog(loc.Catalog())
 	if err != nil || !ok {

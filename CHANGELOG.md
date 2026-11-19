@@ -2,6 +2,11 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- `ccdrawu doctor` sets right what the drawer and the status line say is wrong with `config.yaml`, as `ccdrawu` does when it opens: the values it can't use go back to their defaults, yours kept in `config.yaml.bak`, and it says on stderr each value it changed. A file that can't be read it leaves as it is, and says why.
+- The red text at the top of the drawer and at the end of the status line now ends with `run ccdrawu doctor`.
+
 ## v1.2.1 — tdp v1.2.17
 
 - The release is tagged as an annotated tag, its message this heading, as the family releases now (harness project.7). The tags of v1.2.0 and before stay as they were.

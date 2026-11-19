@@ -70,6 +70,10 @@ export function configMisfits(text: string, json = false): string[] {
   return keys
 }
 
+// After what is wrong with the config, in the pane and the status line: what sets it right, as ccdrawu does
+// when it opens (tdp E3, outside the TUI)
+export const DOCTOR_HINT = 'run ccdrawu doctor'
+
 // Why parseConfig can't read text: the parser's words, or that it is not a config; undefined when it can
 export function unreadReason(text: string, json = false): string | undefined {
   try {

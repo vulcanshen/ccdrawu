@@ -63,6 +63,7 @@ import {
   chunk,
   COLUMN_GAP,
   columnRows,
+  DOCTOR_HINT,
   drawerShows,
   drawerWanted,
   enabledItems,
@@ -721,9 +722,15 @@ export const register: Register = on => {
     const s = await readSnapshot($)
     const conf = await read($, config)
     const enabled = enabledItems(conf, placement)
-    // What is wrong with the config, over the rows (tdp E3, outside the TUI)
+    // What is wrong with the config, over the rows, and what sets it right (tdp E3, outside the TUI)
     const issue = await read($, configIssue)
-    const issueRow = issue === null ? null : <Text color={C.red}>{issue}</Text>
+    const issueRow =
+      issue === null ? null : (
+        <Text color={C.red}>
+          {issue + '; '}
+          <Text color={C.text}>{DOCTOR_HINT}</Text>
+        </Text>
+      )
     // The pet is not a row: it is drawn on its own, over the rows or left of the columns
     const shown = enabled.flatMap(item => {
       const v = view(item.id, s)

@@ -246,9 +246,13 @@ Claude Code 執行的是 `ccdrawu statusline`，而它在你的 `PATH` 上找到
 
 那個 session 裡沒有跑 ccdrawu 外掛，狀態列只能顯示 Claude Code 給它的資料。用 `ccdrawu install claude` 裝外掛；外掛裝好之前就開著的 session，跑一次 `/reload-plugins`。
 
+### 紅字寫著 `run ccdrawu doctor`
+
+`config.yaml` 裡有 ccdrawu 用不了的值（例如你挑了之後、ccdrawu 已經拿掉的項目），或整個檔讀不了。執行 `ccdrawu doctor`：它會修好這個檔並寫出改了什麼，側邊欄與狀態列一秒內就會跟上。讀不了的檔它不會動：打開 `ccdrawu`，它會問要不要把檔移開，或是自己動手改好。
+
 ## 資料存放位置
 
-- `~/.config/ccdrawu/config.yaml`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。`config.yaml` 讀不了時，`ccdrawu` 會寫出原因、先問再繼續：`Enter` 把它改名成 `config.yaml.bak`，像第一次執行時一樣用預設值開始；`Esc` 離開。`ccdrawu uninstall claude` 沒有畫面可以問：它照 `Esc` 停下來，什麼都不改，寫出是哪個檔、為什麼。讀得了、只是有 ccdrawu 用不了的值時（不認得的動物、不是 `#rrggbb` 的顏色、超過 60 秒的 refresh、外掛沒有的項目），`ccdrawu` 會先把它複製成 `config.yaml.bak`，把那個值換成預設寫回去，並告訴你；`ccdrawu uninstall claude` 也一樣，寫在 stderr。側邊欄與狀態列什麼都不改：它們用預設值，並用紅字寫出哪個檔有什麼問題，側邊欄寫在最上面，狀態列寫在最後，直到你打開 `ccdrawu`。`config.yaml` 裡 ccdrawu 不讀的 key（例如打錯的）會原樣留著，`ccdrawu` 寫回這個檔時也留著；每次 `ccdrawu` 啟動，App Log 會記一筆。
+- `~/.config/ccdrawu/config.yaml`：你在 `ccdrawu` 裡挑的項目、別名、bar、寵物、側邊欄要不要自動打開，以及狀態列的設定。`CCDRAWU__CONFIG` 或 `XDG_CONFIG_HOME` 可以改放別的資料夾。`config.yaml` 讀不了時，`ccdrawu` 會寫出原因、先問再繼續：`Enter` 把它改名成 `config.yaml.bak`，像第一次執行時一樣用預設值開始；`Esc` 離開。`ccdrawu uninstall claude` 沒有畫面可以問：它照 `Esc` 停下來，什麼都不改，寫出是哪個檔、為什麼。讀得了、只是有 ccdrawu 用不了的值時（不認得的動物、不是 `#rrggbb` 的顏色、超過 60 秒的 refresh、外掛沒有的項目），`ccdrawu` 會先把它複製成 `config.yaml.bak`，把那個值換成預設寫回去，並告訴你；`ccdrawu uninstall claude` 也一樣，寫在 stderr。側邊欄與狀態列什麼都不改：它們用預設值，並用紅字寫出哪個檔有什麼問題，側邊欄寫在最上面，狀態列寫在最後，後面接著 `run ccdrawu doctor`。`ccdrawu doctor` 做的事跟打開 `ccdrawu` 時一樣，只是沒有畫面：它把檔案複製成 `config.yaml.bak`，換成預設值寫回去，並在 stderr 寫出改了哪些值、你原本寫的與現在用的；讀不了的檔它不動，寫出原因，並說打開 `ccdrawu` 可以把它移開。`config.yaml` 裡 ccdrawu 不讀的 key（例如打錯的）會原樣留著，`ccdrawu` 寫回這個檔時也留著；每次 `ccdrawu` 啟動，App Log 會記一筆。
 - 系統快取資料夾裡的 `ccdrawu`（macOS 是 `~/Library/Caches/ccdrawu`，Linux 是 `~/.cache/ccdrawu`，Windows 是 `%LOCALAPPDATA%\ccdrawu\cache`，在 `ccdrawu.exe` 旁邊）：外掛寫給 `ccdrawu` 的東西，也就是它列出的項目清單（`catalog.json`），以及狀態列打開時、每個 session 給它的值（`sessions/`；一週沒用到的 session 檔會刪掉）。外掛會再寫一次，刪掉也不會少什麼。`CCDRAWU__CACHE` 可以改放別的資料夾。
 - `~/.ccdrawu/originals.yaml`：換成 ccdrawu 的之前，你原本的 Claude Code theme 與狀態列；關掉 ccdrawu 的、或執行 `ccdrawu uninstall claude` 時靠它放回去。只有 ccdrawu 的開著時才有這個檔，刪了就找不回來，備份時記得帶上。`CCDRAWU__DATA` 可以改放別的資料夾。讀不了時，`ccdrawu` 會像 `config.yaml` 那樣先問，`ccdrawu uninstall claude` 會停下來。
 
