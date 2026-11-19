@@ -22,6 +22,7 @@ tasks:
     test:
       - TestDrawerTurnsOffAndOn
       - commit: 39d8059
+      - commit: 20a69c7
   - id: 3
     spec: 1
     implementation: |
@@ -201,6 +202,7 @@ tasks:
       - TestInstalledFindsThePlugin
       - TestPutBackGivesClaudeCodeItsOwnBack
       - TestUninstallStopsOnAFileThatCantBeRead
+      - commit: 20a69c7
   - id: 19
     spec: 1
     implementation: |
