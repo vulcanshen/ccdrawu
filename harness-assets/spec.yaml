@@ -141,7 +141,7 @@ tasks:
   - id: 21
     spec: 4
     request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問；讀得進來、只有用不了的值時，備份後換成預設
-    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6, tdp note.7]
+    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6, tdp note.7, tdp P5]
     remark:
       - ~/.config/ccdrawu/config.yaml（CCDRAWU__CONFIG、XDG_CONFIG_HOME）；系統快取資料夾裡的 ccdrawu（CCDRAWU__CACHE）；~/.ccdrawu/originals.yaml（CCDRAWU__DATA）
       - config.yaml 讀不了：寫出原因，Enter 改名成 config.yaml.bak、用預設值開始，Esc 離開
