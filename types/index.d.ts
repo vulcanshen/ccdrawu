@@ -97,6 +97,7 @@ export type PetState = {
   ballPos: number // where the ball is along the walk, and how far off the ground, a tick's
   ballLift: number
   playUntil: number // pawing at the ball until then
+  toy?: string // the toy it goes over to, idle, and paws at: its task's id
 }
 
 // A kit (hooks/pets.ts): a small one of the pet's kind for a subagent running, walking behind the pet
@@ -113,6 +114,23 @@ export type Kit = {
   hopUntil: number // hopping on the spot until then
   air: boolean // off what is under it: in a hop, jumping up onto the boxes or dropping off them
   level: number // how high the layer of boxes it goes on at is, picked where they get higher or lower; 0 the ground
+}
+
+// A toy (hooks/toys.ts): a snail for a shell, an owl for a monitor, left in the background
+export type Toy = {
+  id: string // the background task's, as a reply's end lists it
+  kind: 'snail' | 'owl'
+  ink: Record<string, string> // its colors, made up at random when it came
+  x: number // 0 to TRACK along the walk, as the pet's; beyond an end, out of sight, a snail crawling in or off
+  target: number
+  faceLeft: boolean
+  y: number // how many pixels over the ground: an owl on the git boxes, or flying
+  air: boolean // an owl flying: in, off, or from one perch to another
+  leaving: boolean // its task is done: a snail heads past the nearer end, an owl flies off
+  stepAt: number // a snail's next step, or the end of its rest
+  stride: number
+  blinkUntil: number // an owl's eyes shut until then
+  hitUntil: number // pawed at by the pet: a snail in its shell, an owl's wings out, until then
 }
 
 declare module 'claude-code' {
@@ -138,6 +156,8 @@ declare module 'claude-code' {
       config: Config
       pet: PetState
       kits: Kit[]
+      toys: Toy[]
+      monitors: string[] // the tasks the Monitor tool started, by id: a reply's end lists them as shells
       manual: 'on' | 'off' | null
     }
   }

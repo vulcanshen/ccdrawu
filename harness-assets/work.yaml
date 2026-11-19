@@ -6,6 +6,7 @@ tasks:
       打開的列一開始就畫，值還沒來時寫 -
       值從 Claude Code 的 mod 介面讀：$.session.usage()（context、5 小時與每週的用量與重置、花費）、$.session.model()、$.session.turns()、$.session.id()、$.session.cwd()、$.session.version()、$.config.list()（output style）、$.agent.list()（subagent）；Mode、Compact、Skills、Tasks 從 classic.PostToolBatch、classic.UserPromptSubmit、classic.SessionStart、classic.Stop、session.compact、skill.prompt 這些事件記下來；git 用 $.process.run 跑 git 指令
       更新：session 開始時全部讀一次；用量在 Claude Code 說它變了時（session.measure）；倒數與 Uptime 每 30 秒；git、Path、subagent 每 5 秒；config.yaml 每秒讀一次
+      Tasks 的背景工作照回覆結束（classic.Stop）的 background_tasks 依 type 計數；Monitor 工具開的 monitor 在清單裡標成 shell，用 Monitor 呼叫（tool.call）回來的 taskId 認出來，算成 monitor
     test:
       - commit: a5a8c27
       - commit: acc8e18
@@ -40,7 +41,8 @@ tasks:
       外掛畫在 pane 最上面：一列台詞，下面是寵物走的走道（側邊欄 7 列高，輸入框上方 4 列）；寵物 12×8 像素，用 ▀▄ 畫成 12 欄×4 列
       寵物與球只佔半格的地方，另一半畫後面的小隻或紙箱的顏色（一格會蓋掉底下整格，留空的那一半不然會變成黑的）
       Claude 工作時閒逛、休息、跳、跑、揮爪；一輪結束時坐下說一句；中斷時安靜坐下；回覆以錯誤結束或工具失敗時跳；壓縮後說一句；閒著 2 分鐘趴下、10 分鐘睡著（頭上 z、zz、zzZ）
-      每 200 ms 走一步；台詞固定，不叫模型
+      閒著時每 tick 有 1/150 機率散步、轉頭或揮爪
+      每 200 ms 走一步；台詞固定，不叫模型；每 tick 的亂數記下來，寫回狀態時在當下的值上照同樣的順序重算（狀態每次讀出來都是複本，重抽的話小機率的動作幾乎不會發生）
     test:
       - commit: 3c977dc
       - commit: c9ca750
@@ -269,3 +271,14 @@ tasks:
       README.md 與 README-zh_TW.md；CHANGELOG.md 每一版的標題寫照的 tdp
     test:
       - commit: f6cf97f
+  - id: 27
+    spec: 3
+    implementation: |
+      外掛在主 agent 每次回覆結束（classic.Stop）讀 background_tasks：type 是 shell 的一個一隻蝸牛、monitor 的一個一隻貓頭鷹；Monitor 工具開的 monitor 在清單裡標成 shell，用 Monitor 呼叫回來的 taskId 認出來；清單裡沒有了的離場
+      蝸牛 6×4 像素（殼、殼上的螺紋、身體），從走道左端或右端外面 9 步（看不到）每秒爬一步進來，停 4～8 秒再爬到走道上別的地方；離場時爬到近的那一端外面才拿掉，走道外一步一欄，只畫在走道裡的那幾欄
+      貓頭鷹 5×6 像素，從走道上方每 tick 下降 2 像素，落在隨機位置；平均約 5 秒眨一次眼（0.4 秒）；離場時張開翅膀（7 像素寬），每 tick 往上 2 像素，飛出走道才拿掉
+      貓頭鷹停著時每 tick 有 1/50 機率（約 10 秒一次）飛到走道上隨機的別處：張開翅膀，每 tick 一步、往上 2 像素到走道頂（8 像素），到了再每 tick 下降 2 像素；落點有紙箱就停在紙箱上，最高到 OWL_TOP（走道 14 像素減貓頭鷹 6 像素，取整層＝8，第二層），第三層停在它前面；腳下的紙箱沒了就降到下面，多了就上去
+      配色出場時隨機生成（OKLCH，亮度固定、色相隨機）：蝸牛殼 0.76、殼上的螺紋同色相 0.55、身體另一個色相 0.82；貓頭鷹羽毛 0.64、胸口同色相 0.86，眼睛、嘴、腳固定黃與橘
+      畫在紙箱前面、小隻與寵物後面，彼此可以重疊；只佔半格的地方，另一半畫後面的顏色；只畫在側邊欄
+      Claude 閒著時，寵物每 tick 有 1/125 機率（約 25 秒一次）挑一隻停在走道地上的（不挑飛著、停在紙箱上的），走到牠旁邊 5 步（近的那一側），面向牠揮爪 1.6 秒；蝸牛在揮爪時與之後 2 秒縮進殼裡，貓頭鷹在揮爪時張開翅膀；Claude 開始工作、牠離場或球來了就不去
+      場上有蝸牛或貓頭鷹時寵物不睡，最多趴著

@@ -182,11 +182,12 @@ A pixel-art pet lives at the top of the drawer, a cat unless you pick another. A
 
 - While Claude works, it wanders about: it stops, hops, runs and swipes at the air.
 - When Claude is done, it sits down and says so. If you stop Claude it just sits; if the reply ends in an error, or a tool fails, it jumps. It has something to say after a compaction too.
-- Left alone, it lies down after 2 minutes and falls asleep after 10, and now and then it strolls, looks around or swipes.
+- Left alone, it lies down after 2 minutes and falls asleep after 10, and now and then it strolls, looks around or swipes. With a snail or an owl about it does not fall asleep.
 - `/ccdrawu pat` pats it: it stops, and a heart shows over it.
 - `/ccdrawu ball` throws it a ball, which it runs after and plays with.
 - While subagents run, a small one of its kind walks behind it for each, up to three, beside the transcript only, each in a coat of its own, never the pet's. It walks in from beyond an end of the strip as its subagent starts, and off past one when it is done. Now and then it hops, and where the git boxes get higher or lower, and now and then among them, it picks a layer of them at random, the ground in front of them too, and walks along it; on the third layer there is no room for it, and it walks in front of it.
 - In a git repository, boxes stand at the right end of its strip, beside the transcript only: an open one for each file not committed, and one shut under its lid, taped, for each commit not pushed, nine at most, three to a layer. A commit turns boxes of files into a taped one; a push takes the taped ones away. A branch with no upstream has no taped boxes.
+- For each shell left running in the background a snail crawls onto its strip, and for each monitor an owl flies down onto it, beside the transcript only, each in colors of its own, picked at random. A snail crawls in slowly from beyond an end and wanders; an owl blinks now and then, and now and then flies off to perch somewhere else, on the ground or on the git boxes. While Claude is idle the pet now and then goes over to one on the ground and paws at it: a snail draws into its shell, an owl spreads its wings. Once its task is done, a snail crawls off past the nearer end and an owl flies off. They follow what was still running when Claude last replied.
 
 What it says comes from a fixed set of lines, so it costs no tokens. To pick the animal (cat, dog, rabbit, duck or penguin), run `ccdrawu` and set **Pet** in **preferences** under Settings; open sessions follow within a second. Its coat is picked at random each session. To hide it, uncheck **Pet** in the list of items.
 

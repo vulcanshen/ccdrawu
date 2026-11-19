@@ -13,6 +13,7 @@ import type {
   SessionInfo,
   SkillsInfo,
   TokenInfo,
+  Toy,
   Usage,
   VersionInfo,
 } from '../types'
@@ -21,6 +22,7 @@ import {
   BALL_INK,
   BALL_LEFT,
   drawnCells,
+  keptDraws,
   KIT_WIDTH,
   kitCells,
   kitDrawing,
@@ -44,6 +46,7 @@ import {
   type Under,
 } from './pets'
 import { BOX_INK, groundUnder, PILE_WIDTH, pileDrawing, pileHeights, pileOf } from './pile'
+import { OWL_WIDTH, toyAt, toyCells, toyDrawing, toyHit, toyLeft, toysFor, toysTick } from './toys'
 import { registerCommands } from './commands'
 import {
   bar,
@@ -96,6 +99,8 @@ const modes = atom({ plugin: 'ccdrawu', key: 'modes' } as const, {} as Modes)
 const now = atom({ plugin: 'ccdrawu', key: 'now' } as const, 0)
 const pet = atom({ plugin: 'ccdrawu', key: 'pet' } as const, PET_START)
 const kits = atom({ plugin: 'ccdrawu', key: 'kits' } as const, [] as Kit[])
+const toys = atom({ plugin: 'ccdrawu', key: 'toys' } as const, [] as Toy[])
+const monitors = atom({ plugin: 'ccdrawu', key: 'monitors' } as const, [] as string[])
 const config = atom({ plugin: 'ccdrawu', key: 'config' } as const, {} as Config)
 // Kept by the host, so a reload keeps what /ccdrawu set
 const manual = atom({ plugin: 'ccdrawu', key: 'manual' } as const, null as Manual)
@@ -266,8 +271,8 @@ async function petShown($: Engine) {
 // The strip's columns beside the transcript as last drawn, for where the git boxes are under a kit
 let walkColumns = 30
 
-// A tick of the pet and its kits: written only when what they show changed, worked out again on the
-// value there is then, so an event that came in between is kept
+// A tick of the pet, its kits and its toys: written only when what they show changed, worked out again
+// on the value there is then, with the same draws (keptDraws), so an event that came in between is kept
 async function stepPet($: Engine) {
   if (!(await petShown($))) return
   const t = await $.clock.now()
@@ -275,12 +280,34 @@ async function stepPet($: Engine) {
   // The boxes at the right end of the strip
   const heights = pileHeights(pileOf(await read($, git)))
   const ground = (x: number) => groundUnder(heights, kitLeft(x, walkColumns) - (walkColumns - PILE_WIDTH), KIT_WIDTH)
-  const movedKits = kitsTick(ks, t, Math.random, ground)
-  if (movedKits !== ks) await update($, kits, current => (current === ks ? movedKits : kitsTick(current, t, Math.random, ground)))
+  const kitDraws = keptDraws()
+  if (kitsTick(ks, t, kitDraws.rand, ground) !== ks) await update($, kits, current => kitsTick(current, t, kitDraws.again(), ground))
+  const ts = await read($, toys)
+  // An owl perches on the boxes: how high they are under it
+  const perch = (x: number) => groundUnder(heights, toyAt(x, walkColumns) - (walkColumns - PILE_WIDTH), OWL_WIDTH)
+  const toyDraws = keptDraws()
+  if (toysTick(ts, t, toyDraws.rand, perch) !== ts) await update($, toys, current => toysTick(current, t, toyDraws.again(), perch))
+  const about = await read($, toys)
   const s = await read($, pet)
-  const next = petTick(s, t)
-  if (next === s) return
-  await update($, pet, current => (current === s ? next : petTick(current, t)))
+  const petDraws = keptDraws()
+  if (petTick(s, t, petDraws.rand, about) === s) return
+  await update($, pet, current => petTick(current, t, petDraws.again(), about))
+  // It has begun pawing at a toy: the toy answers it
+  const pawed = await read($, pet)
+  if (pawed.toy !== undefined && pawed.playUntil > t && (s.toy !== pawed.toy || s.playUntil !== pawed.playUntil)) {
+    const { toy, playUntil } = pawed
+    await update($, toys, current => toyHit(current, toy, playUntil))
+  }
+}
+
+// The background work a reply's end lists, counted by type, and a toy on the strip for each shell and
+// monitor; the monitors the Monitor tool started, listed as shells, told by their ids
+async function backgroundListed($: Engine, listed: readonly { id: string; type: string }[]) {
+  const started = await read($, monitors)
+  const tasks = listed.map(t => (started.includes(t.id) ? { ...t, type: 'monitor' } : t))
+  await update($, monitors, ids => ids.filter(id => listed.some(t => t.id === id)))
+  await update($, background, () => countBackground(tasks))
+  await update($, toys, ts => toysFor(ts, tasks, Math.random))
 }
 
 async function petHears($: Engine, event: PetEvent) {
@@ -635,10 +662,19 @@ export const register: Register = on => {
     return result
   }).catch(($, e, next) => next(e))
 
+  // A monitor the Monitor tool starts is listed at a reply's end as a shell: the id the call answers, kept,
+  // tells it apart (Claude Code 2.1.328)
+  on('tool.call', { tool: 'Monitor' }, async ($, e, next) => {
+    const result = await next(e)
+    const id = result.isError === true ? undefined : (result.result as { taskId?: unknown } | undefined)?.taskId
+    if (typeof id === 'string') quietly(update($, monitors, ids => [...ids, id]))
+    return result
+  }).catch(($, e, next) => next(e))
+
   on('classic.Stop', async ($, e, next) => {
     const result = await next(e)
     quietly(rememberMode($, e))
-    if (e.agent_id === undefined) quietly(update($, background, () => countBackground(e.background_tasks ?? [])))
+    if (e.agent_id === undefined) quietly(backgroundListed($, e.background_tasks ?? []))
     return result
   }).catch(($, e, next) => next(e))
 
@@ -784,20 +820,25 @@ export const register: Register = on => {
     }
 
     const rows = []
-    // Read here, not above the prompt, where no kit or box is drawn: a kit's step redraws only the sidebar
+    // Read here, not above the prompt, where no kit, toy or box is drawn: a kit's step redraws only the
+    // sidebar
     const ks = hasPet ? await read($, kits) : []
+    const ts = hasPet ? await read($, toys) : []
     const pile = pileOf(hasPet ? await read($, git) : null)
     // The pet's box at the bottom of the strip, the room over it for the boxes and a kit on them
     const petTop = (WALK_HEIGHT - PET_HEIGHT - LIFT_ROOM) / 2
-    // What the strip has drawn by a pixel's row and column under the first n kits, all of them when n is
-    // left out, the pet and the ball aside: those kits, the last over the others, then the boxes. A kit,
-    // the pet and the ball show it in the halves of their cells they leave empty
+    // What the strip has drawn by a pixel's row and column under the first n of its layers, all of them
+    // when n is left out, the pet and the ball aside: the boxes, over them the toys, over those the kits,
+    // each over the ones before it. A kit, a toy, the pet and the ball show it in the halves of their
+    // cells they leave empty
     const box = { art: pileDrawing(pile), coat: BOX_INK, left: Math.max(0, inner - PILE_WIDTH), lift: 0 }
+    const drawnToys = ts.map(t => ({ art: toyDrawing(t), coat: t.ink, left: toyLeft(t, inner), lift: t.y }))
     const drawnKits = ks.map(k => ({ art: kitDrawing(species, k), coat: petCoat(species, k.coat), left: kitLeft(k.x, inner), lift: k.y }))
+    const layers = [box, ...drawnToys, ...drawnKits]
     const strip =
-      (n = drawnKits.length) =>
+      (n = layers.length) =>
       (y: number, x: number) => {
-        for (const d of [...drawnKits.slice(0, n).reverse(), box]) {
+        for (const d of layers.slice(0, n).reverse()) {
           const color = d.coat[d.art[y - (WALK_HEIGHT - d.art.length - d.lift)]?.[x - d.left] ?? '.']
           if (color !== undefined) return color
         }
@@ -826,6 +867,24 @@ export const register: Register = on => {
               {cellRows(drawnCells(pileDrawing(pile), BOX_INK, WALK_HEIGHT))}
             </Box>
           )}
+          {/* The snails and owls, out of the flow, over the boxes, so the kits and the pet go over them:
+              on the ground, or flying down or off; crawling in or off, the columns of one inside the strip */}
+          {ts.map((t, j) => {
+            const drawn = toyCells(t, inner, strip(1 + j))
+            return drawn === undefined ? null : (
+              <Box
+                key={'toy-' + t.id}
+                position="absolute"
+                top={0}
+                left={drawn.left}
+                width={drawn.width}
+                height={WALK_HEIGHT / 2}
+                flexDirection="column"
+              >
+                {cellRows(drawn.cells)}
+              </Box>
+            )
+          })}
           {/* The kits, out of the flow, so the pet goes over them: on the ground or on the boxes, along a
               walk as long as the pet's, spread over the width there is less their own; coming in or going,
               the columns of one inside the strip */}
@@ -843,7 +902,7 @@ export const register: Register = on => {
                 height={WALK_HEIGHT / 2}
                 flexDirection="column"
               >
-                {cellRows(kitCells(species, k, WALK_HEIGHT, (y, x) => strip(i)(y, left + from + x), from, to))}
+                {cellRows(kitCells(species, k, WALK_HEIGHT, (y, x) => strip(1 + ts.length + i)(y, left + from + x), from, to))}
               </Box>
             )
           })}

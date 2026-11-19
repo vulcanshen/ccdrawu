@@ -2,6 +2,12 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- Snails and owls: beside the transcript, a snail crawls onto the pet's strip for each shell left running in the background, and an owl flies down onto it for each monitor, each in colors picked at random; an owl now and then flies off to perch somewhere else, on the git boxes too. While Claude is idle the pet now and then goes over to one on the ground and paws at it, and a snail draws into its shell, an owl spreads its wings; with them about it does not fall asleep. Once its task is done, a snail crawls off and an owl flies off.
+- Left alone, the pet now and then strolls, looks around or swipes, as it was meant to; it hardly ever did. The same went for a kit's hops and rests, which came less often than meant.
+- **Tasks** counts a monitor the Monitor tool started as a monitor; it counted it as a shell.
+
 ## v1.1.1 — tdp v1.2.0
 
 - The git boxes look more like boxes, and are a darker brown, so orange and brown pets read apart from them: a column wider, lighter inside, with a frame round the sides and the bottom, darker. A box for a file is open in the middle of the top; a taped one is shut under a lid, with a pixel of it down the middle where the flaps meet, and no longer told apart by being light inside.

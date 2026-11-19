@@ -9,7 +9,7 @@
 // from the body and a paw a swipe raises does not run into the head (user, 2026-10-15: the limbs are
 // colored from the first, all of them). A session picks one coat of its pet at random.
 
-import type { Kit, PetBall, PetMode, PetState } from '../types'
+import type { Kit, PetBall, PetMode, PetState, Toy } from '../types'
 import { BOX_HEIGHT } from './pile'
 
 export const SPECIES = ['cat', 'dog', 'rabbit', 'duck', 'penguin'] as const
@@ -563,8 +563,10 @@ export function drawnCells(drawn: string[], coat: Coat, height = PET_HEIGHT, lif
 // swiping, and wakes the moment anything goes on. A tool failing makes it jump; a reply done, a
 // compaction or a pat gets a line out of it; a pat sits it down a moment, a heart over its head, and
 // wakes it. A ball thrown in (/ccdrawu ball) comes from its far side, bounces and rolls to a stop;
-// it runs over, paws at it a while, and has it (user, 2026-10-15, after vscode-pets). None of it
-// touches `$`: the hooks feed it events, a tick and a random source.
+// it runs over, paws at it a while, and has it (user, 2026-10-15, after vscode-pets). Idle with a snail
+// or an owl about (hooks/toys.ts), it lies down but does not fall asleep, and now and then it goes over
+// to one and paws at it a while (user, 2026-11-19); while Claude works it lets them be. None of it
+// touches `$`: the hooks feed it events, a tick, the toys about and a random source.
 
 export const PET_TICK = 200 // ms between ticks
 export const TRACK = 20 // steps from one end of its walk to the other
@@ -582,6 +584,30 @@ const PLAY_MS = 1_600 // the pet paws at it this long
 const BALL_MAX_MS = 20_000 // a ball not had by then goes
 export const BALL_REACH = 5 // how far from the ball the pet stands to paw at it, along its walk
 export const BALL_LEFT = 4 // the ball's columns from the left of the box a pet at its place would have
+const TOY_CHANCE = 1 / 125 // a tick's chance, idle with a toy on the walk, of going over to it: about every 25 s
+export const TOY_REACH = 5 // how far from a toy the pet stands to paw at it, along its walk, as at the ball
+// A toy settled on the ground along the walk, for the pet to go over to: not coming, going, flying, up
+// on the boxes or out of sight
+const reachable = (t: Toy) => !t.leaving && t.air !== true && t.y === 0 && t.x >= 0 && t.x <= TRACK
+
+// A random source that keeps its draws, and one that draws them again in turn: a tick worked out again
+// on the value there is when it is written comes out as the first time. A read of the state is a copy,
+// never the object read before, so a tick is always worked out again; drawn afresh, what the first
+// draws picked was lost, and an idle pet hardly ever strolled, swiped or looked round (found 2026-11-19)
+export function keptDraws(): { rand: () => number; again: () => () => number } {
+  const draws: number[] = []
+  return {
+    rand: () => {
+      const r = Math.random()
+      draws.push(r)
+      return r
+    },
+    again: () => {
+      let i = 0
+      return () => draws[i++] ?? Math.random()
+    },
+  }
+}
 
 // The ball, 4 x 4 pixels on the ground: red, a shine on it
 export const BALL = ['.rr.', 'rhrr', 'rrrr', '.rr.']
@@ -691,12 +717,12 @@ export function petEvent(s: PetState, event: PetEvent, now: number, species: Spe
   }
 }
 
-// The pet a tick later. The same object back when nothing in it changed, so a pet sitting still
-// costs no redraw
-export function petTick(s: PetState, now: number, rand: () => number = Math.random): PetState {
+// The pet a tick later, toys about it. The same object back when nothing in it changed, so a pet
+// sitting still costs no redraw
+export function petTick(s: PetState, now: number, rand: () => number = Math.random, toys: readonly Toy[] = []): PetState {
   const heart = now < s.heartUntil
-  const asleep = !s.busy && now - s.active >= SLEEP_AFTER
-  let { x, target, run, stride, restUntil, jumpFrom, jumpUntil, faceLeft, ball, playUntil, line, lineUntil } = s
+  const asleep = !s.busy && now - s.active >= SLEEP_AFTER && !toys.some(t => !t.leaving)
+  let { x, target, run, stride, restUntil, jumpFrom, jumpUntil, faceLeft, ball, playUntil, line, lineUntil, toy } = s
   let moving = false
   // A ball: it runs to it, paws at it once it has stopped rolling, and has it; one not had in time goes
   if (ball !== undefined && now - ball.from > BALL_MAX_MS) [ball, playUntil] = [undefined, 0]
@@ -709,6 +735,19 @@ export function petTick(s: PetState, now: number, rand: () => number = Math.rand
       faceLeft = ball.goal > ball.rest
     } else if (playUntil === 0) {
       ;[target, run, restUntil] = [ball.goal, true, 0]
+    }
+  }
+  // A toy, idle: it walks over to stand beside it, nearer side, and paws at it a while, facing it; one
+  // gone or out of reach, Claude at work again, or a ball, it lets be
+  const at = toys.find(t => t.id === toy && reachable(t))
+  if (toy !== undefined && (at === undefined || s.busy || ball !== undefined)) toy = undefined
+  else if (at !== undefined && !heart) {
+    if (playUntil > 0 && now >= playUntil) toy = undefined
+    else if (playUntil === 0) {
+      const sides = [at.x - TOY_REACH, at.x + TOY_REACH].filter(g => g >= 0 && g <= TRACK)
+      const goal = sides.reduce((a, b) => (Math.abs(b - x) < Math.abs(a - x) ? b : a), sides[0] ?? x)
+      if (x === goal) [playUntil, faceLeft] = [now + PLAY_MS, at.x < x]
+      else [target, run, restUntil] = [goal, false, 0]
     }
   }
   const playing = now < playUntil
@@ -732,6 +771,13 @@ export function petTick(s: PetState, now: number, rand: () => number = Math.rand
       else if (r < 0.65) ({ jumpFrom, jumpUntil } = jumps(now))
       target = nextTarget(x, rand)
       run = Math.abs(target - x) > TRACK / 2 && rand() < 0.4
+    } else if (toy !== undefined) {
+      // Beside the toy it went over to: it paws at it next
+    } else if (toys.some(reachable) && rand() < TOY_CHANCE) {
+      // Idle with toys about: now and then it goes over to one
+      const near = toys.filter(reachable)
+      toy = near[Math.floor(rand() * near.length) % near.length]?.id
+      playUntil = 0
     } else if (rand() < IDLE_CHANCE) {
       // Idle: now and then a stroll, a look the other way, or a swipe
       const r = rand()
@@ -786,6 +832,7 @@ export function petTick(s: PetState, now: number, rand: () => number = Math.rand
     ballPos: rolled.pos,
     ballLift: rolled.lift,
     playUntil,
+    toy,
   }
   return (Object.keys(next) as (keyof PetState)[]).every(k => next[k] === s[k]) ? s : next
 }
