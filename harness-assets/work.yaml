@@ -11,6 +11,7 @@ tasks:
       - commit: a5a8c27
       - commit: acc8e18
       - commit: 6df08c2
+      - commit: 7eb5a51
   - id: 2
     spec: 1
     implementation: |
@@ -46,6 +47,7 @@ tasks:
     test:
       - commit: 3c977dc
       - commit: c9ca750
+      - commit: 7eb5a51
   - id: 6
     spec: 1
     implementation: |
@@ -282,3 +284,5 @@ tasks:
       畫在紙箱前面、小隻與寵物後面，彼此可以重疊；只佔半格的地方，另一半畫後面的顏色；只畫在側邊欄
       Claude 閒著時，寵物每 tick 有 1/125 機率（約 25 秒一次）挑一隻停在走道地上的（不挑飛著、停在紙箱上的），走到牠旁邊 5 步（近的那一側），面向牠揮爪 1.6 秒；蝸牛在揮爪時與之後 2 秒縮進殼裡，貓頭鷹在揮爪時張開翅膀；Claude 開始工作、牠離場或球來了就不去
       場上有蝸牛或貓頭鷹時寵物不睡，最多趴著
+    test:
+      - commit: 7eb5a51
