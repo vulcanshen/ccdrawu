@@ -36,12 +36,16 @@ const SNAIL: Record<'walk1' | 'walk2' | 'shell', string[]> = {
   walk2: ['.b.ss.', '.bsdss', 'bbsdds', 'bbbbbb'],
   shell: ['...ss.', '..sdss', '..sdds', '..sss.'],
 }
-// Facing out; its wings out a column either side, flying or pawed at
-const OWL: Record<'stand' | 'blink' | 'wings', string[]> = {
+// Facing out; its wings out a column either side, pawed at; flying, they beat up, out, down and out, a
+// frame a tick (user, 2026-11-19: out and still, they did not beat)
+const OWL: Record<'stand' | 'blink' | 'wings' | 'up' | 'down', string[]> = {
   stand: ['o...o', 'ooooo', 'ykayk', 'obbbo', 'obbbo', '.a.a.'],
   blink: ['o...o', 'ooooo', 'ooaoo', 'obbbo', 'obbbo', '.a.a.'],
   wings: ['.o...o.', '.ooooo.', 'oykayko', 'oobbboo', '.obbbo.', '..a.a..'],
+  up: ['o.o...o.o', '.ooooooo.', '..ykayk..', '..obbbo..', '..obbbo..', '...a.a...'],
+  down: ['..o...o..', '..ooooo..', '..ykayk..', '.oobbboo.', 'oo.bbb.oo', '...a.a...'],
 }
+const WINGBEAT = [OWL.up, OWL.wings, OWL.down, OWL.wings]
 
 // OKLCH to sRGB, its chroma brought into the gamut, lightness and hue kept
 const gamma = (v: number) => (v <= 0.0031308 ? 12.92 * v : 1.055 * v ** (1 / 2.4) - 0.055)
@@ -146,18 +150,20 @@ function snailStep(t: Toy, now: number, rand: () => number): Toy | undefined {
 }
 
 function owlStep(t: Toy, now: number, rand: () => number, ground: (x: number) => number): Toy | undefined {
-  if (t.leaving) return t.y + OWL_FLY >= WALK_HEIGHT ? undefined : { ...t, y: t.y + OWL_FLY, air: true }
+  // Flying, a wingbeat's frame a tick
+  const stride = t.stride + 1
+  if (t.leaving) return t.y + OWL_FLY >= WALK_HEIGHT ? undefined : { ...t, y: t.y + OWL_FLY, air: true, stride }
   // On its way to another perch: a step a tick, up along the top of the strip
   if (t.x !== t.target) {
     const faceLeft = t.target < t.x
-    return { ...t, faceLeft, x: t.x + (faceLeft ? -1 : 1), y: Math.min(OWL_CRUISE, t.y + OWL_FLY), air: true, blinkUntil: 0 }
+    return { ...t, faceLeft, x: t.x + (faceLeft ? -1 : 1), y: Math.min(OWL_CRUISE, t.y + OWL_FLY), air: true, blinkUntil: 0, stride }
   }
   // There: down onto the boxes, as high as there is room over them, or the ground; up onto boxes that
   // came under it, down where they went
   const perch = Math.min(ground(t.x), OWL_TOP)
   if (t.y !== perch) {
     const y = t.y > perch ? Math.max(perch, t.y - OWL_FLY) : Math.min(perch, t.y + OWL_FLY)
-    return { ...t, y, air: y !== perch }
+    return { ...t, y, air: y !== perch, stride }
   }
   if (t.air) return { ...t, air: false }
   if (t.hitUntil > 0) return now < t.hitUntil ? t : { ...t, hitUntil: 0 }
@@ -179,7 +185,11 @@ export function toyHit(toys: Toy[], id: string, until: number): Toy[] {
 
 // A toy's pixels as it is now
 export function toyDrawing(t: Toy): string[] {
-  if (t.kind === 'owl') return t.air || t.hitUntil > 0 ? OWL.wings : t.blinkUntil > 0 ? OWL.blink : OWL.stand
+  if (t.kind === 'owl') {
+    if (t.hitUntil > 0) return OWL.wings
+    if (t.air) return WINGBEAT[t.stride % WINGBEAT.length]!
+    return t.blinkUntil > 0 ? OWL.blink : OWL.stand
+  }
   const art = t.hitUntil > 0 ? SNAIL.shell : t.stride % 2 === 0 ? SNAIL.walk1 : SNAIL.walk2
   return t.faceLeft ? art : art.map(r => [...r].reverse().join(''))
 }

@@ -822,7 +822,9 @@ test('a snail crawls in for each shell left in the background and an owl flies d
     [{ ...owl, y: 0, air: false }, 5, 6],
     [{ ...owl, y: 0, air: false, blinkUntil: 1 }, 5, 6],
     [{ ...owl, y: 0, air: false, hitUntil: 1 }, 7, 6],
-    [owl, 7, 6],
+    [owl, 9, 6],
+    [{ ...owl, stride: 1 }, 7, 6],
+    [{ ...owl, stride: 2 }, 9, 6],
   ] as const
   for (const [t, width, height] of looks) {
     const art = toyDrawing(t)
@@ -853,14 +855,21 @@ test('a snail crawls in for each shell left in the background and an owl flies d
   expect(toysTick([blinking!], 20_400, quiet)[0]?.blinkUntil).toBe(0)
 
   // Now and then it flies off to perch somewhere else: a step a tick along the top of the strip, its
-  // wings out, then down onto the boxes there, as high as there is room over them, or the ground
+  // wings beating, then down onto the boxes there, as high as there is room over them, or the ground
   const boxes = (x: number) => (x >= 15 ? 12 : x >= 10 ? 4 : 0)
   const perched = ts[1]!
   let flight = toysTick([perched], 30_000, draws(0, 0.6), boxes)
   expect(flight[0]).toMatchObject({ x: 5, target: 12 })
   flight = toysTick(flight, 30_200, quiet, boxes)
-  expect([flight[0]?.x, flight[0]?.y, flight[0]?.air, toyDrawing(flight[0]!)[0]?.length]).toEqual([6, 2, true, 7])
-  for (let t = 30_400; t <= 33_000; t += 200) flight = toysTick(flight, t, quiet, boxes)
+  expect([flight[0]?.x, flight[0]?.y, flight[0]?.air]).toEqual([6, 2, true])
+  // A frame a tick: up, out, down, out (user, 2026-11-19: wings out and still did not beat)
+  const beat = [toyDrawing(flight[0]!)]
+  for (let t = 30_400; t <= 30_800; t += 200) beat.push(toyDrawing((flight = toysTick(flight, t, quiet, boxes))[0]!))
+  const widths = beat.map(f => f[0]?.length)
+  expect(widths.slice(1).every((w, i) => w !== widths[i])).toBe(true)
+  expect(new Set(widths)).toEqual(new Set([7, 9]))
+  expect(new Set(beat.map(f => f.join('/'))).size).toBe(3)
+  for (let t = 31_000; t <= 33_000; t += 200) flight = toysTick(flight, t, quiet, boxes)
   expect(flight[0]).toMatchObject({ x: 12, y: 4, air: false })
   // Over the third layer there is no room for it: on the second, in front of the third
   let high = [{ ...flight[0]!, target: 18 }]

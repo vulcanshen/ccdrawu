@@ -216,6 +216,8 @@ async function refreshConfig($: Engine) {
   // Half written: keep what shows and read it again next second. Still so a second on, it can't be read:
   // the pane says which file and why, and goes on with what it had, the file as it is; ccdrawu asks about
   // it when it opens (tdp E3, a screen not in the TUI)
+  // TODO(tdp #23): values that do not fit are drawn as their defaults, nothing said, the file left for the TUI
+  // and ccdrawu statusline to keep aside and write again
   if (parsed === undefined) {
     if (unreadStamp === stamp) {
       const why = unreadReason(text, file === oldConfigFile) ?? 'not a config'

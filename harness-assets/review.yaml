@@ -1,4 +1,4 @@
-spec: 2
+spec: 4
 tasks:
   - id: 1
     accepted: true
@@ -41,7 +41,8 @@ tasks:
   - id: 20
     accepted: true
   - id: 21
-    accepted: true
+    accepted: false
+    reason: tdp 不清楚：外掛畫的側邊欄（不在 TUI 裡的畫面）讀到 config.yaml 有用不了的值時怎麼做，tdp E3 沒寫：「值不合規則」只寫了 TUI（Warning toast）與沒有畫面時（stderr），「不在 TUI 裡的畫面」只寫了讀不了時；ccdrawu 的側邊欄照預設畫、不顯示哪裡不合，statusline 沒開、TUI 沒打開時使用者不會知道
   - id: 22
     accepted: true
   - id: 23
@@ -51,4 +52,6 @@ tasks:
   - id: 25
     accepted: true
   - id: 26
+    accepted: true
+  - id: 27
     accepted: true

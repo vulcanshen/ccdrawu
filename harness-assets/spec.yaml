@@ -84,7 +84,7 @@ tasks:
   - id: 12
     spec: 4
     request: 在 ccdrawu 挑側邊欄（或狀態列）顯示哪些項目
-    tdp: [tdp checkbox, tdp finder, tdp E3]
+    tdp: [tdp checkbox, tdp finder, tdp E3, tdp note.7]
     remark:
       - Items 上按 Enter 開所有項目的清單：Space 勾、最上面 Select all 全選、Enter 套用、Esc 不改、/ 打字篩選；新勾的排在它前一項後面
       - config.yaml 裡外掛寫的項目清單沒有的 id 是「app 不認得的名字」，啟動時照 E3 拿掉；還沒有項目清單時無從判斷，不動
@@ -97,7 +97,7 @@ tasks:
   - id: 14
     spec: 4
     request: ccdrawu 的畫面：左邊分組列出 Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences），右邊是選到的那一頁的值
-    tdp: [tdp screen.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp M3, tdp E3]
+    tdp: [tdp screen.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp M3, tdp E3, tdp note.7]
     remark:
       - 開著的 session 在一秒內跟著換
       - 手改 config.yaml 留下的不合的值，啟動時就換成預設（tdp E3），畫面上不再有標 Red 的值；只有 Plugin 列在查不到外掛時標 Red
@@ -123,7 +123,7 @@ tasks:
   - id: 18
     spec: 4
     request: ccdrawu install claude 把同一版的外掛裝進 Claude Code，ccdrawu uninstall claude 拿掉它並換回原本的主題與狀態列
-    tdp: [tdp P5, tdp E1, tdp E2, tdp E3]
+    tdp: [tdp P5, tdp E1, tdp E2, tdp E3, tdp E6, harness project.3]
     remark:
       - 只用這兩個指令（或 ccdrawu update）裝外掛，不用 /plugin：外掛要跟指令同一版
       - uninstall 讀不了 config.yaml 或 originals.yaml 時停下來，什麼都不動，寫出是哪個檔與原因（tdp E3）
@@ -141,7 +141,7 @@ tasks:
   - id: 21
     spec: 4
     request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問；讀得進來、只有用不了的值時，備份後換成預設
-    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6]
+    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6, tdp note.7]
     remark:
       - ~/.config/ccdrawu/config.yaml（CCDRAWU__CONFIG、XDG_CONFIG_HOME）；系統快取資料夾裡的 ccdrawu（CCDRAWU__CACHE）；~/.ccdrawu/originals.yaml（CCDRAWU__DATA）
       - config.yaml 讀不了：寫出原因，Enter 改名成 config.yaml.bak、用預設值開始，Esc 離開
@@ -149,6 +149,7 @@ tasks:
       - 同一次啟動有搬家又有不合的值：合成一個 toast，App Log 一件一筆（tdp E3，同一次啟動有好幾件）
       - 外掛畫的側邊欄（不在 TUI 裡的畫面，tdp P5）讀不了 config.yaml：在面板上寫出哪個檔、為什麼，不動檔；值不合規則時照預設畫，備份與寫回交給 TUI 與 statusline（tdp E3、P5）
       - {note: "從來不是 ccdrawu 的 key（打錯的）tdp 沒寫怎麼辦；暫時照舊：重寫時不留，值不合規則而重寫時原本的在 .bak", issue: "tdp #21"}
+      - {note: "外掛的側邊欄讀到用不了的值怎麼做 tdp 沒寫；暫時照預設畫、不動檔、不顯示，備份與寫回交給 TUI 與 statusline", issue: "tdp #23"}
   - id: 22
     spec: 1
     request: ccdrawu 在至少 40 欄寬、12 列高、支援 truecolor 的終端機跑，要 Nerd Font；圖示佔的格數可以用環境變數設
@@ -175,7 +176,7 @@ tasks:
     request: README（英文與繁中）與 CHANGELOG
     tdp: [tdp E7, harness project.6]
   - id: 27
-    spec: 3
+    spec: 4
     request: 背景的 shell 和 monitor 補回走道上：shell 是蝸牛、monitor 是貓頭鷹，像球一樣會跟寵物互動；主 agent 靜止時寵物偶爾去抓一下；幾個就幾隻，可以重疊，每一隻的配色隨機生成；貓頭鷹偶爾會飛一下，也會停在箱子上
     tdp: [tdp P5]
     remark:
@@ -183,5 +184,6 @@ tasks:
       - 蝸牛從走道外面爬進來，結束後爬出去，不趕即時顯示有無；貓頭鷹飛進來、飛走
       - 被抓時蝸牛縮進殼裡，貓頭鷹張開翅膀；寵物只去抓停在地上的
       - 貓頭鷹停在箱子上最高到上面還放得下牠的那一層（跟小隻一樣是第二層），第三層牠停在前面
+      - 貓頭鷹飛的時候振翅：翅膀上、平、下、平一輪（方案 2）
       - 場上有它們時寵物不睡，最多趴著；Claude 工作時寵物照常閒逛，不特別去抓
       - 取代 2026-11-06 的小螢幕（shell）與雷達（monitor），那次因為太難表示而取消
