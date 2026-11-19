@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.3.0 — tdp v1.2.17
 
 - `ccdrawu doctor` sets right what the drawer and the status line say is wrong with `config.yaml`, as `ccdrawu` does when it opens: the values it can't use go back to their defaults, yours kept in `config.yaml.bak`, and it says on stderr each value it changed. A file that can't be read it leaves as it is, and says why.
 - The red text at the top of the drawer and at the end of the status line now ends with `run ccdrawu doctor`.
