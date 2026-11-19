@@ -240,6 +240,10 @@ func misfitNotices(path string, s config.Settled) []terminu.Notice {
 	if len(s.Misfits) == 0 {
 		return nil
 	}
+	if s.Copy == "" && s.Err != nil {
+		// The copy not made: why first, then the values' WARNs
+		return []terminu.Notice{{Kind: terminu.Error, Text: s.Err.Error()}, terminu.MisfitNotice(path, "", s.Misfits...)}
+	}
 	notices := []terminu.Notice{terminu.MisfitNotice(path, s.Copy, s.Misfits...)}
 	if s.Err != nil {
 		notices = append(notices, terminu.Notice{Kind: terminu.Error, Text: s.Err.Error()})

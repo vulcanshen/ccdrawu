@@ -758,6 +758,12 @@ func TestValuesThatDoNotFitWithNoCopy(t *testing.T) {
 	if data, _ := os.ReadFile(loc.ConfigFile); string(data) != "bar: wavy\n" {
 		t.Fatalf("the file written:\n%s", data)
 	}
+	// In the App Log, why first, then the value's WARN
+	press(d, key("!"))
+	log := frameText(d)
+	if why, warn := strings.Index(log, "could not be made"), strings.Index(log, `bar "wavy" did not fit`); why < 0 || warn < 0 || why > warn {
+		t.Fatalf("the App Log, why then the WARN:\n%s", log)
+	}
 }
 
 // The plugin row is marked wrong while ccdrawu can't tell whether the plugin
