@@ -22,13 +22,49 @@ import (
 // animal, a bar, a format, a color, a theme, an item the catalog does not
 // have), a color that is not #rrggbb, a number of seconds below 0 or past 60,
 // an alias the mod does not take, a separator with a control character, and a
-// value of the wrong kind (a word where a number goes). A key that is not
-// ccdrawu's at all is left out, as before.
-// TODO(tdp #21): tdp says nothing of a key that was never the app's (one
-// mistyped); writing the file again leaves it out, the file as it was kept in
-// the .bak when values did not fit.
+// value of the wrong kind (a word where a number goes). A key ccdrawu does not
+// read, one it read once or one it never did (mistyped), stays in the file,
+// written again too, and each start has an INFO of it in the App Log, no
+// toast (tdp E3; user, 2026-11-19, tdp #21).
 
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
+
+// readKeys are the keys ccdrawu reads, at the top ("") and in the mappings
+// under it; the plugin reads none other (hooks/layout.ts).
+var readKeys = map[string][]string{
+	"":           {"dock", "inline", "alias", "pet", "bar", "drawer", "theme", "statusline"},
+	"pet":        {"species"},
+	"drawer":     {"sidebarOff", "inlineOff", "off"},
+	"theme":      {"base", "background", "before"},
+	"statusline": {"on", "when", "items", "format", "color", "separator", "refresh", "before"},
+}
+
+// UsedToRead reports whether ccdrawu read key once and reads it no longer
+// (input_tab_width, ccdrawu 0.1.x), not a key it never read.
+func UsedToRead(key string) bool { return key == "input_tab_width" }
+
+// unread are the keys of the config, as JSON, that ccdrawu does not read,
+// "statusline.refesh" for one under a mapping, in order.
+func unread(top map[string]json.RawMessage) []string {
+	var keys []string
+	for key, raw := range top {
+		if !slices.Contains(readKeys[""], key) {
+			keys = append(keys, key)
+			continue
+		}
+		var m map[string]json.RawMessage
+		if _, nested := readKeys[key]; !nested || json.Unmarshal(raw, &m) != nil {
+			continue
+		}
+		for name := range m {
+			if !slices.Contains(readKeys[key], name) {
+				keys = append(keys, key+"."+name)
+			}
+		}
+	}
+	slices.Sort(keys)
+	return keys
+}
 
 // MaxRefresh is the most seconds the statusline's Refresh takes.
 const MaxRefresh = 60
@@ -197,6 +233,7 @@ type Settled struct {
 	Misfits []terminu.Misfit
 	Copy    string
 	Err     error
+	Unread  []string // the keys ccdrawu does not read, which stay (tdp E3)
 }
 
 // Settle reads config.yaml as a start does (tdp E3): values that do not fit
@@ -212,12 +249,21 @@ func Settle(loc Locations) (Config, Settled, error) {
 		}
 	}
 	c, misfits, err := readFit(loc.ConfigFile, known)
-	// Only config.yaml is settled: the config.json of 0.1.4 and before is
-	// Move's to take
-	if err != nil || len(misfits) == 0 || !fileThere(loc.ConfigFile) {
+	if err != nil {
 		return c, Settled{}, err
 	}
 	s := Settled{Misfits: misfits}
+	if data, err := configData(loc.ConfigFile); err == nil && data != nil {
+		var top map[string]json.RawMessage
+		if json.Unmarshal(data, &top) == nil {
+			s.Unread = unread(top)
+		}
+	}
+	// Only config.yaml is settled: the config.json of 0.1.4 and before is
+	// Move's to take
+	if len(misfits) == 0 || !fileThere(loc.ConfigFile) {
+		return c, Settled{Unread: s.Unread}, nil
+	}
 	copy, err := terminu.KeepAside(loc.ConfigFile)
 	if err != nil {
 		s.Err = err

@@ -196,6 +196,49 @@ func TestSettleWithNoCopyLeavesTheFile(t *testing.T) {
 	}
 }
 
+// tdp E3-24, E3-38: a key ccdrawu does not read, one it read once or one it
+// never did (mistyped), stays in the file, written again by a setting saved
+// or by values that did not fit, and is listed for the App Log; a key of its
+// own it no longer writes does not come back
+func TestKeysNotReadStay(t *testing.T) {
+	loc := testLocations(t)
+	text := "# mine\nrefesh: 5\ninput_tab_width: 4\nbar: line\npet: {species: dog, nickname: Mochi}\nstatusline:\n  on: true\n  colour: red\n"
+	if err := os.WriteFile(loc.ConfigFile, []byte(text), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	c, s, err := Settle(loc)
+	if err != nil || len(s.Misfits) != 0 || !slices.Equal(s.Unread, []string{"input_tab_width", "pet.nickname", "refesh", "statusline.colour"}) {
+		t.Fatalf("%+v, %v", s, err)
+	}
+	if !UsedToRead("input_tab_width") || UsedToRead("refesh") {
+		t.Error("input_tab_width is the key ccdrawu read once, refesh one it never did")
+	}
+	// A setting saved: the bar and the pet back to their defaults
+	c.Bar, c.Pet.Species = "", ""
+	if err := WriteConfig(loc.ConfigFile, c); err != nil {
+		t.Fatal(err)
+	}
+	data, _ := os.ReadFile(loc.ConfigFile)
+	for _, want := range []string{"refesh: 5\n", "input_tab_width: 4\n", "pet:\n  nickname: Mochi\n", "  colour: red\n"} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("no %q in\n%s", want, data)
+		}
+	}
+	if strings.Contains(string(data), "bar:") || strings.Contains(string(data), "species") {
+		t.Errorf("a key of ccdrawu's own back:\n%s", data)
+	}
+	// Written again for values that did not fit: they stay as well
+	if err := os.WriteFile(loc.ConfigFile, []byte("refesh: 5\nbar: wavy\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, s, err = Settle(loc); err != nil || len(s.Misfits) != 1 || !slices.Equal(s.Unread, []string{"refesh"}) {
+		t.Fatalf("%+v, %v", s, err)
+	}
+	if data, _ = os.ReadFile(loc.ConfigFile); !strings.Contains(string(data), "refesh: 5\n") || strings.Contains(string(data), "wavy") {
+		t.Fatalf("written again as\n%s", data)
+	}
+}
+
 // The config.json of 0.1.4 and before moves as it is, values that do not fit
 // and all, for Settle to say
 func TestMoveKeepsValuesThatDoNotFit(t *testing.T) {

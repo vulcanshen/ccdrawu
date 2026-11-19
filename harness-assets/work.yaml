@@ -243,6 +243,7 @@ tasks:
       啟動時（搬家之後）config.Settle：有用不了的值就用 terminu.KeepAside 複製成 config.yaml.bak（有了就 .bak.1…），用預設值寫回；theme.base 不合時同時像 Claude theme 設 off 一樣換回 Claude Code 原本的主題，statusline.refresh 不合、狀態列是 ccdrawu 的時，Claude Code 的 refreshInterval 也換回 10；備份做不出來時不寫回，這一次用預設
       搬家的 Info 與不合的值（terminu.MisfitNotice；備份做不出來時先一列 Error 寫原因，再接不帶那一句、只帶 WARN 的 MisfitNotice）一起交給 App.Notify：一個 toast、一件一行、種類取最重的，App Log 一件一筆、每個值一筆 WARN
       搬家（config.json → config.yaml、config 裡的 theme.before／statusline.before → originals.yaml）照原文寫，不合的值留給 Settle
+      ccdrawu 不讀的 key（頂層，與 pet、drawer、theme、statusline 底下的）：WriteConfig 用 yaml.Node 把原檔裡這些 key 與值照原樣接在後面，存設定與 E3 重寫都留著；啟動時 Settle 列出來，TUI 每個記一筆 INFO「Not read: <key> in <路徑>; delete it if you don't need it」，ccdrawu 以前讀過的 input_tab_width 寫 No longer used；不跳 toast
       外掛（hooks）每秒讀 config.yaml：解不開時當成寫到一半，下一秒還是一樣才算讀不了，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」，不動檔、照舊用上一次讀到的；讀得了就拿掉那一列；不合的值外掛照預設畫
     test:
       - TestValuesThatDoNotFitAreTheirDefaults
@@ -252,6 +253,7 @@ tasks:
       - TestMoveKeepsValuesThatDoNotFit
       - TestValuesThatDoNotFitAreSaidInOneToast
       - TestValuesThatDoNotFitWithNoCopy
+      - TestKeysNotReadStay
       - TestLocateFollowsE3
       - TestConfigIsYAML
       - TestMoveTakesTheOldPlaces

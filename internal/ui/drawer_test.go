@@ -700,7 +700,8 @@ func TestValuesThatDoNotFitAreSaidInOneToast(t *testing.T) {
 		t.Fatal(err)
 	}
 	// theme.before, kept in the config by 0.1.1, moves to originals.yaml as it starts
-	wrong := `{"alias": "a b!", "theme": {"background": "zzz", "before": "light"}, "statusline": {"refresh": 999, "separator": "\u001b"}}`
+	// and refesh, a key ccdrawu never read, which stays: an INFO in the App Log, no toast (tdp E3-38)
+	wrong := `{"alias": "a b!", "refesh": 5, "theme": {"background": "zzz", "before": "light"}, "statusline": {"refresh": 999, "separator": "\u001b"}}`
 	if err := os.WriteFile(loc.ConfigFile, []byte(wrong), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -722,10 +723,16 @@ func TestValuesThatDoNotFitAreSaidInOneToast(t *testing.T) {
 	}
 	press(d, key("!"))
 	log := frameText(d)
-	for _, entry := range []string{"INFO Moved theme.before", "WARN 4 values in config.yaml did not fit", `WARN config.yaml: alias "a b!" did not fit; using "none"`, `WARN config.yaml: statusline.refresh "999" did not fit; using "10"`} {
+	for _, entry := range []string{"INFO Moved theme.before", "WARN 4 values in config.yaml did not fit", `WARN config.yaml: alias "a b!" did not fit; using "none"`, `WARN config.yaml: statusline.refresh "999" did not fit; using "10"`, "INFO Not read: refesh in"} {
 		if !strings.Contains(log, entry) {
 			t.Errorf("no %q in the App Log:\n%s", entry, log)
 		}
+	}
+	if strings.Contains(text, "refesh") {
+		t.Errorf("a key not read in the toast:\n%s", text)
+	}
+	if data, _ := os.ReadFile(loc.ConfigFile); !strings.Contains(string(data), "refesh") {
+		t.Errorf("refesh not kept:\n%s", data)
 	}
 }
 

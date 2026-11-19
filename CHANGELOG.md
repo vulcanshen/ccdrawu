@@ -13,6 +13,7 @@ Each release names the version of terminu design (tdp) it follows.
 - A `config.yaml` that reads but has values ccdrawu can't use is no longer one it can't read (tdp E3): at the start, `ccdrawu` copies it to `config.yaml.bak`, writes it again with the default for each such value and says so in a Warning toast, each value a WARN in the App Log with its key, what you wrote and what is used now. Before, some of them were marked red, others quietly read as their defaults, and a value of the wrong kind (`refresh: ten`) made the whole file one it could not read. `ccdrawu statusline` and `ccdrawu uninstall claude` do the same and say so on stderr. When the copy can't be made, the file is left as it is and an Error toast says why. A theme that does not fit is off, which gives Claude Code its own theme back.
 - What one start has to say, a move and values that did not fit, comes in one toast, a row each, and the App Log has an entry for each.
 - An item id in `config.yaml` that the plugin's list of items does not have is taken out at the start, as a value that does not fit.
+- A key in `config.yaml` that ccdrawu does not read, one mistyped or one it read once, stays in the file when `ccdrawu` writes it, where it was taken out, and each start has an INFO of it in the App Log (tdp E3).
 - The drawer says at its top which file can't be read and why when `config.yaml` can't be read, and goes on with what it read last; it said nothing.
 - Built on terminu-go v1.2.17 (tdp v1.2.16).
 

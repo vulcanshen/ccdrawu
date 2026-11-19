@@ -317,12 +317,21 @@ func (c Config) Shown(p Placement, cat Catalog) []Item {
 // WriteConfig writes the whole file at once (a temporary file renamed over
 // it), so a session never reads half of it, as YAML (tdp E3). Written first,
 // it takes the place of the config.json of 0.1.4 and before beside it.
+// The keys of the file there that ccdrawu does not read stay, as they were
+// (tdp E3, a key no longer read or never read).
 func WriteConfig(path string, c Config) error {
 	data, err := json.Marshal(c)
 	if err != nil {
 		return err
 	}
-	if data, err = yamlFromJSON(data); err != nil {
+	doc, err := nodeFromJSON(data)
+	if err != nil {
+		return err
+	}
+	if old, err := os.ReadFile(path); err == nil {
+		keepUnread(doc, old)
+	}
+	if data, err = encodeYAML(doc); err != nil {
 		return err
 	}
 	return writeConfigData(path, data)

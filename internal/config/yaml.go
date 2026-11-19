@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"gopkg.in/yaml.v3"
@@ -18,21 +19,84 @@ import (
 
 // yamlFromJSON writes a JSON document as block YAML, in its own order.
 func yamlFromJSON(data []byte) ([]byte, error) {
+	doc, err := nodeFromJSON(data)
+	if err != nil {
+		return nil, err
+	}
+	return encodeYAML(doc)
+}
+
+// nodeFromJSON is a JSON document as a block YAML node, in its own order.
+func nodeFromJSON(data []byte) (*yaml.Node, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(data, &doc); err != nil {
 		return nil, err
 	}
 	block(&doc)
+	return &doc, nil
+}
+
+// encodeYAML writes a YAML node, indented by two.
+func encodeYAML(doc *yaml.Node) ([]byte, error) {
 	var out bytes.Buffer
 	enc := yaml.NewEncoder(&out)
 	enc.SetIndent(2)
-	if err := enc.Encode(&doc); err != nil {
+	if err := enc.Encode(doc); err != nil {
 		return nil, err
 	}
 	if err := enc.Close(); err != nil {
 		return nil, err
 	}
 	return out.Bytes(), nil
+}
+
+// keepUnread puts the keys of the config.yaml written before (old) that
+// ccdrawu does not read, and their values as they were, after its own in doc,
+// at the top and in the mappings it reads keys of (tdp E3, a key no longer
+// read or never read).
+func keepUnread(doc *yaml.Node, old []byte) {
+	var was yaml.Node
+	if yaml.Unmarshal(old, &was) != nil || len(was.Content) == 0 || len(doc.Content) == 0 {
+		return
+	}
+	keepIn(doc.Content[0], was.Content[0], "")
+}
+
+func keepIn(now, was *yaml.Node, at string) {
+	if now.Kind != yaml.MappingNode || was.Kind != yaml.MappingNode {
+		return
+	}
+	for i := 0; i+1 < len(was.Content); i += 2 {
+		key, value := was.Content[i], was.Content[i+1]
+		if !slices.Contains(readKeys[at], key.Value) {
+			if valueAt(now, key.Value) == nil {
+				now.Content = append(now.Content, key, value)
+			}
+			continue
+		}
+		if _, nested := readKeys[key.Value]; at != "" || !nested || value.Kind != yaml.MappingNode || len(unreadIn(value, key.Value)) == 0 {
+			continue
+		}
+		m := valueAt(now, key.Value)
+		if m == nil || m.Kind != yaml.MappingNode {
+			// None of ccdrawu's own written there: a mapping for those it does not read alone
+			m = &yaml.Node{Kind: yaml.MappingNode, Tag: "!!map"}
+			drop(now, key.Value)
+			now.Content = append(now.Content, &yaml.Node{Kind: yaml.ScalarNode, Tag: "!!str", Value: key.Value}, m)
+		}
+		keepIn(m, value, key.Value)
+	}
+}
+
+// unreadIn are the keys of mapping m, at at, that ccdrawu does not read.
+func unreadIn(m *yaml.Node, at string) []string {
+	var keys []string
+	for i := 0; i+1 < len(m.Content); i += 2 {
+		if !slices.Contains(readKeys[at], m.Content[i].Value) {
+			keys = append(keys, m.Content[i].Value)
+		}
+	}
+	return keys
 }
 
 // block drops the flow and the quotes JSON wrote everything with: the encoder

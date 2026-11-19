@@ -192,6 +192,14 @@ func (d *drawer) say(o opened) tea.Cmd {
 	if o.statusTaken {
 		d.app.Log(terminu.Info, "Claude Code has a status line of its own now: ccdrawu's statusline is off")
 	}
+	// Keys of the config ccdrawu does not read, which stay: an INFO each start, no toast (tdp E3)
+	for _, key := range o.settled.Unread {
+		what := "Not read"
+		if config.UsedToRead(key) {
+			what = "No longer used"
+		}
+		d.app.Log(terminu.Info, what+": "+key+" in "+shortHome(d.loc.ConfigFile)+"; delete it if you don't need it")
+	}
 	cmd := d.sayMoved(o.moved, o.moveErr, o.settled)
 	if o.asideErr != nil {
 		cmd = tea.Batch(cmd, d.app.MoveAside(o.aside, o.asideErr, d.reopen))
