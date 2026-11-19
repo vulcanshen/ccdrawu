@@ -102,7 +102,7 @@ tasks:
   - id: 15
     spec: 1
     request: 讓側邊欄的底色跟終端機一樣：選一個 Claude Code 內建主題當底，再選側邊欄的底色
-    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker, tdp M2, tdp M3, tdp panel.12]
+    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker, tdp M2, tdp M3, tdp panel.12, tdp E2]
     remark:
       - ccdrawu 寫 ~/.claude/themes/ccdrawu.json 並在 Claude Code 選用；Claude theme 設回 off 或移除時換回原本的主題
       - Drawer background 上按 x 改回主題原本的底色（tdp P5 的領域熱鍵）
