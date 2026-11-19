@@ -196,3 +196,5 @@ tasks:
       - ccdrawu 不讀的 key 留著，每個一行 Not read，以前讀過的寫 No longer used（tdp E3-38）
       - 沒有要修的：stdout 印 Nothing to set right in <路徑>.，exit 0；搬不動、備份或寫回失敗 exit 1
       - 只管 ccdrawu 自己的檔（設定、原值、搬家），不查外掛裝了沒、版本對不對：使用者要的是紅字的修法（使用者 2026-11-19）；指令是 app 自行決定的（tdp E1）
+      - note: 沒有畫面的指令 tdp 沒寫的幾件（WARN 與 INFO 寫到哪、讀不了能不能多一句怎麼辦、搬不動怎麼做、TUI 以外要不要指向修的指令、家族共用的指令與 exit status），使用者要家族有共同的 subcommand 規範；暫時照 E1 的放行做：都寫 stderr、一件一行，讀不了多一句怎麼辦，沒做完 exit 1、用法錯 exit 2
+        issue: tdp #24
