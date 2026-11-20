@@ -4,9 +4,10 @@
 // is: idle, the pet now and then goes over and paws at one (hooks/pets.ts), and a snail draws into its
 // shell, an owl spreads its wings. A snail crawls in from beyond an end of the strip, about a column a
 // second, wanders slowly, and crawls off past the nearer end once its shell is done (user: no hurry to
-// show it there or gone); an owl flies down onto the strip, blinks now and then, now and then flies
-// off to perch somewhere else, on the ground or on the git boxes as high as there is room over them, as
-// a kit goes (user, 2026-11-19), and flies off up. Known from the background work a reply's end lists.
+// show it there or gone); an owl flies down onto the strip, rests ten seconds, blinking now and then,
+// flies ten seconds, its wings beating, along the top of the strip, and comes down where it is, on the
+// ground or on the git boxes as high as there is room over them, as a kit goes (user, 2026-11-19), to
+// rest again (user, 2026-11-20), and flies off up. Known from the background work a reply's end lists.
 // An earlier screen for a shell and radar for a monitor, beside the boxes, went (user, 2026-11-06: too
 // hard to show).
 
@@ -23,10 +24,12 @@ export const SNAIL_HIDE_MS = 2_000 // in its shell after the pet has done pawing
 export const OWL_WIDTH = 5 // its wings in
 const OWL_HEIGHT = 6
 const OWL_FLY = 2 // pixels a tick, up or down
-const OWL_FLIGHT_CHANCE = 1 / 50 // a tick's, perched, of flying off to perch somewhere else: about every 10 s (user, 2026-11-19: 30 was too seldom)
+// Down, it rests ten seconds, then flies ten (user, 2026-11-20: every 10 s off, 10 s flying, 10 s of rest)
+const OWL_REST_MS = 10_000
+const OWL_FLIGHT_MS = 10_000
 // The highest it perches: on a layer of the boxes with room over it, as a kit goes (hooks/pets.ts)
 export const OWL_TOP = Math.floor((WALK_HEIGHT - OWL_HEIGHT) / BOX_HEIGHT) * BOX_HEIGHT
-const OWL_CRUISE = WALK_HEIGHT - OWL_HEIGHT // how high it flies, from one perch to another: the top of the strip
+const OWL_CRUISE = WALK_HEIGHT - OWL_HEIGHT // how high it flies: the top of the strip
 const BLINK_CHANCE = 1 / 25 // a tick's: about every five seconds
 const BLINK_MS = 400
 
@@ -113,6 +116,7 @@ export function toysFor(toys: Toy[], tasks: readonly { id: string; type: string 
       air: kind === 'owl',
       leaving: false,
       stepAt: 0,
+      flyUntil: 0,
       stride: 0,
       blinkUntil: 0,
       hitUntil: 0,
@@ -153,28 +157,34 @@ function owlStep(t: Toy, now: number, rand: () => number, ground: (x: number) =>
   // Flying, a wingbeat's frame a tick
   const stride = t.stride + 1
   if (t.leaving) return t.y + OWL_FLY >= WALK_HEIGHT ? undefined : { ...t, y: t.y + OWL_FLY, air: true, stride }
-  // On its way to another perch: a step a tick, up along the top of the strip
-  if (t.x !== t.target) {
-    const faceLeft = t.target < t.x
-    return { ...t, faceLeft, x: t.x + (faceLeft ? -1 : 1), y: Math.min(OWL_CRUISE, t.y + OWL_FLY), air: true, blinkUntil: 0, stride }
+  // In its flight: a step a tick, up along the top of the strip, on to somewhere else along the walk
+  // each time it gets where it was going, till the flight is over; then down where it is
+  if (t.flyUntil > 0) {
+    if (now >= t.flyUntil) return { ...t, flyUntil: 0, target: t.x, stride }
+    const target = t.x !== t.target ? t.target : elsewhere(t.x, rand)
+    const faceLeft = target < t.x
+    return { ...t, target, faceLeft, x: t.x + (faceLeft ? -1 : 1), y: Math.min(OWL_CRUISE, t.y + OWL_FLY), air: true, stride }
   }
-  // There: down onto the boxes, as high as there is room over them, or the ground; up onto boxes that
-  // came under it, down where they went
+  // Down onto the boxes, as high as there is room over them, or the ground, its rest begun; up onto
+  // boxes that came under it, down where they went, its rest going on
   const perch = Math.min(ground(t.x), OWL_TOP)
   if (t.y !== perch) {
     const y = t.y > perch ? Math.max(perch, t.y - OWL_FLY) : Math.min(perch, t.y + OWL_FLY)
-    return { ...t, y, air: y !== perch, stride }
+    const stepAt = y === perch && t.stepAt <= now ? now + OWL_REST_MS : t.stepAt
+    return { ...t, y, air: y !== perch, stepAt, stride }
   }
-  if (t.air) return { ...t, air: false }
+  if (t.air) return { ...t, air: false, stepAt: t.stepAt <= now ? now + OWL_REST_MS : t.stepAt }
   if (t.hitUntil > 0) return now < t.hitUntil ? t : { ...t, hitUntil: 0 }
   if (t.blinkUntil > 0) return now < t.blinkUntil ? t : { ...t, blinkUntil: 0 }
-  // Perched: now and then off to somewhere else along the walk, now and then a blink
-  const r = rand()
-  if (r < OWL_FLIGHT_CHANCE) {
-    const spot = Math.round(rand() * TRACK)
-    return { ...t, target: spot !== t.x ? spot : t.x < TRACK / 2 ? TRACK : 0 }
-  }
-  return r < OWL_FLIGHT_CHANCE + BLINK_CHANCE ? { ...t, blinkUntil: now + BLINK_MS } : t
+  // Rested: off on a flight; resting, now and then a blink
+  if (now >= t.stepAt) return { ...t, flyUntil: now + OWL_FLIGHT_MS, target: elsewhere(t.x, rand), air: true, stride }
+  return rand() < BLINK_CHANCE ? { ...t, blinkUntil: now + BLINK_MS } : t
+}
+
+// A spot along the walk, at random, other than x: the far end when the draw is x
+function elsewhere(x: number, rand: () => number): number {
+  const spot = Math.round(rand() * TRACK)
+  return spot !== x ? spot : x < TRACK / 2 ? TRACK : 0
 }
 
 // The pet has begun pawing at a toy, until then: a snail draws into its shell a while longer, an owl's

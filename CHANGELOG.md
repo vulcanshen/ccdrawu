@@ -2,6 +2,11 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- An owl now keeps time: it rests 10 seconds, flies 10 seconds along the top of the strip, its wings beating, and comes down where it is to rest again. It used to fly off now and then, at random, straight to another perch.
+- In the red hint of the drawer and the status line, `ccdrawu doctor` is blue, set apart from the words around it.
+
 ## v1.3.0 — tdp v1.2.17
 
 - `ccdrawu doctor` sets right what the drawer and the status line say is wrong with `config.yaml`, as `ccdrawu` does when it opens: the values it can't use go back to their defaults, yours kept in `config.yaml.bak`, and it says on stderr each value it changed. A file that can't be read it leaves as it is, and says why.

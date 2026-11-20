@@ -849,50 +849,67 @@ test('a snail crawls in for each shell left in the background and an owl flies d
   expect(toyCells({ ...snail, x: -5 }, 30)).toMatchObject({ left: 0, width: 4 })
   expect(toyCells({ ...snail, x: -1 }, 30)).toMatchObject({ left: 2, width: 6 })
 
-  // The snail crawls a step a second; the owl flies down two pixels a tick and lands
+  // The snail crawls a step a second; the owl flies down two pixels a tick, lands, and rests ten seconds
   let ts = toysTick(toys, 0, quiet)
   expect(ts.map(t => [t.x, t.y])).toEqual([
     [-TOY_OFF + 1, 0],
     [5, WALK_HEIGHT - 2],
   ])
   expect(toysTick(ts, 200, quiet)[0]).toBe(ts[0])
-  for (let t = 200; t <= 18_000; t += 200) ts = toysTick(ts, t, quiet)
+  for (let t = 200; t <= 1_200; t += 200) ts = toysTick(ts, t, quiet)
+  const perched = ts[1]!
+  expect(perched).toMatchObject({ x: 5, y: 0, air: false, stepAt: 11_200, flyUntil: 0 })
+  for (let t = 1_400; t <= 18_000; t += 200) ts = [...toysTick([ts[0]!], t, quiet), perched]
   expect(ts.map(t => [t.x, t.y, t.air])).toEqual([
     [10, 0, false],
     [5, 0, false],
   ])
-  // Now and then the owl blinks
-  const blinking = toysTick([ts[1]!], 20_000, () => 0.03)[0]
-  expect(toyDrawing(blinking!)).not.toEqual(toyDrawing(ts[1]!))
-  expect(toysTick([blinking!], 20_400, quiet)[0]?.blinkUntil).toBe(0)
+  // Resting, now and then the owl blinks
+  const blinking = toysTick([perched], 10_000, () => 0.03)[0]
+  expect(toyDrawing(blinking!)).not.toEqual(toyDrawing(perched))
+  expect(toysTick([blinking!], 10_400, quiet)[0]?.blinkUntil).toBe(0)
 
-  // Now and then it flies off to perch somewhere else: a step a tick along the top of the strip, its
-  // wings beating, then down onto the boxes there, as high as there is room over them, or the ground
+  // Rested, it flies ten seconds, its wings beating: a step a tick along the top of the strip, on to
+  // somewhere else each time it gets there; then down where it is, onto the boxes, as high as there is
+  // room over them, or the ground, to rest ten seconds again (user, 2026-11-20)
   const boxes = (x: number) => (x >= 15 ? 12 : x >= 10 ? 4 : 0)
-  const perched = ts[1]!
-  let flight = toysTick([perched], 30_000, draws(0, 0.6), boxes)
-  expect(flight[0]).toMatchObject({ x: 5, target: 12 })
-  flight = toysTick(flight, 30_200, quiet, boxes)
+  expect(toysTick([perched], 11_000, quiet, boxes)[0]).toBe(perched)
+  let flight = toysTick([perched], 11_200, draws(0.6), boxes)
+  expect(flight[0]).toMatchObject({ x: 5, target: 12, air: true, flyUntil: 21_200 })
+  flight = toysTick(flight, 11_400, quiet, boxes)
   expect([flight[0]?.x, flight[0]?.y, flight[0]?.air]).toEqual([6, 2, true])
   // A frame a tick: up, out, down, out (user, 2026-11-19: wings out and still did not beat)
   const beat = [toyDrawing(flight[0]!)]
-  for (let t = 30_400; t <= 30_800; t += 200) beat.push(toyDrawing((flight = toysTick(flight, t, quiet, boxes))[0]!))
+  for (let t = 11_600; t <= 12_000; t += 200) beat.push(toyDrawing((flight = toysTick(flight, t, quiet, boxes))[0]!))
   const widths = beat.map(f => f[0]?.length)
   expect(widths.slice(1).every((w, i) => w !== widths[i])).toBe(true)
   expect(new Set(widths)).toEqual(new Set([7, 9]))
   expect(new Set(beat.map(f => f.join('/'))).size).toBe(3)
-  for (let t = 31_000; t <= 33_000; t += 200) flight = toysTick(flight, t, quiet, boxes)
-  expect(flight[0]).toMatchObject({ x: 12, y: 4, air: false })
+  // In the air all ten seconds, from one end of the strip to the other
+  const along = new Set<number>()
+  for (let t = 12_200; t < 21_200; t += 200) {
+    flight = toysTick(flight, t, quiet, boxes)
+    expect([flight[0]?.air, flight[0]?.y]).toEqual([true, WALK_HEIGHT - 6])
+    along.add(flight[0]!.x)
+  }
+  expect([Math.min(...along), Math.max(...along)]).toEqual([0, TRACK])
+  // Then down where it is, and ten seconds of rest from there
+  for (let t = 21_200; t <= 22_000; t += 200) flight = toysTick(flight, t, quiet, boxes)
+  const down = flight[0]!
+  expect(down).toMatchObject({ y: Math.min(boxes(down.x), OWL_TOP), air: false, flyUntil: 0 })
+  expect(down.stepAt).toBeGreaterThan(21_200 + 10_000 - 1_000)
+  expect(toysTick(flight, down.stepAt - 200, quiet, boxes)[0]?.flyUntil).toBe(0)
+  expect(toysTick(flight, down.stepAt, quiet, boxes)[0]?.flyUntil).toBe(down.stepAt + 10_000)
   // Over the third layer there is no room for it: on the second, in front of the third
-  let high = [{ ...flight[0]!, target: 18 }]
-  for (let t = 33_200; t <= 36_000; t += 200) high = toysTick(high, t, quiet, boxes)
+  let high = [{ ...down, x: 18, target: 18, y: WALK_HEIGHT, air: true }]
+  for (let t = 22_000; t <= 23_000; t += 200) high = toysTick(high, t, quiet, boxes)
   expect(high[0]).toMatchObject({ x: 18, y: OWL_TOP, air: false })
   // The boxes gone from under it, it comes down onto the ground
-  for (let t = 36_200; t <= 38_000; t += 200) high = toysTick(high, t, quiet)
+  for (let t = 23_200; t <= 25_000; t += 200) high = toysTick(high, t, quiet)
   expect(high[0]).toMatchObject({ x: 18, y: 0, air: false })
   // Up on the boxes or flying, the pet does not go over to it
   const idle: PetState = { ...PET_START, active: 0, x: 2, target: 2 }
-  expect(petTick(idle, 40_000, draws(0, 0), [flight[0]!]).toy).toBeUndefined()
+  expect(petTick(idle, 40_000, draws(0, 0), [{ ...perched, y: 4 }]).toy).toBeUndefined()
   expect(petTick(idle, 40_000, draws(0, 0), [{ ...perched, air: true }]).toy).toBeUndefined()
 
   // Pawed at: the snail draws into its shell a while after, the owl spreads its wings till then
@@ -921,7 +938,7 @@ test('idle, with a snail or an owl about, the pet lies down but does not fall as
     return () => values[Math.min(i++, values.length - 1)] ?? 0
   }
   const quiet = () => 0.99
-  const snail: Toy = { id: 's1', kind: 'snail', ink: {}, x: 12, target: 12, faceLeft: true, y: 0, air: false, leaving: false, stepAt: 1e9, stride: 0, blinkUntil: 0, hitUntil: 0 }
+  const snail: Toy = { id: 's1', kind: 'snail', ink: {}, x: 12, target: 12, faceLeft: true, y: 0, air: false, leaving: false, stepAt: 1e9, flyUntil: 0, stride: 0, blinkUntil: 0, hitUntil: 0 }
   let s: PetState = { ...PET_START, coat: 0, active: 0, x: 2, target: 2 }
   // Ten minutes idle: lying, not asleep, while a toy is about; asleep with none, or one going
   expect(petTick(s, 11 * 60_000, quiet, [snail]).mode).toBe('lie')
@@ -960,7 +977,7 @@ test('idle, with a snail or an owl about, the pet lies down but does not fall as
 test('a tick worked out again on a copy of the state, with the draws kept, comes out as the first time', async () => {
   // The state is read as a copy each time: a tick written is worked out again on it. Drawn afresh, an idle
   // pet's now-and-then went with the first draws; with them drawn again, it is kept
-  const snail = { id: 's1', kind: 'snail', ink: {}, x: 12, target: 12, faceLeft: true, y: 0, leaving: false, stepAt: 0, stride: 0, blinkUntil: 0, hitUntil: 0 } as Toy
+  const snail = { id: 's1', kind: 'snail', ink: {}, x: 12, target: 12, faceLeft: true, y: 0, leaving: false, stepAt: 0, flyUntil: 0, stride: 0, blinkUntil: 0, hitUntil: 0 } as Toy
   let s: PetState = { ...PET_START, coat: 0, active: 0, x: 2, target: 2 }
   let ts: Toy[] = [snail]
   let changed = 0
@@ -1295,7 +1312,8 @@ test('the pane says in red which file has what wrong, and that ccdrawu doctor se
   const issue = (await ui.findAll({ type: 'Text' })).find(t => /did not fit/.test(t.text ?? ''))
   expect(issue?.text).toBe('~/.config/ccdrawu/config.yaml: bar did not fit; run ccdrawu doctor')
   expect(issue?.props.color).toBe(C.red)
-  // The hint inside it, in the color of the text
-  expect((await ui.find({ type: 'Text', text: /^run ccdrawu doctor$/ }))?.props.color).toBe(C.text)
+  // The hint inside it, its words in the color of the text, the command in blue, set apart from them
+  expect((await ui.find({ type: 'Text', text: /^run $/ }))?.props.color).toBe(C.text)
+  expect((await ui.find({ type: 'Text', text: /^ccdrawu doctor$/ }))?.props.color).toBe(C.blue)
   await ui.unmount()
 })

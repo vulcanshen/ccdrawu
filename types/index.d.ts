@@ -127,7 +127,8 @@ export type Toy = {
   y: number // how many pixels over the ground: an owl on the git boxes, or flying
   air: boolean // an owl flying: in, off, or from one perch to another
   leaving: boolean // its task is done: a snail heads past the nearer end, an owl flies off
-  stepAt: number // a snail's next step, or the end of its rest
+  stepAt: number // a snail's next step, or the end of its rest; the end of an owl's rest
+  flyUntil: number // an owl in a flight of its own until then: 0 resting, coming down, or flying in or off
   stride: number
   blinkUntil: number // an owl's eyes shut until then
   hitUntil: number // pawed at by the pet: a snail in its shell, an owl's wings out, until then

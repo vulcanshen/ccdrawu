@@ -86,13 +86,13 @@ tasks:
       - TestPetIsPicked
       - TestConfigKeepsTheAliasAndPet
   - id: 10
-    spec: 6
+    spec: 7
     implementation: |
       ccdrawu statusline：從 stdin 讀 Claude Code 給的 session，讀外掛寫在快取資料夾 sessions/ 的那個 session 的值；沒有的話只畫 Model、Context、Cost
       照 config.yaml 的項目、順序、Format、Color、Separator 排成一列，截到 COLUMNS 減 4 欄，結尾加 …
       on when narrow 時側邊欄在對話旁邊、或終端機寬到 144 欄以上，印一個 reset 讓那一列收起來；沒有東西可畫也一樣
       一週沒寫過的 session 檔刪掉
-      config.yaml 讀不了或有用不了的值（TUI 以外）：用 config.Check 只讀不寫，不動檔、不寫 stderr、exit 0；這一次用預設值照樣排那一列，最後接分隔與紅色（#f38ba8，dimmed 時沒顏色）的標記：「config.yaml can't be read: <原因第一行>」或「config.yaml: <不合的 key>, … did not fit」；值不合的標記放不下（前面的項目剩不到 20 欄）時改短成「config.yaml: N values did not fit」；讀不了的標記一定帶原因（tdp E3-36）：前面的項目讓位，還放不下就截掉原因的結尾加 …；前面的項目截短留位置給標記；標記後面接「; run ccdrawu doctor」，放不下時先把 key 的清單改成「N values did not fit」、再拿掉提示；讀不了的提示先讓位、原因留著
+      config.yaml 讀不了或有用不了的值（TUI 以外）：用 config.Check 只讀不寫，不動檔、不寫 stderr、exit 0；這一次用預設值照樣排那一列，最後接分隔與紅色（#f38ba8，dimmed 時沒顏色）的標記：「config.yaml can't be read: <原因第一行>」或「config.yaml: <不合的 key>, … did not fit」；值不合的標記放不下（前面的項目剩不到 20 欄）時改短成「config.yaml: N values did not fit」；讀不了的標記一定帶原因（tdp E3-36）：前面的項目讓位，還放不下就截掉原因的結尾加 …；前面的項目截短留位置給標記；標記後面接「; run ccdrawu doctor」，放不下時先把 key 的清單改成「N values did not fit」、再拿掉提示；讀不了的提示先讓位、原因留著；顏色：「; 」接在紅色的標記裡，「run 」#cdd6f4，「ccdrawu doctor」#89b4fa（dimmed 時都沒顏色）
     test:
       - TestRunMarksValuesThatDoNotFit
       - TestRunMarksAConfigThatCantBeRead
@@ -229,7 +229,7 @@ tasks:
     test:
       - commit: 5de15c1
   - id: 21
-    spec: 6
+    spec: 7
     implementation: |
       config.yaml 在 CCDRAWU__CONFIG、XDG_CONFIG_HOME/ccdrawu 或 ~/.config/ccdrawu；快取在 CCDRAWU__CACHE 或系統快取資料夾；originals.yaml 在 CCDRAWU__DATA 或 ~/.ccdrawu
       啟動時把 config.json 與舊位置的檔搬到新位置，搬了的用 Info toast 說「Moved <從> to <到>」
@@ -243,7 +243,7 @@ tasks:
       搬家的 Info 與不合的值（terminu.MisfitNotice；備份做不出來時先一列 Error 寫原因，再接不帶那一句、只帶 WARN 的 MisfitNotice）一起交給 App.Notify：一個 toast、一件一行、種類取最重的，App Log 一件一筆、每個值一筆 WARN
       搬家（config.json → config.yaml、config 裡的 theme.before／statusline.before → originals.yaml）照原文寫，不合的值留給 Settle
       ccdrawu 不讀的 key（頂層，與 pet、drawer、theme、statusline 底下的）：WriteConfig 用 yaml.Node 把原檔裡這些 key 與值照原樣接在後面，存設定與 E3 重寫都留著；啟動時 Settle 列出來，TUI 每個記一筆 INFO「Not read: <key> in <路徑>; delete it if you don't need it」，ccdrawu 以前讀過的 input_tab_width 寫 No longer used；不跳 toast
-      外掛（hooks）每秒讀 config.yaml，TUI 以外，不動檔：解不開時當成寫到一半，下一秒還是一樣才算讀不了，這時用預設值，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」；讀得了但有用不了的值（configMisfits，規則與 config.readFit 一樣），照預設畫，那一列寫「<路徑>: <不合的 key>, … did not fit」；都沒有就拿掉那一列；那一列比面板寬時折成好幾行，路徑與原因整句都看得到（2026-11-19 在沙盒截圖驗過）；那一列後面接「; 」與一般文字顏色（#cdd6f4）的「run ccdrawu doctor」
+      外掛（hooks）每秒讀 config.yaml，TUI 以外，不動檔：解不開時當成寫到一半，下一秒還是一樣才算讀不了，這時用預設值，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」；讀得了但有用不了的值（configMisfits，規則與 config.readFit 一樣），照預設畫，那一列寫「<路徑>: <不合的 key>, … did not fit」；都沒有就拿掉那一列；那一列比面板寬時折成好幾行，路徑與原因整句都看得到（2026-11-19 在沙盒截圖驗過）；那一列後面接紅色的「; 」、一般文字顏色（#cdd6f4）的「run 」與 Blue（#89b4fa）的「ccdrawu doctor」
     test:
       - TestValuesThatDoNotFitAreTheirDefaults
       - TestSettleKeepsTheFileAsideAndWritesItAgain
@@ -298,12 +298,12 @@ tasks:
     test:
       - commit: f6cf97f
   - id: 27
-    spec: 4
+    spec: 7
     implementation: |
       外掛在主 agent 每次回覆結束（classic.Stop）讀 background_tasks：type 是 shell 的一個一隻蝸牛、monitor 的一個一隻貓頭鷹；Monitor 工具開的 monitor 在清單裡標成 shell，用 Monitor 呼叫回來的 taskId 認出來；清單裡沒有了的離場
       蝸牛 6×4 像素（殼、殼上的螺紋、身體），從走道左端或右端外面 9 步（看不到）每秒爬一步進來，停 4～8 秒再爬到走道上別的地方；離場時爬到近的那一端外面才拿掉，走道外一步一欄，只畫在走道裡的那幾欄
       貓頭鷹 5×6 像素，從走道上方每 tick 下降 2 像素，落在隨機位置；飛的時候振翅，每 tick 換一張：翅膀往上舉（9 像素寬）、平伸（7）、往下壓（9）、平伸（使用者 2026-11-19：「貓頭鷹飛起來的時候翅膀打開但是沒有振翅」）；平均約 5 秒眨一次眼（0.4 秒）；離場時振翅，每 tick 往上 2 像素，飛出走道才拿掉
-      貓頭鷹停著時每 tick 有 1/50 機率（約 10 秒一次）飛到走道上隨機的別處：每 tick 一步、往上 2 像素到走道頂（8 像素），到了再每 tick 下降 2 像素；落點有紙箱就停在紙箱上，最高到 OWL_TOP（走道 14 像素減貓頭鷹 6 像素，取整層＝8，第二層），第三層停在它前面；腳下的紙箱沒了就降到下面，多了就上去
+      貓頭鷹降落後休息 10 秒（stepAt），起飛飛 10 秒（flyUntil）：每 tick 一步、往上 2 像素到走道頂（8 像素），到了走道上隨機的別處就再挑一個，一直振翅；10 秒到了就在當下的位置每 tick 下降 2 像素，再休息 10 秒（使用者 2026-11-20）；休息時才眨眼；落點有紙箱就停在紙箱上，最高到 OWL_TOP（走道 14 像素減貓頭鷹 6 像素，取整層＝8，第二層），第三層停在它前面；腳下的紙箱沒了就降到下面，多了就上去
       配色出場時隨機生成（OKLCH，亮度固定、色相隨機）：蝸牛殼 0.76、殼上的螺紋同色相 0.55、身體另一個色相 0.82；貓頭鷹羽毛 0.64、胸口同色相 0.86，眼睛、嘴、腳固定黃與橘
       畫在紙箱前面、小隻與寵物後面，彼此可以重疊；只佔半格的地方，另一半畫後面的顏色；只畫在側邊欄
       Claude 閒著時，寵物每 tick 有 1/125 機率（約 25 秒一次）挑一隻停在走道地上的（不挑飛著、停在紙箱上的），走到牠旁邊 5 步（近的那一側），面向牠揮爪 1.6 秒；蝸牛在揮爪時與之後 2 秒縮進殼裡，貓頭鷹在揮爪時張開翅膀；Claude 開始工作、牠離場或球來了就不去

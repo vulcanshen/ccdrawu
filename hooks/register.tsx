@@ -63,7 +63,8 @@ import {
   chunk,
   COLUMN_GAP,
   columnRows,
-  DOCTOR_HINT,
+  DOCTOR_COMMAND,
+  DOCTOR_RUN,
   drawerShows,
   drawerWanted,
   enabledItems,
@@ -728,7 +729,8 @@ export const register: Register = on => {
       issue === null ? null : (
         <Text color={C.red}>
           {issue + '; '}
-          <Text color={C.text}>{DOCTOR_HINT}</Text>
+          <Text color={C.text}>{DOCTOR_RUN}</Text>
+          <Text color={C.blue}>{DOCTOR_COMMAND}</Text>
         </Text>
       )
     // The pet is not a row: it is drawn on its own, over the rows or left of the columns

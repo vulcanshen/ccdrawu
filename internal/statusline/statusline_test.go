@@ -190,6 +190,21 @@ func TestRunMarksValuesThatDoNotFit(t *testing.T) {
 	if got := ansi.Strip(run(t, loc, input, 0, time.Now())); got != "Model claude-opus-5-5 | config.yaml: statusline.format, statusline.separator did not fit; run ccdrawu doctor\n" {
 		t.Errorf("%q", got)
 	}
+	// The mark red, the hint's words in the text's color, the command in the labels' blue
+	var out bytes.Buffer
+	if err := Run(strings.NewReader(input), &out, loc, 0, time.Now()); err != nil {
+		t.Fatal(err)
+	}
+	got := out.String()
+	for _, want := range []string{
+		"\x1b[38;2;243;139;168mconfig.yaml: statusline.format, statusline.separator did not fit; \x1b[0m",
+		"\x1b[38;2;205;214;244mrun \x1b[0m",
+		"\x1b[38;2;137;180;250mccdrawu doctor\x1b[0m",
+	} {
+		if !strings.Contains(got, want) {
+			t.Errorf("no %q in %q", want, got)
+		}
+	}
 	// Narrower: the keys go before the hint
 	if got := ansi.Strip(run(t, loc, input, 90, time.Now())); !strings.HasSuffix(got, " | config.yaml: 2 values did not fit; run ccdrawu doctor\n") {
 		t.Errorf("narrower: %q", got)
