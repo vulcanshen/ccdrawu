@@ -190,7 +190,8 @@ tasks:
       preferences 頁 Plugin：Enter 開 confirm 問過，再跑 ccdrawu install claude 那一套；Claude Code 印的字記進 App Log
       外掛還沒寫出 catalog.json 時，sidebar、inline、statusline 頁寫還沒有東西可以列，提示在 Plugin 上按 Enter
       Plugin 的 confirm：「Installs the ccdrawu plugin for your user, as `ccdrawu install claude` does.」「New sessions have the drawer; open ones take it with `/reload-plugins`.」；移除的：「…, as `ccdrawu uninstall claude` does.」
-      ccdrawu 開著時每 2 秒（App.Tick）看 catalog.json 的修改時間，變了才讀；不是第一次讀到時，App Log 記 INFO「The ccdrawu plugin changed its items; added <名字>, …; taken out <名字>, …」，之前沒有就「The ccdrawu plugin wrote its items: N of them」
+      ccdrawu 開著時每 2 秒（App.Tick）看 catalog.json 的修改時間，變了才讀；不是第一次讀、項目也真的變了（slices.Equal 比 Items）時，App Log 記 INFO「The ccdrawu plugin changed its items; added <名字>, …; taken out <名字>, …」，之前沒有就「The ccdrawu plugin wrote its items: N of them」；項目沒變不記
+      catalog.json 讀不了：刪掉等外掛重寫（E3 的快取）；啟動時記 WARN「Threw away <路徑> for the plugin to write anew, as it can't be read: <原因>」；之後重讀時同一句話，第一次跳 Error toast（App.Toast，同時記 ERR），跟上一次同一句不跳不記；又讀得到時記 INFO「<路徑> can be read again」，不跳 toast；讀成功過一次之後再失敗，算新的第一次，照樣跳；讀不了、檔案被丟掉時，頁面照舊畫上一次讀到的項目（d.cat 不清空，tdp panel.15「舊的內容還在就留著」），不變成還沒有 catalog 的空狀態
     test:
       - TestCatalogWrittenAgainIsInTheAppLog
       - TestPluginRowInstallsAfterAsking

@@ -23,11 +23,13 @@ type drawer struct {
 	cat    config.Catalog
 	stamp  time.Time // the catalog's mtime when it was read
 	looked bool      // whether load has looked for the catalog once: later, one read is one the plugin wrote anew
-	cfg    config.Config
-	orig   config.Originals // what ccdrawu replaced in Claude Code, to put back
-	kept   config.Originals // orig as written in originals.yaml
-	detail *terminu.Panel
-	pages  map[string]*terminu.Values // [2]'s body for each row of [1]
+	// why the catalog read again last could not be read, "" while it can (tdp note.7)
+	catalogErr string
+	cfg        config.Config
+	orig       config.Originals // what ccdrawu replaced in Claude Code, to put back
+	kept       config.Originals // orig as written in originals.yaml
+	detail     *terminu.Panel
+	pages      map[string]*terminu.Values // [2]'s body for each row of [1]
 
 	background *terminu.Field            // the drawer background, which x resets
 	drawerOn   map[string]*terminu.Field // the drawer's on and off atop sidebar and inline, each its own
@@ -299,28 +301,43 @@ func (d *drawer) show(id string) {
 
 // load reads the catalog when it is new or changed: Claude Code writes it each
 // time the mod starts, so a mod updated (or run for the first time) while the
-// TUI is open shows up by itself.
-func (d *drawer) load() {
+// TUI is open shows up by itself. Read again on its own, what it finds goes to
+// the App Log as tdp note.7 has it; the Error toast it gives, if any, is its
+// result.
+func (d *drawer) load() tea.Cmd {
 	path := d.loc.Catalog()
 	again := d.looked
 	d.looked = true
 	info, err := os.Stat(path)
 	if err != nil || info.ModTime().Equal(d.stamp) {
-		return
+		return nil
 	}
 	cat, ok, err := config.ReadCatalog(path)
 	// A cache: one that can't be read is thrown away, and the plugin writes it
-	// again as a session starts (tdp E3, can't be read)
+	// again as a session starts (tdp E3, can't be read). At the start, a WARN;
+	// read again, the first such failure an Error toast and its ERR, the same
+	// one again nothing, and reading it again after one an INFO (tdp note.7)
 	if err != nil {
 		os.Remove(path)
-		d.app.Log(terminu.Warning, "Threw away "+shortHome(path)+" for the plugin to write anew, as it can't be read: "+err.Error())
-		return
+		text := "Threw away " + shortHome(path) + " for the plugin to write anew, as it can't be read: " + err.Error()
+		switch {
+		case !again:
+			d.app.Log(terminu.Warning, text)
+		case text != d.catalogErr:
+			d.catalogErr = text
+			return d.app.Toast(terminu.Error, text)
+		}
+		return nil
 	}
 	if !ok {
-		return
+		return nil
+	}
+	if d.catalogErr != "" {
+		d.catalogErr = ""
+		d.app.Log(terminu.Info, shortHome(path)+" can be read again")
 	}
 	// Read again on its own and found changed: an INFO of what changed; the same, nothing (tdp note.7)
-	if again {
+	if again && !slices.Equal(d.cat.Items, cat.Items) {
 		d.app.Log(terminu.Info, catalogChange(d.cat, cat))
 	}
 	d.cat, d.stamp = cat, info.ModTime()
@@ -328,6 +345,7 @@ func (d *drawer) load() {
 		d.pages[id].Fields = append([]*terminu.Field{d.drawerOn[id]}, d.summary(id)...)
 	}
 	d.pages[rowStatusline].Fields = d.statuslineFields()
+	return nil
 }
 
 // catalogChange says what the plugin changed in the items it offers, as it
@@ -390,9 +408,9 @@ func (d *drawer) radio(f *terminu.Field, selected func() int) *terminu.Field {
 }
 
 func (d *drawer) reload() tea.Cmd {
-	d.load()
+	said := d.load()
 	// The app's clock, which a test moves on (tdptest)
-	return d.app.Tick(2*time.Second, func(time.Time) tea.Msg { return catalogTick{} })
+	return tea.Batch(said, d.app.Tick(2*time.Second, func(time.Time) tea.Msg { return catalogTick{} }))
 }
 
 func (d *drawer) onMsg(msg tea.Msg) tea.Cmd {

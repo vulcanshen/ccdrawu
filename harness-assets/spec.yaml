@@ -121,11 +121,11 @@ tasks:
   - id: 17
     spec: 8
     request: 在 ccdrawu 裡安裝外掛；外掛還沒寫出項目清單時，頁面說還沒有東西可以列、提示怎麼裝
-    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3, tdp panel.12, tdp M5, tdp M5-32, tdp note-104]
+    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3, tdp panel.12, tdp M5, tdp M5-32, tdp note-104, tdp note-105, tdp E3, tdp toast, tdp F5]
     remark:
       - preferences 的 Plugin 上按 Enter 安裝外掛
       - 安裝與移除的 confirm 裡 `ccdrawu install claude`、`/reload-plugins`、`ccdrawu uninstall claude` 用反引號（tdp M5；tdp v1.2.18；tdp #25）
-      - ccdrawu 開著時每 2 秒看一次外掛寫的 catalog.json（自己重讀的內容）：讀到變了，App Log 記一筆 INFO 寫出外掛加了、拿掉了哪些項目；沒變不記（tdp note.7；tdp v1.2.18）。讀不了照 E3 的快取丟掉、記 WARN，跟原本一樣
+      - ccdrawu 開著時每 2 秒看一次外掛寫的 catalog.json（自己重讀的內容）：讀到項目變了，App Log 記一筆 INFO 寫出外掛加了、拿掉了哪些項目；外掛寫了同樣的一份（修改時間變了、項目沒變）不記（tdp note.7、note-104）。讀不了：照 E3 是快取，不問、丟掉等外掛重寫；啟動時那一次記 WARN；之後重讀時第一次失敗跳 Error toast、記 ERR，同一個失敗再來不跳不記，換了一個失敗再跳；又讀得到時記一筆 INFO（<路徑> can be read again），不跳 toast（tdp note.7、note-105；tdp v1.2.18）
   - id: 18
     spec: 8
     request: ccdrawu install claude 把同一版的外掛裝進 Claude Code，ccdrawu uninstall claude 拿掉它並換回原本的主題與狀態列

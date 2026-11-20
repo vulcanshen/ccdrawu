@@ -481,14 +481,51 @@ func TestCatalogWrittenAgainIsInTheAppLog(t *testing.T) {
 		}
 	}
 	changed := config.Catalog{Version: 1, Items: append(slices.Clone(testCatalog.Items[1:]), config.Item{ID: "tasks", Label: "Tasks", Name: "Tasks", Group: "Session", Dock: true})}
-	write(changed, time.Now().Add(time.Hour))
+	at := time.Now()
+	later := func() time.Time { at = at.Add(time.Hour); return at }
+	write(changed, later())
 	d.load()
 	d.load()
-	d.app.Update(tea.WindowSizeMsg{Width: 160, Height: 40})
+	// Written again the same, a new time on it: nothing
+	write(changed, later())
+	d.load()
+	// Read again and can't be: thrown away (tdp E3), the first time an Error toast and its ERR, the same
+	// failure again nothing; read again after it, an INFO with no toast
+	broken := func() {
+		t.Helper()
+		if err := os.WriteFile(path, []byte("{"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(path, later(), at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	broken()
+	toast := d.load()
+	if toast == nil {
+		t.Fatal("no Error toast for the catalog read again that can't be")
+	}
+	run(d, toast)
+	broken()
+	if d.load() != nil {
+		t.Fatal("a toast again for the same failure")
+	}
+	write(testCatalog, later())
+	if d.load() != nil {
+		t.Fatal("a toast for the catalog read again")
+	}
+	d.app.Update(tea.WindowSizeMsg{Width: 200, Height: 40})
 	press(d, key("!"))
 	text := frameText(d)
-	if n := strings.Count(text, "INFO The ccdrawu plugin changed its items; added Tasks; taken out Model"); n != 1 {
-		t.Fatalf("%d entries of the change in the App Log:\n%s", n, text)
+	for entry, want := range map[string]int{
+		"INFO The ccdrawu plugin changed its items; added Tasks; taken out Model": 1,
+		"ERR  Threw away":   1,
+		"can be read again": 1,
+		"INFO The ccdrawu plugin changed its items; added Model; taken out Tasks": 1,
+	} {
+		if n := strings.Count(text, entry); n != want {
+			t.Fatalf("%d of %q in the App Log, want %d:\n%s", n, entry, want, text)
+		}
 	}
 }
 
