@@ -339,7 +339,7 @@ tasks:
   - id: 29
     spec: 11
     implementation: |
-      preferences 頁 Pet 列下面：Shell 列（值寫目前的樣子，沒設過是 sea-snail），Enter 開 select（標題 SHELL、glyph nf-md-snail），選項照 config.PetShells：sea-snail、sea-snail-7x4、sea-snail-6x4、sea-snail-5x3、spire、horn、cone、hermit-crab、snail、none，選了就寫進 config.yaml 的 pet.shell（寫不成照 commit 放回原樣、select 不關、跳錯誤）；Monitor 列是畫在原地的 radio（owl、none），寫 pet.monitor
+      preferences 頁 Pet 列下面：Shell 列（值寫目前的樣子，沒設過是 sea-snail），Enter 開 select（標題 SHELL、glyph nf-md-snail），選項照 config.PetShells：sea-snail、sea-snail-7x4、sea-snail-6x4、sea-snail-5x3、spire、horn、cone、hermit-crab、snail、none，選了就寫進 config.yaml 的 pet.shell（寫不成照 commit 放回原樣；Select.Commit 回錯誤，select 不關、值留著，terminu-go 在它上面開 error popup，tdp popup.7，不用 toast，tdp toast.1）；Monitor 列是畫在原地的 radio（owl、none），寫 pet.monitor
       config.Pet 多 Shell、Monitor；fit 照 oneOf 讀：不是選項之一的換成第一個（sea-snail、owl），跟 pet.species 一樣是 Misfit；readKeys 的 pet 多 shell、monitor，不算 Not read
       外掛（hooks/toys.ts）：SHELL_LOOKS 九種樣子，每種有爬 1、爬 2、縮進殼三張，面向左；shellLook(pet.shell) 拿樣子，沒設、不認得的是 sea-snail，none 是沒有；toyDrawing、toyCells 照樣子畫，寄居蟹的鉗子與眼睛（c、p）每隻一樣，畫在 toyInk 裡；SHELLS、MONITORS 跟 Go 的兩個清單同順序
       各樣子：圓頂海螺 6×3、7×4、6×4、5×3；尖塔（7×5）、號角（7×5）、長錐（7×4）海螺；這幾種照海螺的規則（殼後半貼地、身體伸進殼底下兩格、爬時只有最下一列在動、觸角不動、縮進殼時口蓋 d）；寄居蟹 6×4（眼睛在柄上、鉗子，爬時腳在動，縮進殼時只剩殼）；蝸牛 6×4（原本的樣子，觸角傾斜）

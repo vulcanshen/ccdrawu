@@ -216,7 +216,7 @@ tasks:
   - id: 29
     spec: 11
     request: 在 ccdrawu 的設定選背景 shell 與 monitor 在走道上的樣子，也可以不顯示：shell 有這次試過的每一種（圓頂海螺 6×3、7×4、6×4、5×3，尖塔、號角、長錐海螺，寄居蟹，原本的蝸牛），monitor 是貓頭鷹
-    tdp: [tdp P5, tdp panel.12, tdp radio, tdp radio.1, tdp select, tdp E3]
+    tdp: [tdp P5, tdp panel.12, tdp radio, tdp radio.1, tdp select, tdp E3, tdp popup.1, tdp popup.7, tdp toast.1]
     remark:
       - preferences 頁 Pet 列下面兩列：Shell 十個選項（九種樣子與 none），超過五個用 select（tdp radio.1）；Monitor 兩個選項（owl、none），畫在原地的 radio，跟 Pet 一樣
       - 存在 config.yaml 的 pet.shell、pet.monitor（跟 pet.species 放一起：都是寵物走道上的東西）；值不是選項之一時照 tdp E3 換成預設（sea-snail、owl），跟其他值一樣
