@@ -760,6 +760,38 @@ func TestPetIsPicked(t *testing.T) {
 	}
 }
 
+// How a background shell and monitor show beside the pet, or none (user,
+// 2026-11-20): ten looks for a shell, more than five, so a select (tdp
+// radio.1); two for a monitor, drawn in place
+func TestShellAndMonitorArePicked(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	toField(t, d, "Shell")
+	if text := frameText(d); !strings.Contains(text, "sea-snail") {
+		t.Fatalf("the shell row does not read sea-snail before one is picked:\n%s", text)
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if text := frameText(d); !strings.Contains(text, "SHELL") || !strings.Contains(text, "hermit-crab") || !strings.Contains(text, "none") {
+		t.Fatalf("Enter on the shell did not open a select of the looks:\n%s", text)
+	}
+	for range slices.Index(config.PetShells, "hermit-crab") {
+		press(d, key("j"))
+	}
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Pet.Shell != "hermit-crab" {
+		t.Fatalf("pet = %+v, want the hermit crab for a shell", c.Pet)
+	}
+	if text := frameText(d); !strings.Contains(text, "hermit-crab") {
+		t.Fatalf("the shell row does not read hermit-crab:\n%s", text)
+	}
+
+	toField(t, d, "Monitor") // on the owl
+	press(d, key("j"))
+	press(d, tea.KeyMsg{Type: tea.KeyEnter})
+	if c, _ := config.ReadConfig(loc.ConfigFile); c.Pet.Monitor != "none" || c.Pet.Shell != "hermit-crab" {
+		t.Fatalf("pet = %+v, want no owl for a monitor, the hermit crab kept", c.Pet)
+	}
+}
+
 // tdp panel.12, one value per row: a value set by hand in
 // config.yaml that ccdrawu does not take turns its label Red
 // tdp E3-28, E3-30, E3-37: values in config.yaml ccdrawu can't use are their

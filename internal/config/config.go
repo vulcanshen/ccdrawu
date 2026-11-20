@@ -172,14 +172,26 @@ var BarStyles = []string{"squares", "line"}
 
 // Pet is the pet as the mod draws it (hooks/pets.ts): Species one of
 // PetSpecies ("" for the first, the cat). Its coat is the mod's to pick, a new
-// one each session.
+// one each session. Shell and Monitor are how a background shell and monitor
+// show on its strip (hooks/toys.ts), one of PetShells and PetMonitors ("" for
+// the first), "none" for not at all.
 type Pet struct {
 	Species string `json:"species,omitempty"`
+	Shell   string `json:"shell,omitempty"`
+	Monitor string `json:"monitor,omitempty"`
 }
 
 // PetSpecies are the animals the mod draws, in the order of its SPECIES
 // (hooks/pets.ts); one it does not know is the cat.
 var PetSpecies = []string{"cat", "dog", "rabbit", "duck", "penguin"}
+
+// PetShells are the looks the mod draws a background shell in, in the order
+// of its SHELLS (hooks/toys.ts): the sea snail first, then every one tried on
+// the way to it (the user's, 2026-11-20), and none.
+var PetShells = []string{"sea-snail", "sea-snail-7x4", "sea-snail-6x4", "sea-snail-5x3", "spire", "horn", "cone", "hermit-crab", "snail", "none"}
+
+// PetMonitors are the same for a background monitor (MONITORS).
+var PetMonitors = []string{"owl", "none"}
 
 // Theme is ccdrawu's Claude Code theme (internal/claude): Base, a built-in
 // theme ("" for none, the user's own theme as it was), with Background over

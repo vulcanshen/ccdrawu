@@ -16,10 +16,12 @@ import (
 )
 
 // The preferences past the alias: Claude Code's theme with the drawer's
-// background (internal/claude, theme), how the drawer draws its bars, the pet,
-// and whether the plugin is in Claude Code.
+// background (internal/claude, theme), how the drawer draws its bars, the pet
+// and how background shells and monitors show beside it, and whether the plugin
+// is in Claude Code.
 
 const glyphPalette = "\U000F03D8" // nf-md-palette, the background picker's title
+const glyphSnail = "\U000F1677"   // nf-md-snail, the shell picker's title
 
 var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 
@@ -171,6 +173,36 @@ func (d *drawer) petField() *terminu.Field {
 		return d.save()
 	}
 	return d.radio(f, func() int { return max(0, slices.Index(options, d.cfg.Pet.Species)) })
+}
+
+// shellField picks how a shell left in the background shows on the pet's
+// strip, or none (user, 2026-11-20: every look tried on the way to the sea
+// snail a choice). More than five to pick from, so a select (tdp radio.1); it
+// takes effect when picked, open sessions drawing it within a second.
+func (d *drawer) shellField() *terminu.Field {
+	options := config.PetShells
+	return &terminu.Field{Label: "Shell", Value: func() string { return cmp.Or(d.cfg.Pet.Shell, options[0]) }, Edit: func() tea.Cmd {
+		return d.app.Select(terminu.Select{
+			Title: "Shell", Glyph: glyphSnail, Options: options, Selected: max(0, slices.Index(options, d.cfg.Pet.Shell)),
+			Commit: func(i int) error {
+				return d.commit(func() error {
+					d.cfg.Pet.Shell = options[i]
+					return nil
+				})
+			},
+		})
+	}}
+}
+
+// monitorField picks the same for a monitor: the owl or none, drawn in place.
+func (d *drawer) monitorField() *terminu.Field {
+	options := config.PetMonitors
+	f := &terminu.Field{Label: "Monitor", Options: options}
+	f.OnChange = func() tea.Cmd {
+		d.cfg.Pet.Monitor = options[f.Selected]
+		return d.save()
+	}
+	return d.radio(f, func() int { return max(0, slices.Index(options, d.cfg.Pet.Monitor)) })
 }
 
 // The plugin row: whether Claude Code has the ccdrawu plugin, found with

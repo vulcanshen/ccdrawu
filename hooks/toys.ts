@@ -1,5 +1,6 @@
 // Snails and owls (user, 2026-11-19): beside the transcript, for each shell left in the background a
-// snail on the pet's strip, a sea snail (user, 2026-11-20: a shell's), and for each monitor an owl, as many as there are, over one another, the
+// snail on the pet's strip, a sea snail (user, 2026-11-20: a shell's) or the look the settings pick
+// (SHELL_LOOKS), and for each monitor an owl, either kind none at all if the settings say so, as many as there are, over one another, the
 // git boxes and the pet as they come, each in colors made up at random when it comes, in a hue away from
 // those of its kind about (user, 2026-11-20: their colors too often alike). Toys, as the ball
 // is: idle, the pet now and then goes over and paws at one (hooks/pets.ts), and a snail draws into its
@@ -18,9 +19,6 @@ import { BOX_HEIGHT } from './pile'
 
 const PET_WIDTH = 12 // a pet's columns: a toy is placed along the walk as a pet is
 export const TOY_LEFT = 3 // a toy's columns from the left of the box a pet at its place would have
-const SNAIL_WIDTH = 7
-// Steps beyond an end of the walk where a snail is out of sight: past the left its width as well
-export const TOY_OFF = Math.max(PET_WIDTH - TOY_LEFT, TOY_LEFT + SNAIL_WIDTH)
 const SNAIL_STEP_MS = 1_000
 const SNAIL_REST_MS = 4_000 // and up to as long again, where it got to
 export const SNAIL_HIDE_MS = 2_000 // in its shell after the pet has done pawing at it
@@ -36,15 +34,78 @@ const OWL_CRUISE = WALK_HEIGHT - OWL_HEIGHT // how high it flies: the top of the
 const BLINK_CHANCE = 1 / 25 // a tick's: about every five seconds
 const BLINK_MS = 400
 
-// A sea snail, facing left: a domed shell, its spire a nub on top, resting on the ground at the back,
-// its body two columns in under it and out at the front, a tentacle up (user, 2026-11-20: half the
-// shell on the ground, the body in under it two cells). As it goes, what touches the ground moves: the
-// front of its foot, out and in; the tentacle stays. In its shell, the lid shuts the opening
-const SNAIL: Record<'walk1' | 'walk2' | 'shell', string[]> = {
-  walk1: ['b...d..', '.b.sss.', '.bsdsds', 'bbbbsss'],
-  walk2: ['b...d..', '.b.sss.', '.bsdsds', '.bbbsss'],
-  shell: ['....d..', '...sss.', '..sdsds', '..ddsss'],
+// The looks a shell's toy takes, facing left, the user's pick in the settings (pet.shell; user,
+// 2026-11-20: every one tried on the way to the sea snail a choice, or none). The first, the default:
+// a sea snail with a domed shell, its spire a nub on top, resting on the ground at the back, its body
+// two columns in under it and out at the front, a tentacle up (user: half the shell on the ground, the
+// body in under it two cells; 6 x 3, smaller than a kit). The sea snails are all so: as they go, what
+// touches the ground moves, the front of the foot, out and in, and the tentacle stays; in the shell,
+// the lid (d) shuts the opening. A hermit crab's legs move; the snail, as it was, leans its stalk
+export type ShellLook = Record<'walk1' | 'walk2' | 'shell', string[]>
+export const SHELL_LOOKS = {
+  'sea-snail': { walk1: ['b..sd.', '.bsdss', 'bbbbss'], walk2: ['b..sd.', '.bsdss', '.bbbss'], shell: ['...sd.', '..sdss', '..ddss'] },
+  'sea-snail-7x4': {
+    walk1: ['b...d..', '.b.sss.', '.bsdsds', 'bbbbsss'],
+    walk2: ['b...d..', '.b.sss.', '.bsdsds', '.bbbsss'],
+    shell: ['....d..', '...sss.', '..sdsds', '..ddsss'],
+  },
+  'sea-snail-6x4': {
+    walk1: ['b...d.', '.b.ss.', '.bsdss', 'bbbbss'],
+    walk2: ['b...d.', '.b.ss.', '.bsdss', '.bbbss'],
+    shell: ['....d.', '...ss.', '..sdss', '..ddss'],
+  },
+  'sea-snail-5x3': { walk1: ['b.sd.', '.bsds', 'bbbbs'], walk2: ['b.sd.', '.bsds', '.bbbs'], shell: ['..sd.', '..sds', '..dds'] },
+  // Its spire up and back to a point
+  spire: {
+    walk1: ['......d', '.....sd', 'b..ssds', '.bsdsss', 'bbbbdss'],
+    walk2: ['......d', '.....sd', 'b..ssds', '.bsdsss', '.bbbdss'],
+    shell: ['......d', '.....sd', '...ssds', '..sdsss', '..dddss'],
+  },
+  // A wide opening, back to a horn's point
+  horn: {
+    walk1: ['b..ss..', '.bsdss.', '..sdsdd', '..ssss.', 'bbbbss.'],
+    walk2: ['b..ss..', '.bsdss.', '..sdsdd', '..ssss.', '.bbbss.'],
+    shell: ['...ss..', '..sdss.', '..sdsdd', '..ssss.', '..ddss.'],
+  },
+  // A long cone lying back, its point up
+  cone: {
+    walk1: ['b.ss...', '.bsdss.', '..ssdsd', 'bbbbdss'],
+    walk2: ['b.ss...', '.bsdss.', '..ssdsd', '.bbbdss'],
+    shell: ['..ss...', '..sdss.', '..ssdsd', '..dddss'],
+  },
+  // Its eye (p) on a stalk, a claw (c) out
+  'hermit-crab': {
+    walk1: ['p.sss.', 'c.sdds', 'ccsdds', '.c.c..'],
+    walk2: ['p.sss.', 'c.sdds', 'ccsdds', 'c.c.c.'],
+    shell: ['..sss.', '..sdds', '..sdds', '..sss.'],
+  },
+  snail: {
+    walk1: ['b..ss.', 'b.sdss', 'bbsdds', 'bbbbbb'],
+    walk2: ['.b.ss.', '.bsdss', 'bbsdds', 'bbbbbb'],
+    shell: ['...ss.', '..sdss', '..sdds', '..sss.'],
+  },
+} satisfies Record<string, ShellLook>
+// pet.shell's values, as the settings list them (config.PetShells), and pet.monitor's
+export const SHELLS = [...Object.keys(SHELL_LOOKS), 'none']
+export const MONITORS = ['owl', 'none']
+
+// The look pet.shell names, the sea snail for one it does not name; none for none
+export function shellLook(name: unknown): ShellLook | undefined {
+  if (name === 'none') return undefined
+  return Object.hasOwn(SHELL_LOOKS, name as string) ? SHELL_LOOKS[name as keyof typeof SHELL_LOOKS] : SHELL_LOOKS['sea-snail']
 }
+
+// The toys the config shows: a kind it says none for is not drawn, and the pet neither goes over to
+// one of it nor stays up for it; it is kept, and shows again, where it got to, once the config names
+// a look again
+export function shownToys(toys: Toy[], pet?: { shell?: string; monitor?: string }): Toy[] {
+  const hidden = (t: Toy) => (t.kind === 'snail' ? shellLook(pet?.shell) === undefined : pet?.monitor === 'none')
+  return toys.some(hidden) ? toys.filter(t => !hidden(t)) : toys
+}
+
+// Steps beyond an end of the walk where a snail is out of sight: past the left the widest look's width
+// as well
+export const TOY_OFF = Math.max(PET_WIDTH - TOY_LEFT, TOY_LEFT + Math.max(...Object.values(SHELL_LOOKS).map(l => l.walk1[0]!.length)))
 // Facing out; its wings out a column either side, pawed at; flying, they beat up, out, down and out, a
 // frame a tick (user, 2026-11-19: out and still, they did not beat)
 const OWL: Record<'stand' | 'blink' | 'wings' | 'up' | 'down', string[]> = {
@@ -79,6 +140,10 @@ export function oklch(L: number, C: number, h: number): string {
       .padStart(2, '0')
   return '#' + linear(L, Math.max(0, c), h).map(hex).join('')
 }
+
+// A hermit crab's claw and eye, the same on every one: drawn under a shell's own colors, so one from
+// before there were hermit crabs has them too
+const SHELL_INK: Coat = { c: oklch(0.7, 0.13, 0.55), p: '#f5f0e6' }
 
 const TURN = 2 * Math.PI
 
@@ -216,14 +281,14 @@ export function toyHit(toys: Toy[], id: string, until: number): Toy[] {
   return toys.map(t => (t.id === id ? { ...t, hitUntil: t.kind === 'snail' ? until + SNAIL_HIDE_MS : until } : t))
 }
 
-// A toy's pixels as it is now
-export function toyDrawing(t: Toy): string[] {
+// A toy's pixels as it is now, a shell's in the look the config picks
+export function toyDrawing(t: Toy, look: ShellLook = SHELL_LOOKS['sea-snail']): string[] {
   if (t.kind === 'owl') {
     if (t.hitUntil > 0) return OWL.wings
     if (t.air) return WINGBEAT[t.stride % WINGBEAT.length]!
     return t.blinkUntil > 0 ? OWL.blink : OWL.stand
   }
-  const art = t.hitUntil > 0 ? SNAIL.shell : t.stride % 2 === 0 ? SNAIL.walk1 : SNAIL.walk2
+  const art = t.hitUntil > 0 ? look.shell : t.stride % 2 === 0 ? look.walk1 : look.walk2
   return t.faceLeft ? art : art.map(r => [...r].reverse().join(''))
 }
 
@@ -240,15 +305,26 @@ export function toyAt(x: number, columns: number): number {
   return (x < 0 ? x : x > TRACK ? span + x - TRACK : Math.round((x / TRACK) * span)) + TOY_LEFT
 }
 
-// The cells of a toy in a strip columns wide, standing on its bottom, under behind it, and the column
-// they start at: its columns inside the strip alone, and its rows below the top, flying in or off
-export function toyCells(t: Toy, columns: number, under?: Under): { left: number; width: number; cells: Run[][] } | undefined {
+// A toy's colors, a shell's over a hermit crab's claw and eye
+export function toyInk(t: Toy): Coat {
+  return t.kind === 'snail' ? { ...SHELL_INK, ...t.ink } : t.ink
+}
+
+// The cells of a toy in a strip columns wide, a shell's in look, standing on its bottom, under behind
+// it, and the column they start at: its columns inside the strip alone, and its rows below the top,
+// flying in or off
+export function toyCells(
+  t: Toy,
+  columns: number,
+  under?: Under,
+  look?: ShellLook,
+): { left: number; width: number; cells: Run[][] } | undefined {
   const left = toyLeft(t, columns)
-  const art = toyDrawing(t)
+  const art = toyDrawing(t, look)
   const from = Math.max(0, -left)
   const to = Math.min(art[0]!.length, columns - left)
   const shown = art.slice(Math.max(0, art.length + t.y - WALK_HEIGHT)).map(r => r.slice(from, to))
   if (to <= from || shown.length === 0) return undefined
-  const cells = drawnCells(shown, t.ink, WALK_HEIGHT, t.y, undefined, false, (y, x) => under?.(y, left + from + x))
+  const cells = drawnCells(shown, toyInk(t), WALK_HEIGHT, t.y, undefined, false, (y, x) => under?.(y, left + from + x))
   return { left: left + from, width: to - from, cells }
 }

@@ -33,7 +33,7 @@ var hexColor = regexp.MustCompile(`^#[0-9a-fA-F]{6}$`)
 // under it; the plugin reads none other (hooks/layout.ts).
 var readKeys = map[string][]string{
 	"":           {"dock", "inline", "alias", "pet", "bar", "drawer", "theme", "statusline"},
-	"pet":        {"species"},
+	"pet":        {"species", "shell", "monitor"},
 	"drawer":     {"sidebarOff", "inlineOff", "off"},
 	"theme":      {"base", "background", "before"},
 	"statusline": {"on", "when", "items", "format", "color", "separator", "refresh", "before"},
@@ -178,7 +178,10 @@ func readFit(path string, known []string) (Config, []terminu.Misfit, error) {
 			c.Alias = alias
 		}
 	}
-	f.oneOf(f.object(top, "pet"), "pet.species", "species", &c.Pet.Species, PetSpecies, PetSpecies[0])
+	pet := f.object(top, "pet")
+	f.oneOf(pet, "pet.species", "species", &c.Pet.Species, PetSpecies, PetSpecies[0])
+	f.oneOf(pet, "pet.shell", "shell", &c.Pet.Shell, PetShells, PetShells[0])
+	f.oneOf(pet, "pet.monitor", "monitor", &c.Pet.Monitor, PetMonitors, PetMonitors[0])
 	f.oneOf(top, "bar", "bar", &c.Bar, BarStyles, BarStyles[0])
 	drawer := f.object(top, "drawer")
 	f.flag(drawer, "drawer.sidebarOff", "sidebarOff", &c.Drawer.SidebarOff)

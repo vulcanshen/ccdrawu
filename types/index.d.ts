@@ -63,7 +63,7 @@ export type Config = {
   dock?: string[]
   inline?: string[]
   alias?: string
-  pet?: { species?: string }
+  pet?: { species?: string; shell?: string; monitor?: string } // shell and monitor: the toys' looks (hooks/toys.ts), or none
   bar?: string
   drawer?: { sidebarOff: boolean; inlineOff: boolean }
   statusline?: { on: boolean }

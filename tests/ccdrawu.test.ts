@@ -82,7 +82,7 @@ import {
   type Species,
 } from '../hooks/pets'
 import { BOX_INK, groundUnder, PILE_WIDTH, pileDrawing, pileHeights, pileOf } from '../hooks/pile'
-import { OWL_TOP, SNAIL_HIDE_MS, TOY_OFF, toyCells, toyDrawing, toyHit, toysFor, toysTick } from '../hooks/toys'
+import { OWL_TOP, SHELL_LOOKS, SHELLS, shellLook, shownToys, SNAIL_HIDE_MS, TOY_OFF, toyCells, toyDrawing, toyHit, toyInk, toysFor, toysTick } from '../hooks/toys'
 import type { GitInfo, Kit, PetState, Toy } from '../types'
 
 const PANE = {
@@ -836,12 +836,13 @@ test('a snail crawls in for each shell left in the background and an owl flies d
   // A toy from before hues were kept has none, and is not in the way
   const old = { ...toys[0]!, hue: undefined } as unknown as Toy
   expect(toysFor([old], [{ id: 's1', type: 'shell' }, { id: 's5', type: 'shell' }], same)[1]?.hue).toBe(0.3 * TURN)
-  // A snail, a sea snail, is 7 x 4 pixels, an owl 5 x 6 and 7 wide with its wings out; every mark inked
+  // A snail, a sea snail by default, is 6 x 3 pixels, smaller than a kit; an owl 5 x 6 and 7 wide with
+  // its wings out; every mark inked
   const [snail, owl] = toys as [Toy, Toy]
   const looks = [
-    [snail, 7, 4],
-    [{ ...snail, stride: 1 }, 7, 4],
-    [{ ...snail, hitUntil: 1 }, 7, 4],
+    [snail, 6, 3],
+    [{ ...snail, stride: 1 }, 6, 3],
+    [{ ...snail, hitUntil: 1 }, 6, 3],
     [{ ...owl, y: 0, air: false }, 5, 6],
     [{ ...owl, y: 0, air: false, blinkUntil: 1 }, 5, 6],
     [{ ...owl, y: 0, air: false, hitUntil: 1 }, 7, 6],
@@ -854,16 +855,36 @@ test('a snail crawls in for each shell left in the background and an owl flies d
     expect([art[0]?.length, art.length]).toEqual([width, height])
     for (const mark of art.join('').replace(/\./g, '')) expect(t.ink[mark]).toBeDefined()
   }
-  // As it crawls, what touches the ground moves, the front of its foot; its tentacle and shell stay
-  const [step1, step2] = [toyDrawing(snail), toyDrawing({ ...snail, stride: 1 })]
-  expect(step1.slice(0, -1)).toEqual(step2.slice(0, -1))
-  expect(step1.at(-1)).not.toBe(step2.at(-1))
+  // Every look the settings offer (user, 2026-11-20): its three frames as wide and high as each other,
+  // every mark inked; as a sea snail or a hermit crab crawls, what touches the ground moves, the bottom
+  // row, and the rest stays (the snail, as it was, leans its stalk); beyond the left end, out of sight
+  for (const [name, look] of Object.entries(SHELL_LOOKS)) {
+    const frames = [toyDrawing(snail, look), toyDrawing({ ...snail, stride: 1 }, look), toyDrawing({ ...snail, hitUntil: 1 }, look)]
+    for (const art of frames) {
+      expect([art[0]?.length, art.length]).toEqual([frames[0]![0]!.length, frames[0]!.length])
+      for (const mark of art.join('').replace(/\./g, '')) expect(toyInk(snail)[mark]).toBeDefined()
+    }
+    if (name !== 'snail') expect(frames[0]!.slice(0, -1)).toEqual(frames[1]!.slice(0, -1))
+    expect(frames[0]).not.toEqual(frames[1])
+    expect(toyCells(snail, 30, undefined, look)).toBeUndefined()
+  }
+  expect(SHELLS).toEqual([...Object.keys(SHELL_LOOKS), 'none'])
+  // The look pet.shell names: the sea snail for none named or one unknown, nothing for none
+  expect(shellLook(undefined)).toBe(SHELL_LOOKS['sea-snail'])
+  expect(shellLook('clam')).toBe(SHELL_LOOKS['sea-snail'])
+  expect(shellLook('horn')).toBe(SHELL_LOOKS.horn)
+  expect(shellLook('none')).toBeUndefined()
+  // A kind the settings say none for is not shown; the rest are, the same array when all are
+  expect(shownToys(toys, {})).toBe(toys)
+  expect(shownToys(toys, { shell: 'none' })).toEqual([owl])
+  expect(shownToys(toys, { monitor: 'none' })).toEqual([snail])
+  expect(shownToys(toys, { shell: 'none', monitor: 'none' })).toEqual([])
   // Out of sight, nothing drawn, beyond either end; at an end, the columns of it inside the strip
   expect(toyCells(snail, 30)).toBeUndefined()
   expect(toyCells({ ...snail, x: TRACK + TOY_OFF, faceLeft: true }, 30)).toBeUndefined()
   expect(toyCells(owl, 30)).toBeUndefined()
-  expect(toyCells({ ...snail, x: -5 }, 30)).toMatchObject({ left: 0, width: 5 })
-  expect(toyCells({ ...snail, x: -1 }, 30)).toMatchObject({ left: 2, width: 7 })
+  expect(toyCells({ ...snail, x: -5 }, 30)).toMatchObject({ left: 0, width: 4 })
+  expect(toyCells({ ...snail, x: -1 }, 30)).toMatchObject({ left: 2, width: 6 })
 
   // The snail crawls a step a second; the owl flies down two pixels a tick, lands, and rests ten seconds
   let ts = toysTick(toys, 0, quiet)
@@ -1039,7 +1060,7 @@ test('values the pane can not use read as ccdrawu reads them: their keys, once e
     'alias: "a b!"',
     'dock: [model, nope, 3]',
     'inline: model',
-    'pet: {species: dragon}',
+    'pet: {species: dragon, shell: clam, monitor: bat}',
     'bar: wavy',
     'drawer: {sidebarOff: yes please}',
     'theme: {background: zzz}',
@@ -1058,6 +1079,8 @@ test('values the pane can not use read as ccdrawu reads them: their keys, once e
     'inline',
     'alias',
     'pet.species',
+    'pet.shell',
+    'pet.monitor',
     'bar',
     'drawer.sidebarOff',
     'theme.background',
@@ -1069,7 +1092,7 @@ test('values the pane can not use read as ccdrawu reads them: their keys, once e
   ])
   expect(configMisfits('theme: {base: neon}\nstatusline: {refresh: 61}\n')).toEqual(['theme.base', 'statusline.refresh'])
   // All that fits, a key not read, nothing, and a file that can't be read: none
-  for (const text of ['alias: /ccd\ndock: [model, git]\npet: {species: duck}\nbar: line\ntheme: {base: dark, background: "#112233"}\nstatusline: {on: true, when: narrow, refresh: 30, separator: "·"}\n', 'refesh: 5\n', '', 'alias: [\n']) {
+  for (const text of ['alias: /ccd\ndock: [model, git]\npet: {species: duck, shell: hermit-crab, monitor: none}\nbar: line\ntheme: {base: dark, background: "#112233"}\nstatusline: {on: true, when: narrow, refresh: 30, separator: "·"}\n', 'refesh: 5\n', '', 'alias: [\n']) {
     expect(configMisfits(text)).toEqual([])
   }
 })
@@ -1133,6 +1156,8 @@ test('config.yaml reads as the ccdrawu command writes it, and as a person writes
     drawer: { sidebarOff: false, inlineOff: true },
     statusline: { on: true },
   })
+  // The pet's animal, and the looks of its strip's toys
+  expect(parseConfig('pet: {species: dog, shell: horn, monitor: none, nickname: Mochi}\n')?.pet).toEqual({ species: 'dog', shell: 'horn', monitor: 'none' })
   // By hand: comments, a sequence as deep as its key, flow, quotes of both kinds, a mapping in a sequence
   const hand = "# mine\n---\nalias: 'it''s'   # a name\ndock:\n- model\n- 'git'\ninline: [cost, \"context\"]\nx:\n  - a: 1\n    b: [2]\n"
   expect(parseYaml(hand)).toEqual({ alias: "it's", dock: ['model', 'git'], inline: ['cost', 'context'], x: [{ a: 1, b: [2] }] })

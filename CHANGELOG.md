@@ -2,6 +2,11 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- The sea snail is smaller, 6×3, smaller than a small one of the pet's kind.
+- **Shell** and **Monitor** in `ccdrawu`'s preferences pick how a background shell and monitor show beside the transcript, or `none`: for a shell, the domed sea snail (6×3, 7×4, 6×4 or 5×3), a spire, horn or cone sea snail, a hermit crab, or the snail it once was; for a monitor, the owl. They are kept in `config.yaml` as `pet.shell` and `pet.monitor`; open sessions follow within a second. What is not shown the pet leaves alone, and it does not keep it awake.
+
 ## v1.3.3 — tdp v1.2.19
 
 - A shell left in the background is a sea snail now, not a snail: a domed shell resting on the ground at the back, its body out at the front, the front of its foot what moves as it crawls. It comes, wanders, draws into its shell and goes as the snail did.

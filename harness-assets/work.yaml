@@ -311,11 +311,11 @@ tasks:
     test:
       - commit: f6cf97f
   - id: 27
-    spec: 9
+    spec: 11
     implementation: |
       外掛在主 agent 每次回覆結束（classic.Stop）讀 background_tasks：type 是 shell 的一個一隻海螺、monitor 的一個一隻貓頭鷹；Monitor 工具開的 monitor 在清單裡標成 shell，用 Monitor 呼叫回來的 taskId 認出來；清單裡沒有了的離場
-      海螺（kind 仍是 snail）7×4 像素，面向左：圓頂殼（s）、螺紋與頂上的螺塔（d）、身體（b）；殼的後半（右 3 欄）貼地，身體在最下一列從左邊伸到殼底下兩格，觸角從頭往左上斜；爬 1／爬 2 只差最下一列最左那格（腳的前緣一伸一縮），上面三列不變；縮進殼時身體不見，殼口最下一列畫成兩格 d（口蓋）（使用者 2026-11-20）
-      從走道左端或右端外面 10 步（TOY_OFF＝max(12−3, 3＋7)，左邊要多算牠的寬度才看不到）每秒爬一步進來，停 4～8 秒再爬到走道上別的地方；離場時爬到近的那一端外面才拿掉，走道外一步一欄，只畫在走道裡的那幾欄
+      海螺（kind 仍是 snail；預設的樣子，SHELL_LOOKS 的 sea-snail，其他樣子見 task 29）6×3 像素，面向左：圓頂殼（s）、螺紋與頂上的螺塔（d）、身體（b）；殼的後半（右 2 欄）貼地，身體在最下一列從左邊伸到殼底下兩格，觸角從頭往左上；爬 1／爬 2 只差最下一列最左那格（腳的前緣一伸一縮），上面兩列不變；縮進殼時身體不見，殼口最下一列畫成兩格 d（口蓋）（使用者 2026-11-20）
+      從走道左端或右端外面 10 步（TOY_OFF＝max(12−3, 3＋最寬的樣子 7)，左邊要多算牠的寬度才看不到）每秒爬一步進來，停 4～8 秒再爬到走道上別的地方；離場時爬到近的那一端外面才拿掉，走道外一步一欄，只畫在走道裡的那幾欄
       貓頭鷹 5×6 像素，從走道上方每 tick 下降 2 像素，落在隨機位置；飛的時候振翅，每 tick 換一張：翅膀往上舉（9 像素寬）、平伸（7）、往下壓（9）、平伸（使用者 2026-11-19：「貓頭鷹飛起來的時候翅膀打開但是沒有振翅」）；平均約 5 秒眨一次眼（0.4 秒）；離場時振翅，每 tick 往上 2 像素，飛出走道才拿掉
       貓頭鷹降落後休息 10 秒（stepAt），起飛飛 10 秒（flyUntil）：每 tick 一步、往上 2 像素到走道頂（8 像素），到了走道上隨機的別處就再挑一個，一直振翅；10 秒到了就在當下的位置每 tick 下降 2 像素，再休息 10 秒（使用者 2026-11-20）；休息時才眨眼；落點有紙箱就停在紙箱上，最高到 OWL_TOP（走道 14 像素減貓頭鷹 6 像素，取整層＝8，第二層），第三層停在它前面；腳下的紙箱沒了就降到下面，多了就上去
       配色出場時隨機生成（OKLCH，亮度固定）：海螺殼 0.76、殼上的螺紋與口蓋同色相 0.55、身體另一個隨機色相 0.82；貓頭鷹羽毛 0.64、胸口同色相 0.86，眼睛、嘴、腳固定黃與橘
@@ -336,3 +336,16 @@ tasks:
     test:
       - TestDoctorSetsRightWhatDoesNotFit
       - TestDoctorLeavesAFileThatCantBeRead
+  - id: 29
+    spec: 11
+    implementation: |
+      preferences 頁 Pet 列下面：Shell 列（值寫目前的樣子，沒設過是 sea-snail），Enter 開 select（標題 SHELL、glyph nf-md-snail），選項照 config.PetShells：sea-snail、sea-snail-7x4、sea-snail-6x4、sea-snail-5x3、spire、horn、cone、hermit-crab、snail、none，選了就寫進 config.yaml 的 pet.shell（寫不成照 commit 放回原樣、select 不關、跳錯誤）；Monitor 列是畫在原地的 radio（owl、none），寫 pet.monitor
+      config.Pet 多 Shell、Monitor；fit 照 oneOf 讀：不是選項之一的換成第一個（sea-snail、owl），跟 pet.species 一樣是 Misfit；readKeys 的 pet 多 shell、monitor，不算 Not read
+      外掛（hooks/toys.ts）：SHELL_LOOKS 九種樣子，每種有爬 1、爬 2、縮進殼三張，面向左；shellLook(pet.shell) 拿樣子，沒設、不認得的是 sea-snail，none 是沒有；toyDrawing、toyCells 照樣子畫，寄居蟹的鉗子與眼睛（c、p）每隻一樣，畫在 toyInk 裡；SHELLS、MONITORS 跟 Go 的兩個清單同順序
+      各樣子：圓頂海螺 6×3、7×4、6×4、5×3；尖塔（7×5）、號角（7×5）、長錐（7×4）海螺；這幾種照海螺的規則（殼後半貼地、身體伸進殼底下兩格、爬時只有最下一列在動、觸角不動、縮進殼時口蓋 d）；寄居蟹 6×4（眼睛在柄上、鉗子，爬時腳在動，縮進殼時只剩殼）；蝸牛 6×4（原本的樣子，觸角傾斜）
+      shownToys(toys, pet)：pet.shell 是 none 時海螺不算、pet.monitor 是 none 時貓頭鷹不算；側邊欄只畫算的，寵物的 petTick 也只拿算的（不去抓、不因為牠們不睡）；toys 的 state 照舊記著全部，設定換回來時在原地、原本的顏色出現
+      hooks/layout.ts 的 configMisfits 也查 pet.shell、pet.monitor（側邊欄的紅字），parseConfig 讀 pet 的 species、shell、monitor
+    test:
+      - TestShellAndMonitorArePicked
+      - TestValuesThatDoNotFitAreTheirDefaults
+      - TestSettleKeepsTheFileAsideAndWritesItAgain

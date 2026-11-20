@@ -102,7 +102,7 @@ func newDrawer(loc config.Locations, run claude.Run) (*drawer, error) {
 	d.background, d.statusOn = d.backgroundField(), d.statusOnField()
 	d.drawerOn = map[string]*terminu.Field{rowSidebar: d.drawerOnField(&d.cfg.Drawer.SidebarOff), rowInline: d.drawerOnField(&d.cfg.Drawer.InlineOff)}
 	d.pages[rowPreferences] = &terminu.Values{Header: [2]string{"Key", "Value"}, Fields: []*terminu.Field{
-		d.aliasField(), d.themeField(), d.background, d.barField(), d.petField(), d.pluginField(),
+		d.aliasField(), d.themeField(), d.background, d.barField(), d.petField(), d.shellField(), d.monitorField(), d.pluginField(),
 	}}
 
 	list := &terminu.List{}

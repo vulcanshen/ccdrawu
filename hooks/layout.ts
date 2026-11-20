@@ -5,6 +5,7 @@ import type { Config } from '../types'
 import { truncateStart } from './format'
 import { C, ITEMS, NO_VALUE, type Item, type Seg, type View } from './items'
 import { SPECIES } from './pets'
+import { MONITORS, SHELLS } from './toys'
 import { parseYaml } from './yaml'
 
 export type Placement = 'dock' | 'inline'
@@ -50,7 +51,10 @@ export function configMisfits(text: string, json = false): string[] {
     const name = v.trim().replace(/^\/+/, '')
     return name === '' || (name !== 'ccdrawu' && /^[a-zA-Z0-9][a-zA-Z0-9-]*$/.test(name))
   })
-  check(object(top, 'pet', 'pet'), 'species', 'pet.species', oneOf(SPECIES))
+  const pet = object(top, 'pet', 'pet')
+  check(pet, 'species', 'pet.species', oneOf(SPECIES))
+  check(pet, 'shell', 'pet.shell', oneOf(SHELLS))
+  check(pet, 'monitor', 'pet.monitor', oneOf(MONITORS))
   check(top, 'bar', 'bar', oneOf(['squares', 'line']))
   const drawer = object(top, 'drawer', 'drawer')
   for (const key of ['sidebarOff', 'inlineOff', 'off']) check(drawer, key, `drawer.${key}`, flag)
@@ -85,7 +89,7 @@ export function unreadReason(text: string, json = false): string | undefined {
   }
 }
 
-// ~/.config/ccdrawu/config.yaml: dock: [ids], inline: [ids], alias: name, pet: { species }, bar: style,
+// ~/.config/ccdrawu/config.yaml: dock: [ids], inline: [ids], alias: name, pet: { species, shell, monitor }, bar: style,
 // drawer: { sidebarOff, inlineOff }, statusline: { on, ... }; as JSON in the config.json of 0.1.4 and
 // before, until ccdrawu moves it (`json`). Undefined when it can't be read, as when caught half written:
 // read it again on the next tick. A list or a lone value is not a config, as ccdrawu has it (tdp E3)
@@ -109,8 +113,12 @@ export function parseConfig(text: string, json = false): Config | undefined {
   if (typeof style === 'string') config.bar = style
   const pet = (raw as Record<string, unknown>).pet
   if (typeof pet === 'object' && pet !== null) {
-    const { species } = pet as Record<string, unknown>
-    config.pet = typeof species === 'string' ? { species } : {}
+    const p = pet as Record<string, unknown>
+    config.pet = {}
+    for (const key of ['species', 'shell', 'monitor'] as const) {
+      const v = p[key]
+      if (typeof v === 'string') config.pet[key] = v
+    }
   }
   const drawer = (raw as Record<string, unknown>).drawer
   if (typeof drawer === 'object' && drawer !== null) {

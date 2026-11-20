@@ -46,7 +46,7 @@ import {
   type Under,
 } from './pets'
 import { BOX_INK, groundUnder, PILE_WIDTH, pileDrawing, pileHeights, pileOf } from './pile'
-import { OWL_WIDTH, toyAt, toyCells, toyDrawing, toyHit, toyLeft, toysFor, toysTick } from './toys'
+import { OWL_WIDTH, shellLook, shownToys, toyAt, toyCells, toyDrawing, toyHit, toyInk, toyLeft, toysFor, toysTick } from './toys'
 import { registerCommands } from './commands'
 import {
   bar,
@@ -312,7 +312,8 @@ async function stepPet($: Engine) {
   const perch = (x: number) => groundUnder(heights, toyAt(x, walkColumns) - (walkColumns - PILE_WIDTH), OWL_WIDTH)
   const toyDraws = keptDraws()
   if (toysTick(ts, t, toyDraws.rand, perch) !== ts) await update($, toys, current => toysTick(current, t, toyDraws.again(), perch))
-  const about = await read($, toys)
+  // The ones the settings show: the pet goes over to, and stays up for, those alone
+  const about = shownToys(await read($, toys), (await read($, config)).pet)
   const s = await read($, pet)
   const petDraws = keptDraws()
   if (petTick(s, t, petDraws.rand, about) === s) return
@@ -864,7 +865,9 @@ export const register: Register = on => {
     // Read here, not above the prompt, where no kit, toy or box is drawn: a kit's step redraws only the
     // sidebar
     const ks = hasPet ? await read($, kits) : []
-    const ts = hasPet ? await read($, toys) : []
+    // The toys the settings show, a shell's in the look they pick
+    const ts = hasPet ? shownToys(await read($, toys), conf.pet) : []
+    const shellArt = shellLook(conf.pet?.shell)
     const pile = pileOf(hasPet ? await read($, git) : null)
     // The pet's box at the bottom of the strip, the room over it for the boxes and a kit on them
     const petTop = (WALK_HEIGHT - PET_HEIGHT - LIFT_ROOM) / 2
@@ -873,7 +876,7 @@ export const register: Register = on => {
     // each over the ones before it. A kit, a toy, the pet and the ball show it in the halves of their
     // cells they leave empty
     const box = { art: pileDrawing(pile), coat: BOX_INK, left: Math.max(0, inner - PILE_WIDTH), lift: 0 }
-    const drawnToys = ts.map(t => ({ art: toyDrawing(t), coat: t.ink, left: toyLeft(t, inner), lift: t.y }))
+    const drawnToys = ts.map(t => ({ art: toyDrawing(t, shellArt), coat: toyInk(t), left: toyLeft(t, inner), lift: t.y }))
     const drawnKits = ks.map(k => ({ art: kitDrawing(species, k), coat: petCoat(species, k.coat), left: kitLeft(k.x, inner), lift: k.y }))
     const layers = [box, ...drawnToys, ...drawnKits]
     const strip =
@@ -911,7 +914,7 @@ export const register: Register = on => {
           {/* The snails and owls, out of the flow, over the boxes, so the kits and the pet go over them:
               on the ground, or flying down or off; crawling in or off, the columns of one inside the strip */}
           {ts.map((t, j) => {
-            const drawn = toyCells(t, inner, strip(1 + j))
+            const drawn = toyCells(t, inner, strip(1 + j), shellArt)
             return drawn === undefined ? null : (
               <Box
                 key={'toy-' + t.id}

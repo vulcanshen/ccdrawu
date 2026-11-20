@@ -36,7 +36,7 @@ func testLocations(t *testing.T) Locations {
 const misfitting = `alias: "a b!"
 dock: [model, nope, 3]
 inline: model
-pet: {species: dragon}
+pet: {species: dragon, shell: clam, monitor: bat}
 bar: wavy
 drawer: {sidebarOff: yes please}
 theme: {background: zzz}
@@ -68,6 +68,8 @@ func TestValuesThatDoNotFitAreTheirDefaults(t *testing.T) {
 		{Key: "inline", Was: "model", Now: "default"},
 		{Key: "alias", Was: "a b!", Now: "none"},
 		{Key: "pet.species", Was: "dragon", Now: "cat"},
+		{Key: "pet.shell", Was: "clam", Now: "sea-snail"},
+		{Key: "pet.monitor", Was: "bat", Now: "owl"},
 		{Key: "bar", Was: "wavy", Now: "squares"},
 		{Key: "drawer.sidebarOff", Was: "yes please", Now: "false"},
 		{Key: "theme.background", Was: "zzz", Now: "none"},
@@ -125,7 +127,7 @@ func TestSettleKeepsTheFileAsideAndWritesItAgain(t *testing.T) {
 		t.Fatal(err)
 	}
 	c, s, err := Settle(loc)
-	if err != nil || s.Err != nil || len(s.Misfits) != 13 || s.Copy != loc.ConfigFile+".bak.1" {
+	if err != nil || s.Err != nil || len(s.Misfits) != 15 || s.Copy != loc.ConfigFile+".bak.1" {
 		t.Fatalf("settled %+v, %v", s, err)
 	}
 	if kept, _ := os.ReadFile(s.Copy); string(kept) != misfitting {
