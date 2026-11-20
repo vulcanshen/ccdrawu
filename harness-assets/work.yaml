@@ -148,9 +148,10 @@ tasks:
       - TestConfigReordersInPlace
       - TestWhatCantMoveARowEach
   - id: 14
-    spec: 4
+    spec: 10
     implementation: |
       [1] 分組清單：Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences）；[2] 跟著 [1] 的 cursor 換成那一頁，一列一個值，Enter 進去
+      [1] 是一欄的 terminu.List，List.Spread 沒設＝SpreadEnd：寬度有剩時留在每一列最右邊（tdp panel.5「放最後」）
       值上的 Enter 也在 Space menu 裡；沒存的改動放回去
       手改 config.yaml 留下的不合的值啟動時就換成預設（task 21），畫面上沒有標 Red 的值；Plugin 列在 claude plugin list 查不出來時標 Red，App Log 記 WARN
     test:

@@ -6,6 +6,7 @@ Each release names the version of terminu design (tdp) it follows.
 
 - A shell left in the background is a sea snail now, not a snail: a domed shell resting on the ground at the back, its body out at the front, the front of its foot what moves as it crawls. It comes, wanders, draws into its shell and goes as the snail did.
 - A new sea snail or owl takes a hue unlike those of the others of its kind on the strip, so two of a kind seldom look alike; before, each one's hue was picked at random on its own.
+- Built on terminu-go v1.2.20 (tdp v1.2.19).
 
 ## v1.3.2 — tdp v1.2.18
 

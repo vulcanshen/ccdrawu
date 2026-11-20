@@ -1,6 +1,6 @@
-id: 9
-from: v1.2.17
-to: v1.2.18
+id: 10
+from: v1.2.18
+to: v1.2.19
 tasks:
   - id: 1
     spec: 1
@@ -99,12 +99,13 @@ tasks:
     remark:
       - Order 上按 Enter：D 拿起一項、j k 移動、Enter 放下、再 Enter 存起來、Esc 放回原樣
   - id: 14
-    spec: 4
+    spec: 10
     request: ccdrawu 的畫面：左邊分組列出 Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences），右邊是選到的那一頁的值
     tdp: [tdp screen.1, tdp panel.5, tdp panel.11, tdp panel.12, tdp panel.13, tdp M3, tdp E3, tdp note.7]
     remark:
       - 開著的 session 在一秒內跟著換
       - 手改 config.yaml 留下的不合的值，啟動時就換成預設（tdp E3），畫面上不再有標 Red 的值；只有 Plugin 列在查不到外掛時標 Red
+      - 寬度有剩時放最後（tdp panel.5 的預設，tdp v1.2.19 起 app 替每個清單挑一種）：[1] 只有一欄、沒有表頭，其他三種（一欄填滿、平均、加大欄距）都是在欄與欄之間分寬度，一欄的清單用不上
   - id: 15
     spec: 1
     request: 讓側邊欄的底色跟終端機一樣：選一個 Claude Code 內建主題當底，再選側邊欄的底色
