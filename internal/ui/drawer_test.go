@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"slices"
 	"strings"
@@ -523,7 +524,13 @@ func TestCatalogWrittenAgainIsInTheAppLog(t *testing.T) {
 		"can be read again": 1,
 		"INFO The ccdrawu plugin changed its items; added Model; taken out Tasks": 1,
 	} {
-		if n := strings.Count(text, entry); n != want {
+		// An entry folds where it is longer than the App Log is wide, as after Windows' long temporary
+		// path: its words may have a row's end and the popup's border between them
+		words := strings.Fields(entry)
+		for i, w := range words {
+			words[i] = regexp.QuoteMeta(w)
+		}
+		if n := len(regexp.MustCompile(strings.Join(words, `[\s┃│]+`)).FindAllStringIndex(text, -1)); n != want {
 			t.Fatalf("%d of %q in the App Log, want %d:\n%s", n, entry, want, text)
 		}
 	}
