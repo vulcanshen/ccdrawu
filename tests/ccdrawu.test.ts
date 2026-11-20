@@ -821,16 +821,27 @@ test('a snail crawls in for each shell left in the background and an owl flies d
     ['m1', 'owl', 5, 5, WALK_HEIGHT],
   ])
   expect(toysFor(toys, tasks, quiet)).toBe(toys)
-  // Colors made up at random, a hue any way round: two snails seldom look alike
+  // Colors made up at random: the first of a kind a hue any way round, each after it a hue away from those
+  // of its kind about, even when the draws come out the same (user, 2026-11-20: too often alike)
   for (const t of toys) for (const c of Object.values(t.ink)) expect(c).toMatch(/^#[0-9a-f]{6}$/)
-  const other = toysFor([], [{ id: 's2', type: 'shell' }], draws(0.5, 0.2, 0.6, 0.1))[0]
-  expect(other?.ink.s).not.toBe(toys[0]?.ink.s)
-  // A snail is 6 x 4 pixels, an owl 5 x 6 and 7 wide with its wings out; every mark inked
+  const TURN = 2 * Math.PI
+  const same = () => 0.3
+  const coming = [['s2', 'shell'], ['m2', 'monitor'], ['s3', 'shell'], ['m3', 'monitor'], ['s4', 'shell']] as const
+  let about: Toy[] = []
+  coming.forEach((_, n) => (about = toysFor(about, coming.slice(0, n + 1).map(([id, type]) => ({ id, type })), same)))
+  const apart = (a: number, b: number) => Math.min(Math.abs(a - b), TURN - Math.abs(a - b))
+  // Three snails a sixth of the way round apart at least, two owls a third
+  for (const a of about) for (const b of about) if (a !== b && a.kind === b.kind) expect(apart(a.hue, b.hue)).toBeGreaterThanOrEqual(a.kind === 'snail' ? TURN / 6 : TURN / 3)
+  expect(new Set(about.map(t => t.ink.s ?? t.ink.o)).size).toBe(coming.length)
+  // A toy from before hues were kept has none, and is not in the way
+  const old = { ...toys[0]!, hue: undefined } as unknown as Toy
+  expect(toysFor([old], [{ id: 's1', type: 'shell' }, { id: 's5', type: 'shell' }], same)[1]?.hue).toBe(0.3 * TURN)
+  // A snail, a sea snail, is 7 x 4 pixels, an owl 5 x 6 and 7 wide with its wings out; every mark inked
   const [snail, owl] = toys as [Toy, Toy]
   const looks = [
-    [snail, 6, 4],
-    [{ ...snail, stride: 1 }, 6, 4],
-    [{ ...snail, hitUntil: 1 }, 6, 4],
+    [snail, 7, 4],
+    [{ ...snail, stride: 1 }, 7, 4],
+    [{ ...snail, hitUntil: 1 }, 7, 4],
     [{ ...owl, y: 0, air: false }, 5, 6],
     [{ ...owl, y: 0, air: false, blinkUntil: 1 }, 5, 6],
     [{ ...owl, y: 0, air: false, hitUntil: 1 }, 7, 6],
@@ -843,11 +854,16 @@ test('a snail crawls in for each shell left in the background and an owl flies d
     expect([art[0]?.length, art.length]).toEqual([width, height])
     for (const mark of art.join('').replace(/\./g, '')) expect(t.ink[mark]).toBeDefined()
   }
-  // Out of sight, nothing drawn; at an end, the columns of it inside the strip
+  // As it crawls, what touches the ground moves, the front of its foot; its tentacle and shell stay
+  const [step1, step2] = [toyDrawing(snail), toyDrawing({ ...snail, stride: 1 })]
+  expect(step1.slice(0, -1)).toEqual(step2.slice(0, -1))
+  expect(step1.at(-1)).not.toBe(step2.at(-1))
+  // Out of sight, nothing drawn, beyond either end; at an end, the columns of it inside the strip
   expect(toyCells(snail, 30)).toBeUndefined()
+  expect(toyCells({ ...snail, x: TRACK + TOY_OFF, faceLeft: true }, 30)).toBeUndefined()
   expect(toyCells(owl, 30)).toBeUndefined()
-  expect(toyCells({ ...snail, x: -5 }, 30)).toMatchObject({ left: 0, width: 4 })
-  expect(toyCells({ ...snail, x: -1 }, 30)).toMatchObject({ left: 2, width: 6 })
+  expect(toyCells({ ...snail, x: -5 }, 30)).toMatchObject({ left: 0, width: 5 })
+  expect(toyCells({ ...snail, x: -1 }, 30)).toMatchObject({ left: 2, width: 7 })
 
   // The snail crawls a step a second; the owl flies down two pixels a tick, lands, and rests ten seconds
   let ts = toysTick(toys, 0, quiet)
@@ -859,7 +875,7 @@ test('a snail crawls in for each shell left in the background and an owl flies d
   for (let t = 200; t <= 1_200; t += 200) ts = toysTick(ts, t, quiet)
   const perched = ts[1]!
   expect(perched).toMatchObject({ x: 5, y: 0, air: false, stepAt: 11_200, flyUntil: 0 })
-  for (let t = 1_400; t <= 18_000; t += 200) ts = [...toysTick([ts[0]!], t, quiet), perched]
+  for (let t = 1_400; t <= 19_000; t += 200) ts = [...toysTick([ts[0]!], t, quiet), perched]
   expect(ts.map(t => [t.x, t.y, t.air])).toEqual([
     [10, 0, false],
     [5, 0, false],
@@ -938,7 +954,7 @@ test('idle, with a snail or an owl about, the pet lies down but does not fall as
     return () => values[Math.min(i++, values.length - 1)] ?? 0
   }
   const quiet = () => 0.99
-  const snail: Toy = { id: 's1', kind: 'snail', ink: {}, x: 12, target: 12, faceLeft: true, y: 0, air: false, leaving: false, stepAt: 1e9, flyUntil: 0, stride: 0, blinkUntil: 0, hitUntil: 0 }
+  const snail: Toy = { id: 's1', kind: 'snail', hue: 0, ink: {}, x: 12, target: 12, faceLeft: true, y: 0, air: false, leaving: false, stepAt: 1e9, flyUntil: 0, stride: 0, blinkUntil: 0, hitUntil: 0 }
   let s: PetState = { ...PET_START, coat: 0, active: 0, x: 2, target: 2 }
   // Ten minutes idle: lying, not asleep, while a toy is about; asleep with none, or one going
   expect(petTick(s, 11 * 60_000, quiet, [snail]).mode).toBe('lie')

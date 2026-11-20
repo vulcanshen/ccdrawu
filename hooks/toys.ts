@@ -1,6 +1,7 @@
 // Snails and owls (user, 2026-11-19): beside the transcript, for each shell left in the background a
-// snail on the pet's strip, and for each monitor an owl, as many as there are, over one another, the
-// git boxes and the pet as they come, each in colors made up at random when it comes. Toys, as the ball
+// snail on the pet's strip, a sea snail (user, 2026-11-20: a shell's), and for each monitor an owl, as many as there are, over one another, the
+// git boxes and the pet as they come, each in colors made up at random when it comes, in a hue away from
+// those of its kind about (user, 2026-11-20: their colors too often alike). Toys, as the ball
 // is: idle, the pet now and then goes over and paws at one (hooks/pets.ts), and a snail draws into its
 // shell, an owl spreads its wings. A snail crawls in from beyond an end of the strip, about a column a
 // second, wanders slowly, and crawls off past the nearer end once its shell is done (user: no hurry to
@@ -17,7 +18,9 @@ import { BOX_HEIGHT } from './pile'
 
 const PET_WIDTH = 12 // a pet's columns: a toy is placed along the walk as a pet is
 export const TOY_LEFT = 3 // a toy's columns from the left of the box a pet at its place would have
-export const TOY_OFF = PET_WIDTH - TOY_LEFT // steps beyond an end of the walk where a snail is out of sight
+const SNAIL_WIDTH = 7
+// Steps beyond an end of the walk where a snail is out of sight: past the left its width as well
+export const TOY_OFF = Math.max(PET_WIDTH - TOY_LEFT, TOY_LEFT + SNAIL_WIDTH)
 const SNAIL_STEP_MS = 1_000
 const SNAIL_REST_MS = 4_000 // and up to as long again, where it got to
 export const SNAIL_HIDE_MS = 2_000 // in its shell after the pet has done pawing at it
@@ -33,11 +36,14 @@ const OWL_CRUISE = WALK_HEIGHT - OWL_HEIGHT // how high it flies: the top of the
 const BLINK_CHANCE = 1 / 25 // a tick's: about every five seconds
 const BLINK_MS = 400
 
-// Facing left; its eye stalk leans as it goes
+// A sea snail, facing left: a domed shell, its spire a nub on top, resting on the ground at the back,
+// its body two columns in under it and out at the front, a tentacle up (user, 2026-11-20: half the
+// shell on the ground, the body in under it two cells). As it goes, what touches the ground moves: the
+// front of its foot, out and in; the tentacle stays. In its shell, the lid shuts the opening
 const SNAIL: Record<'walk1' | 'walk2' | 'shell', string[]> = {
-  walk1: ['b..ss.', 'b.sdss', 'bbsdds', 'bbbbbb'],
-  walk2: ['.b.ss.', '.bsdss', 'bbsdds', 'bbbbbb'],
-  shell: ['...ss.', '..sdss', '..sdds', '..sss.'],
+  walk1: ['b...d..', '.b.sss.', '.bsdsds', 'bbbbsss'],
+  walk2: ['b...d..', '.b.sss.', '.bsdsds', '.bbbsss'],
+  shell: ['....d..', '...sss.', '..sdsds', '..ddsss'],
 }
 // Facing out; its wings out a column either side, pawed at; flying, they beat up, out, down and out, a
 // frame a tick (user, 2026-11-19: out and still, they did not beat)
@@ -74,17 +80,30 @@ export function oklch(L: number, C: number, h: number): string {
   return '#' + linear(L, Math.max(0, c), h).map(hex).join('')
 }
 
-// Colors made up at random: a hue any way round, a lightness that shows on a dark background. A snail's
-// shell of one hue, its whorl darker, a pale body of another; an owl's feathers muted, its breast paler,
+const TURN = 2 * Math.PI
+
+// Colors made up at random, a lightness that shows on a dark background: a snail's shell of hue, its
+// whorls and lid darker, a pale body of a hue any way round; an owl's feathers of hue, muted, its breast paler,
 // its eyes, beak and feet an owl's
-function inkOf(kind: Toy['kind'], rand: () => number): Coat {
-  const hue = () => rand() * 2 * Math.PI
+function inkOf(kind: Toy['kind'], hue: number, rand: () => number): Coat {
   if (kind === 'snail') {
-    const shell = hue()
-    return { s: oklch(0.76, 0.09, shell), d: oklch(0.55, 0.08, shell), b: oklch(0.82, 0.035, hue()) }
+    return { s: oklch(0.76, 0.09, hue), d: oklch(0.55, 0.08, hue), b: oklch(0.82, 0.035, rand() * TURN) }
   }
-  const feathers = hue()
-  return { o: oklch(0.64, 0.06, feathers), b: oklch(0.86, 0.035, feathers), y: '#f9e2af', k: '#11111b', a: '#fab387' }
+  return { o: oklch(0.64, 0.06, hue), b: oklch(0.86, 0.035, hue), y: '#f9e2af', k: '#11111b', a: '#fab387' }
+}
+
+// A hue at random away from those of the toys about: in the middle third of the widest gap between them,
+// any way round when there are none. A toy from before hues were kept has none
+function hueAmong(toys: readonly Toy[], rand: () => number): number {
+  const hues = toys.flatMap(t => (Number.isFinite(t.hue) ? [((t.hue % TURN) + TURN) % TURN] : [])).sort((a, b) => a - b)
+  if (hues.length === 0) return rand() * TURN
+  let from = 0
+  let width = -1
+  hues.forEach((h, i) => {
+    const before = i === 0 ? hues[hues.length - 1]! - TURN : hues[i - 1]!
+    if (h - before > width) [from, width] = [before, h - before]
+  })
+  return (from + (width * (1 + rand())) / 3 + TURN) % TURN
 }
 
 const KINDS: Record<string, Toy['kind']> = { shell: 'snail', monitor: 'owl' }
@@ -105,10 +124,14 @@ export function toysFor(toys: Toy[], tasks: readonly { id: string; type: string 
     const spot = Math.round(rand() * TRACK)
     // A snail from beyond an end; an owl over the spot it lands on, out of sight above the strip
     const x = kind === 'snail' ? (rand() < 0.5 ? -TOY_OFF : TRACK + TOY_OFF) : spot
+    // Away from its own kind's: a snail and an owl already look apart, and the owls' muted colors want
+    // the room (user, 2026-11-20: two of a kind in colors alike)
+    const hue = hueAmong(next.filter(t => t.kind === kind), rand)
     const toy: Toy = {
       id: task.id,
       kind,
-      ink: inkOf(kind, rand),
+      hue,
+      ink: inkOf(kind, hue, rand),
       x,
       target: spot,
       faceLeft: spot < x,

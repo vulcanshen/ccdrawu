@@ -120,6 +120,7 @@ export type Kit = {
 export type Toy = {
   id: string // the background task's, as a reply's end lists it
   kind: 'snail' | 'owl'
+  hue: number // its shell's or feathers', in radians: a new one's is away from those of its kind about
   ink: Record<string, string> // its colors, made up at random when it came
   x: number // 0 to TRACK along the walk, as the pet's; beyond an end, out of sight, a snail crawling in or off
   target: number
