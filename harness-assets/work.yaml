@@ -138,9 +138,10 @@ tasks:
       - TestConfigKeepsUnknownIDsAndWritesAllOff
       - TestConfigDefaultsUntilChanged
   - id: 13
-    spec: 1
+    spec: 12
     implementation: |
       Order 列：Enter 開 reorder popup，列出勾了的項目；D 拿起、j k 移動、Enter 放下、Enter 存、Esc 放回原樣
+      reorder popup 的 D 是拿起（Drag）；ccdrawu 沒有 Diff 模式，D、d 上沒有會永久拿掉東西的動作（tdp K13）
       存進 config.yaml 的順序
     test:
       - TestOrderIsReordered
@@ -163,12 +164,13 @@ tasks:
       - TestTDPTricky
       - TestL4EveryRowFullWidth
   - id: 15
-    spec: 1
+    spec: 12
     implementation: |
       preferences 頁 Claude theme：Enter 開 select，off 與六個內建主題；Drawer background：color picker，在 panel 上畫三格色塊與 hex
       Drawer background 上按 x 改回主題原本的底色；x 也在 Space menu 的 item 區：Reset，說明 the drawer background to the theme's own，熱鍵 x
       寫 <Claude 資料夾>/themes/ccdrawu.json，settings.json 的 theme 換成 custom:ccdrawu，原本的寫進 originals.yaml；設回 off 換回去，使用者之後在 /theme 換過的不動
       改 settings.json 只動 theme 那個值，其他位元組原樣；Claude 資料夾照 CLAUDE_CONFIG_DIR
+      Drawer background 上的 [x] Reset 拿掉自訂的底色，回到主題原本的；這是 ccdrawu 唯一一個會拿掉使用者設的東西的鍵，在 x（tdp K13）
     test:
       - TestThemeGoesIntoClaudeCodeAndBack
       - TestXResetsTheBackground
@@ -186,8 +188,9 @@ tasks:
     test:
       - TestBarIsSquaresUntilTheLineIsPicked
   - id: 17
-    spec: 8
+    spec: 12
     implementation: |
+      Plugin 列的 Enter 依現況裝或移除，兩邊都先開 confirm；移除不放在 x、D、d：它是裝與移除的切換，裝得回來（tdp K13）
       preferences 頁 Plugin：Enter 開 confirm 問過，再跑 ccdrawu install claude 那一套；Claude Code 印的字記進 App Log
       外掛還沒寫出 catalog.json 時，sidebar、inline、statusline 頁寫還沒有東西可以列，提示在 Plugin 上按 Enter
       Plugin 的 confirm：「Installs the ccdrawu plugin for your user, as `ccdrawu install claude` does.」「New sessions have the drawer; open ones take it with `/reload-plugins`.」；移除的：「…, as `ccdrawu uninstall claude` does.」

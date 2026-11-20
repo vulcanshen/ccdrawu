@@ -1,6 +1,6 @@
-id: 11
-from: v1.2.18
-to: v1.2.19
+id: 12
+from: v1.2.19
+to: v1.2.20
 tasks:
   - id: 1
     spec: 1
@@ -93,11 +93,12 @@ tasks:
       - Items 上按 Enter 開所有項目的清單：Space 勾、最上面 Select all 全選、Enter 套用、Esc 不改、/ 打字篩選；新勾的排在它前一項後面
       - config.yaml 裡外掛寫的項目清單沒有的 id 是「app 不認得的名字」，啟動時照 E3 拿掉；還沒有項目清單時無從判斷，不動
   - id: 13
-    spec: 1
+    spec: 12
     request: 在 ccdrawu 排側邊欄（或狀態列）的項目順序
-    tdp: [tdp reorder, tdp panel.12]
+    tdp: [tdp reorder, tdp panel.12, tdp K13]
     remark:
       - Order 上按 Enter：D 拿起一項、j k 移動、Enter 放下、再 Enter 存起來、Esc 放回原樣
+      - D 是 reorder 的拿起（Drag），不是刪除；ccdrawu 沒有 Diff 模式，K13 准同一個 panel 把 D 給不是刪除的動作（tdp v1.2.20）
   - id: 14
     spec: 10
     request: ccdrawu 的畫面：左邊分組列出 Drawer（sidebar、inline）、Statusline（statusline）、Settings（preferences），右邊是選到的那一頁的值
@@ -107,12 +108,13 @@ tasks:
       - 手改 config.yaml 留下的不合的值，啟動時就換成預設（tdp E3），畫面上不再有標 Red 的值；只有 Plugin 列在查不到外掛時標 Red
       - 寬度有剩時放最後（tdp panel.5 的預設，tdp v1.2.19 起 app 替每個清單挑一種）：[1] 只有一欄、沒有表頭，其他三種（一欄填滿、平均、加大欄距）都是在欄與欄之間分寬度，一欄的清單用不上
   - id: 15
-    spec: 1
+    spec: 12
     request: 讓側邊欄的底色跟終端機一樣：選一個 Claude Code 內建主題當底，再選側邊欄的底色
-    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker, tdp M2, tdp M3, tdp panel.12, tdp E2]
+    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker, tdp M2, tdp M3, tdp panel.12, tdp E2, tdp K13]
     remark:
       - ccdrawu 寫 ~/.claude/themes/ccdrawu.json 並在 Claude Code 選用；Claude theme 設回 off 或移除時換回原本的主題
       - Drawer background 上按 x 改回主題原本的底色（tdp P5 的領域熱鍵）
+      - x 拿掉使用者設的底色，就是 cursor 上那一個值，K13 的刪除一律在 x（tdp v1.2.20）；ccdrawu 沒有任何刪除放在 D 或 d
   - id: 16
     spec: 1
     request: 終端機的字型畫不出 bar 時，把 Bar 換成 line
@@ -120,11 +122,12 @@ tasks:
     remark:
       - 每個選項旁邊畫著它的 bar，終端機畫得出哪一種一看就知道
   - id: 17
-    spec: 8
+    spec: 12
     request: 在 ccdrawu 裡安裝外掛；外掛還沒寫出項目清單時，頁面說還沒有東西可以列、提示怎麼裝
-    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3, tdp panel.12, tdp M5, tdp M5-32, tdp note-104, tdp note-105, tdp E3, tdp toast, tdp F5, tdp panel.15]
+    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3, tdp panel.12, tdp M5, tdp M5-32, tdp note-104, tdp note-105, tdp E3, tdp toast, tdp F5, tdp panel.15, tdp K13]
     remark:
       - preferences 的 Plugin 上按 Enter 安裝外掛
+      - Plugin 的 Enter 是裝與移除的切換，跟 off、on 一樣：問過才做，移除了一樣按 Enter 裝回來，不是把一項永久拿掉，所以不算 K13 的刪除，不放在 x；也不在 D、d（tdp v1.2.20）
       - 安裝與移除的 confirm 裡 `ccdrawu install claude`、`/reload-plugins`、`ccdrawu uninstall claude` 用反引號（tdp M5；tdp v1.2.18；tdp #25）
       - ccdrawu 開著時每 2 秒看一次外掛寫的 catalog.json（自己重讀的內容）：讀到項目變了，App Log 記一筆 INFO 寫出外掛加了、拿掉了哪些項目；外掛寫了同樣的一份（修改時間變了、項目沒變）不記（tdp note.7、note-104）。讀不了：照 E3 是快取，不問、丟掉等外掛重寫；啟動時那一次記 WARN；之後重讀時第一次失敗跳 Error toast、記 ERR，同一個失敗再來不跳不記，換了一個失敗再跳；又讀得到時記一筆 INFO（<路徑> can be read again），不跳 toast（tdp note.7、note-105；tdp v1.2.18）
   - id: 18
