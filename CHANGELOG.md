@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.3.2 — tdp v1.2.18
 
 - A command you are to type is in backticks wherever ccdrawu writes it in a sentence, in the color around it: ``run `ccdrawu doctor` `` in the drawer's and the status line's red text (blue in 1.3.1), and in the TUI's confirms, its Alias prompt, the pet's description, the drawer's toast and what the commands print (tdp M5).
 - The commands print as every terminu app's do (tdp E1): a wrong use, such as an unknown command or `ccdrawu install` without `claude`, says what is wrong, then a blank line and the usage, with exit status 2; each line of an error starts with `ccdrawu: ` and a capital.
