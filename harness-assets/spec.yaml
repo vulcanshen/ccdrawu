@@ -122,7 +122,7 @@ tasks:
   - id: 17
     spec: 8
     request: 在 ccdrawu 裡安裝外掛；外掛還沒寫出項目清單時，頁面說還沒有東西可以列、提示怎麼裝
-    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3, tdp panel.12, tdp M5, tdp M5-32, tdp note-104, tdp note-105, tdp E3, tdp toast, tdp F5]
+    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3, tdp panel.12, tdp M5, tdp M5-32, tdp note-104, tdp note-105, tdp E3, tdp toast, tdp F5, tdp panel.15]
     remark:
       - preferences 的 Plugin 上按 Enter 安裝外掛
       - 安裝與移除的 confirm 裡 `ccdrawu install claude`、`/reload-plugins`、`ccdrawu uninstall claude` 用反引號（tdp M5；tdp v1.2.18；tdp #25）
