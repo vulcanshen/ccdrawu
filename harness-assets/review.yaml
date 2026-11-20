@@ -1,4 +1,4 @@
-spec: 11
+spec: 12
 tasks:
   - id: 1
     accepted: true
