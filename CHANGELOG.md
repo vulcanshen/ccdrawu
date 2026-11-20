@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.3.1 — tdp v1.2.17
 
 - An owl now keeps time: it rests 10 seconds, flies 10 seconds along the top of the strip, its wings beating, and comes down where it is to rest again. It used to fly off now and then, at random, straight to another perch.
 - In the red hint of the drawer and the status line, `ccdrawu doctor` is blue, set apart from the words around it.
