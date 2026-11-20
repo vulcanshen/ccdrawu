@@ -3,7 +3,6 @@ package ui
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 	"slices"
 	"strings"
 	"time"
@@ -23,6 +22,7 @@ type drawer struct {
 	loc    config.Locations
 	cat    config.Catalog
 	stamp  time.Time // the catalog's mtime when it was read
+	looked bool      // whether load has looked for the catalog once: later, one read is one the plugin wrote anew
 	cfg    config.Config
 	orig   config.Originals // what ccdrawu replaced in Claude Code, to put back
 	kept   config.Originals // orig as written in originals.yaml
@@ -302,6 +302,8 @@ func (d *drawer) show(id string) {
 // TUI is open shows up by itself.
 func (d *drawer) load() {
 	path := d.loc.Catalog()
+	again := d.looked
+	d.looked = true
 	info, err := os.Stat(path)
 	if err != nil || info.ModTime().Equal(d.stamp) {
 		return
@@ -317,11 +319,46 @@ func (d *drawer) load() {
 	if !ok {
 		return
 	}
+	// Read again on its own and found changed: an INFO of what changed; the same, nothing (tdp note.7)
+	if again {
+		d.app.Log(terminu.Info, catalogChange(d.cat, cat))
+	}
 	d.cat, d.stamp = cat, info.ModTime()
 	for _, id := range []string{rowSidebar, rowInline} {
 		d.pages[id].Fields = append([]*terminu.Field{d.drawerOn[id]}, d.summary(id)...)
 	}
 	d.pages[rowStatusline].Fields = d.statuslineFields()
+}
+
+// catalogChange says what the plugin changed in the items it offers, as it
+// wrote its catalog again while ccdrawu is open: the items it added and took
+// out, by name.
+func catalogChange(was, now config.Catalog) string {
+	has := func(c config.Catalog, id string) bool {
+		return slices.ContainsFunc(c.Items, func(it config.Item) bool { return it.ID == id })
+	}
+	if len(was.Items) == 0 {
+		return fmt.Sprintf("The ccdrawu plugin wrote its items: %d of them", len(now.Items))
+	}
+	var added, gone []string
+	for _, it := range now.Items {
+		if !has(was, it.ID) {
+			added = append(added, it.Name)
+		}
+	}
+	for _, it := range was.Items {
+		if !has(now, it.ID) {
+			gone = append(gone, it.Name)
+		}
+	}
+	text := "The ccdrawu plugin changed its items"
+	if len(added) > 0 {
+		text += "; added " + strings.Join(added, ", ")
+	}
+	if len(gone) > 0 {
+		text += "; taken out " + strings.Join(gone, ", ")
+	}
+	return text
 }
 
 // drawerOnField turns the drawer on or off in one place, beside the transcript
@@ -490,7 +527,7 @@ func (d *drawer) aliasField() *terminu.Field {
 	return &terminu.Field{Label: "Alias", Value: func() string { return d.cfg.Alias }, Empty: "none",
 		Edit: func() tea.Cmd {
 			return d.app.Text(terminu.TextInput{
-				Title: "Alias", Glyph: glyphPencil, Prompt: "One more name for /ccdrawu, such as ccd; empty for none",
+				Title: "Alias", Glyph: glyphPencil, Prompt: "One more name for `/ccdrawu`, such as ccd; empty for none",
 				Verb: "save", Old: d.cfg.Alias, MaxLen: 64,
 				Check: func(v string) error {
 					_, err := config.CleanAlias(v)
@@ -584,10 +621,4 @@ func (d *drawer) status(int) []terminu.Span {
 	return []terminu.Span{{Text: "Saved to ", Style: grey}, {Text: shortHome(d.loc.ConfigFile), Style: terminu.Fg(terminu.Lavender)}, {Text: follow, Style: grey}}
 }
 
-func shortHome(path string) string {
-	home, err := os.UserHomeDir()
-	if err == nil && (path == home || strings.HasPrefix(path, home+string(filepath.Separator))) {
-		return "~" + path[len(home):]
-	}
-	return path
-}
+func shortHome(path string) string { return config.ShortHome(path) }

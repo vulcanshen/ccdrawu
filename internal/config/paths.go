@@ -6,9 +6,20 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 
 	"github.com/vulcanshen/ccdrawu/internal/claude"
 )
+
+// ShortHome is path with the home folder written ~, as the TUI and the
+// commands say it.
+func ShortHome(path string) string {
+	home, err := os.UserHomeDir()
+	if err == nil && (path == home || strings.HasPrefix(path, home+string(filepath.Separator))) {
+		return "~" + path[len(home):]
+	}
+	return path
+}
 
 // Locations are where ccdrawu keeps its files (tdp E3), the same places the mod
 // uses (hooks/paths.ts). A variable set but empty counts as unset.

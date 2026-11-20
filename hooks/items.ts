@@ -32,7 +32,7 @@ export type Item = {
 // The order here is the order on screen
 export const ITEMS: readonly Item[] = [
   // Drawn by the pane itself (pets.ts), over the rows beside the transcript and left of the columns above the prompt
-  { id: 'pet', label: 'Pet', short: 'pet', name: 'Pet', group: 'Pet', description: 'A pixel pet: it walks while Claude works, sits when Claude is done, sleeps when nothing goes on; /ccdrawu pat pats it', dock: true, inline: true, statusline: false },
+  { id: 'pet', label: 'Pet', short: 'pet', name: 'Pet', group: 'Pet', description: 'A pixel pet: it walks while Claude works, sits when Claude is done, sleeps when nothing goes on; `/ccdrawu pat` pats it', dock: true, inline: true, statusline: false },
   { id: 'model', label: 'Model', short: 'mdl', name: 'Model', group: 'Model', description: 'The model answering in this session', dock: true, inline: true, statusline: true },
   { id: 'effort', label: 'Effort', short: 'eff', name: 'Effort level', group: 'Model', description: "The last request's effort level, green for low to red for max", dock: true, inline: true, statusline: false },
   { id: 'mode', label: 'Mode', short: 'mode', name: 'Permission mode', group: 'Model', description: 'auto, plan, accept edits, ...; after shift+tab it shows once Claude finishes the tools of a step, or with the next prompt', dock: true, inline: true, statusline: false },

@@ -2,6 +2,14 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
+## Unreleased
+
+- A command you are to type is in backticks wherever ccdrawu writes it in a sentence, in the color around it: ``run `ccdrawu doctor` `` in the drawer's and the status line's red text (blue in 1.3.1), and in the TUI's confirms, its Alias prompt, the pet's description, the drawer's toast and what the commands print (tdp M5).
+- The commands print as every terminu app's do (tdp E1): a wrong use, such as an unknown command or `ccdrawu install` without `claude`, says what is wrong, then a blank line and the usage, with exit status 2; each line of an error starts with `ccdrawu: ` and a capital.
+- `ccdrawu uninstall claude`, with values in `config.yaml` it can't use, says on stderr each value it changed and each key it does not read, as `ccdrawu doctor` does and in the TUI's words. Both write paths in the home folder with `~`, as the TUI does.
+- While `ccdrawu` is open, the plugin writing its list of items anew is an INFO in the App Log, naming the items it added and took out (tdp note.7).
+- Built on terminu-go v1.2.19 (tdp v1.2.18).
+
 ## v1.3.1 — tdp v1.2.17
 
 - An owl now keeps time: it rests 10 seconds, flies 10 seconds along the top of the strip, its wings beating, and comes down where it is to rest again. It used to fly off now and then, at random, straight to another perch.

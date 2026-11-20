@@ -52,11 +52,9 @@ const (
 	lavenderColor = "#b4befe"
 	labelColor    = "#89b4fa"
 	sepColor      = "#45475a"
-	markColor     = "#f38ba8"        // red: the config has something wrong
-	markRoom      = 20               // columns a mark leaves the items at least, if it can
-	doctorRun     = "run "           // after a mark: what sets the config right, the words
-	doctorCommand = "ccdrawu doctor" // and the command
-	doctorHint    = "; " + doctorRun + doctorCommand
+	markColor     = "#f38ba8"                // red: the config has something wrong
+	markRoom      = 20                       // columns a mark leaves the items at least, if it can
+	doctorHint    = "; run `ccdrawu doctor`" // after a mark: what sets the config right
 )
 
 // noValue is what an item on reads while it has no value, as in the drawer
@@ -206,9 +204,9 @@ func Marked(cfg config.Config, cat config.Catalog, items map[string][]Seg, colum
 	}
 	painted := paint(mark, markColor, false)
 	if what, hinted := strings.CutSuffix(mark, doctorHint); hinted {
-		// The hint's words in the text's color, the command in the labels' (user, 2026-11-20: a
-		// command set apart from the words around it)
-		painted = paint(what+"; ", markColor, false) + paint(doctorRun, textColor, false) + paint(doctorCommand, labelColor, false)
+		// The hint in the text's color, set apart from the red of what is wrong; the command in it in
+		// backticks, the hint's color (tdp M5, tdp #25 on tdp main)
+		painted = paint(what+"; ", markColor, false) + paint(doctorHint[len("; "):], textColor, false)
 	}
 	if cfg.Statusline.Color == "dimmed" {
 		painted = mark

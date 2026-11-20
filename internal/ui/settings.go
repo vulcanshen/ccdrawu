@@ -227,8 +227,8 @@ func (d *drawer) pluginAction() tea.Cmd {
 		return d.app.Confirm(terminu.Ask{
 			Title: "Install", Subject: "Claude Code", Question: "Add the drawer to Claude Code?", Verb: "install",
 			Details: []string{
-				"Installs the ccdrawu plugin for your user, as ccdrawu install claude does.",
-				"New sessions have the drawer; open ones take it with /reload-plugins.",
+				"Installs the ccdrawu plugin for your user, as `ccdrawu install claude` does.",
+				"New sessions have the drawer; open ones take it with `/reload-plugins`.",
 			},
 		}, func() tea.Cmd {
 			d.busy = true
@@ -241,7 +241,7 @@ func (d *drawer) pluginAction() tea.Cmd {
 	return d.app.Confirm(terminu.Ask{
 		Title: "Uninstall", Subject: "Claude Code", Question: "Take the drawer out of Claude Code?", Verb: "uninstall",
 		Details: []string{
-			"Removes the ccdrawu plugin and its marketplace, as ccdrawu uninstall claude does.",
+			"Removes the ccdrawu plugin and its marketplace, as `ccdrawu uninstall claude` does.",
 			"ccdrawu's theme and status line go too; your picks here stay.",
 		},
 	}, func() tea.Cmd {

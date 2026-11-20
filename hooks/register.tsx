@@ -63,8 +63,7 @@ import {
   chunk,
   COLUMN_GAP,
   columnRows,
-  DOCTOR_COMMAND,
-  DOCTOR_RUN,
+  DOCTOR_HINT,
   drawerShows,
   drawerWanted,
   enabledItems,
@@ -259,7 +258,7 @@ async function refreshConfig($: Engine) {
 // the engine holds a pane opened unasked until the terminal is wide enough to dock it, and draws one
 // above the prompt only when the person opens it. Once the open has settled, say what to do (the README
 // says why)
-const INLINE_HINT = 'Type /ccdrawu to show the drawer above the prompt'
+const INLINE_HINT = 'Type `/ccdrawu` to show the drawer above the prompt'
 
 async function hintInline($: Engine) {
   await $.clock.sleep(1_000)
@@ -729,8 +728,7 @@ export const register: Register = on => {
       issue === null ? null : (
         <Text color={C.red}>
           {issue + '; '}
-          <Text color={C.text}>{DOCTOR_RUN}</Text>
-          <Text color={C.blue}>{DOCTOR_COMMAND}</Text>
+          <Text color={C.text}>{DOCTOR_HINT}</Text>
         </Text>
       )
     // The pet is not a row: it is drawn on its own, over the rows or left of the columns

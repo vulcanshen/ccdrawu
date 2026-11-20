@@ -71,10 +71,9 @@ export function configMisfits(text: string, json = false): string[] {
 }
 
 // After what is wrong with the config, in the pane and the status line: what sets it right, as ccdrawu does
-// when it opens (tdp E3, outside the TUI), the words and the command, each in a color of its own (user,
-// 2026-11-20: a command set apart from the words around it)
-export const DOCTOR_RUN = 'run '
-export const DOCTOR_COMMAND = 'ccdrawu doctor'
+// when it opens (tdp E3, outside the TUI); the command in it in backticks, in the hint's color (tdp M5,
+// tdp #25 on tdp main)
+export const DOCTOR_HINT = 'run `ccdrawu doctor`'
 
 // Why parseConfig can't read text: the parser's words, or that it is not a config; undefined when it can
 export function unreadReason(text: string, json = false): string | undefined {

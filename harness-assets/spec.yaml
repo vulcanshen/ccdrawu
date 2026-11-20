@@ -1,6 +1,6 @@
-id: 7
-from: v1.2.16
-to: v1.2.17
+id: 8
+from: v1.2.17
+to: v1.2.18
 tasks:
   - id: 1
     spec: 1
@@ -12,14 +12,15 @@ tasks:
       - Context、Session、Weekly 畫 bar，50%、70%、90% 從綠變黃、橘、紅；Effort 從 low 綠到 max 紅
       - 側邊欄是 Claude Code 的外掛畫的，不是 terminu-go 的畫面；列與顏色是 app 的功能邏輯（tdp P5）
   - id: 2
-    spec: 3
+    spec: 8
     request: 側邊欄在 session 開始時自動打開，放在對話旁邊或輸入框上方；兩個位置可以各自關掉
-    tdp: [tdp P5, tdp radio, tdp panel.12]
+    tdp: [tdp P5, tdp radio, tdp panel.12, tdp M5, tdp M5-32]
     remark:
       - 放哪裡由 Claude Code 決定：fullscreen 渲染、終端機夠寬（約 110～144 欄）時在對話旁邊，其他時候在輸入框上方
       - Claude 桌面版把面板最小化成小卡片（widget，Claude Code 2.1.328 起）時，畫成輸入框上方的樣子；Drawer 的設定不關掉它（使用者 2026-11-19：Claude Code 更新帶來的警告要處理）
       - 輸入框上方時項目排成好幾欄文字，不畫 bar
       - ccdrawu 的 sidebar 頁與 inline 頁最上面各有 Drawer（on／off）；inline 設 off 時，終端機窄到放不下就收起來，不跑到輸入框上方
+      - 要使用者打的指令用反引號包起來，顏色跟周圍一樣：放不下時的 toast「Type `/ccdrawu` to show the drawer above the prompt」（tdp M5；tdp v1.2.18；tdp #25）
   - id: 3
     spec: 1
     request: /ccdrawu 開關輸入它的這個 session 的側邊欄，Claude 回覆到一半也能用
@@ -27,11 +28,12 @@ tasks:
     remark:
       - 打開後不管 Drawer 的設定都顯示；關掉後終端機拉寬縮窄都不再出現；之後改了 Drawer 就改回照設定走
   - id: 4
-    spec: 1
+    spec: 8
     request: 設一個比較短的別名指令，例如 /ccd，跟 /ccdrawu 一樣能用
-    tdp: [tdp P5, tdp text, tdp panel.12]
+    tdp: [tdp P5, tdp text, tdp panel.12, tdp M5, tdp M5-32]
     remark:
       - 在 preferences 的 Alias 設；存在 config.yaml 的 alias，也可以直接改檔；改掉或拿掉的名字在 session 重開前都還能用
+      - Alias 輸入框的提示「One more name for `/ccdrawu`, such as ccd; empty for none」，指令用反引號（tdp M5；tdp v1.2.18；tdp #25）
   - id: 5
     spec: 1
     request: 側邊欄最上面有一隻像素寵物陪著：Claude 工作時走動、做完時坐下說一句、出錯時跳、閒著時趴下再睡著
@@ -40,9 +42,11 @@ tasks:
       - 在輸入框上方時佔最左邊一欄，不顯示台詞和球
       - 台詞是固定的幾句，不花 token；花色每個 session 隨機
   - id: 6
-    spec: 1
+    spec: 8
     request: /ccdrawu pat 摸摸寵物，/ccdrawu ball 丟一顆球給牠玩
-    tdp: [tdp P5]
+    tdp: [tdp P5, tdp M5, tdp M5-32]
+    remark:
+      - 寵物項目的說明裡「`/ccdrawu pat` pats it」，指令用反引號（tdp M5；tdp v1.2.18；tdp #25）
   - id: 7
     spec: 2
     request: 有 subagent 在跑時，每個 subagent 有一隻同類的小隻在寵物後面走，最多三隻，從左邊或右邊走進場；小隻偶爾會跳，路上遇到 git 的紙箱，每一層（包含地面）都可能跳到，隨機算，在層間穿插移動，箱子中間每一個地方都可能跳上去走動
@@ -66,22 +70,21 @@ tasks:
     remark:
       - 在 preferences 的 Pet 設，一秒內開著的 session 跟著換；不想要寵物就在項目清單取消勾選 Pet
   - id: 10
-    spec: 7
+    spec: 8
     request: ccdrawu 當 Claude Code 的狀態列（輸入框下方那一列），照使用者挑的項目、順序、寫法排成一列
-    tdp: [tdp P5, tdp E1, tdp E3, tdp E3-36, tdp E3-39]
+    tdp: [tdp P5, tdp E1, tdp E3, tdp E3-36, tdp E3-39, tdp M5, tdp M5-32]
     remark:
       - Claude Code 執行 ccdrawu statusline；太長時結尾截掉加 …；on when narrow 時，側邊欄在對話旁邊或終端機夠寬就整列收起來
       - 狀態列是印給 Claude Code 顯示的輸出，算 TUI 以外（tdp E3、P5）：config.yaml 讀不了、或有用不了的值時，不動檔（沒有 .bak、不重寫），這一次用預設值照樣畫，最後加一個紅色的標記寫出哪個檔有什麼問題；備份、重寫、跳 toast 留給下次打開的 TUI（tdp E3-36、E3-39；tdp #22，tdp v1.2.17）
-      - 標記後面接「; run ccdrawu doctor」，提示怎麼修（task 28；使用者 2026-11-19）；放不下時先把 key 的清單改成幾個值，再拿掉提示；讀不了的一定留原因，提示先讓位；「run」用一般文字的顏色、「ccdrawu doctor」用 Blue，指令跟說明分開（使用者 2026-11-20）
-      - note: 文字裡要使用者去打的指令怎麼跟說明分開，tdp 沒寫（color.2 只區隔 hint 的鍵與說明），使用者要家族一致；暫時照 E3「TUI 以外，怎麼呈現 app 可以自行決定」只用顏色分，不上色（dimmed）時沒有區隔
-        issue: tdp #25
+      - 標記後面接「; run `ccdrawu doctor`」，提示怎麼修（task 28；使用者 2026-11-19）；放不下時先把 key 的清單改成幾個值，再拿掉提示；讀不了的一定留原因，提示先讓位；提示用一般文字的顏色，指令用反引號包起來、跟提示同色（使用者 2026-11-20；tdp M5；tdp v1.2.18；tdp #25）
   - id: 11
-    spec: 1
+    spec: 8
     request: 在 ccdrawu 的 statusline 頁設定狀態列：開關（on、off、on when narrow）、項目、順序、寫法、顏色、分隔、重跑間隔
-    tdp: [tdp radio, tdp text, tdp number, tdp confirm, tdp F6, tdp panel.12, tdp P5]
+    tdp: [tdp radio, tdp text, tdp number, tdp confirm, tdp F6, tdp panel.12, tdp P5, tdp M5, tdp M5-32]
     remark:
       - 打開時在 ~/.claude/settings.json 設成 ccdrawu statusline；原本就有狀態列的，先問過才換掉，並記下原本的，關掉或移除時換回去
       - Format：label、short、value；Color：highlighted、dimmed；Separator 沒設是 |；Refresh 沒設是 10 秒
+      - 打開時那段說明「Turning the statusline off, or `ccdrawu uninstall claude`, puts it back.」，指令用反引號（tdp M5；tdp v1.2.18；tdp #25）
   - id: 12
     spec: 4
     request: 在 ccdrawu 挑側邊欄（或狀態列）顯示哪些項目
@@ -116,42 +119,46 @@ tasks:
     remark:
       - 每個選項旁邊畫著它的 bar，終端機畫得出哪一種一看就知道
   - id: 17
-    spec: 1
+    spec: 8
     request: 在 ccdrawu 裡安裝外掛；外掛還沒寫出項目清單時，頁面說還沒有東西可以列、提示怎麼裝
-    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3, tdp panel.12]
+    tdp: [tdp confirm, tdp F6, tdp screen.8, tdp note.7, tdp K3, tdp panel.12, tdp M5, tdp M5-32, tdp note-104]
     remark:
       - preferences 的 Plugin 上按 Enter 安裝外掛
+      - 安裝與移除的 confirm 裡 `ccdrawu install claude`、`/reload-plugins`、`ccdrawu uninstall claude` 用反引號（tdp M5；tdp v1.2.18；tdp #25）
+      - ccdrawu 開著時每 2 秒看一次外掛寫的 catalog.json（自己重讀的內容）：讀到變了，App Log 記一筆 INFO 寫出外掛加了、拿掉了哪些項目；沒變不記（tdp note.7；tdp v1.2.18）。讀不了照 E3 的快取丟掉、記 WARN，跟原本一樣
   - id: 18
-    spec: 4
+    spec: 8
     request: ccdrawu install claude 把同一版的外掛裝進 Claude Code，ccdrawu uninstall claude 拿掉它並換回原本的主題與狀態列
-    tdp: [tdp P5, tdp E1, tdp E2, tdp E3, tdp E6, harness project.3]
+    tdp: [tdp P5, tdp E1, tdp E2, tdp E3, tdp E6, harness project.3, tdp M5, tdp M5-32, tdp E1-4, tdp E1-6, tdp E1-8, tdp E3-40]
     remark:
       - 只用這兩個指令（或 ccdrawu update）裝外掛，不用 /plugin：外掛要跟指令同一版
       - uninstall 讀不了 config.yaml 或 originals.yaml 時停下來，什麼都不動，寫出是哪個檔與原因（tdp E3）
       - uninstall 遇到 config.yaml 有用不了的值：複製成 .bak、換成預設寫回，那句寫到 stderr，照樣往下做（tdp E3，值不合規則）
+      - 照 tdp E1 的命令列格式（tdp v1.2.18；tdp #24）：錯誤一行一件、開頭 ccdrawu: 、大寫開頭；uninstall 遇到用不了的值，stderr 寫 TUI 的同一句話：toast 那一列、每個值的 WARN、不讀的 key 的 INFO（tdp E3）；安裝後那兩句的 `/reload-plugins`、`ccdrawu` 用反引號（tdp M5；tdp v1.2.18；tdp #25）
   - id: 19
-    spec: 1
+    spec: 8
     request: ccdrawu update 照安裝的方式更新 ccdrawu，再把 Claude Code 裡的外掛更新成同一版
-    tdp: [tdp P5, tdp E1]
+    tdp: [tdp P5, tdp E1, tdp M5, tdp M5-32, tdp E1-4, tdp E1-8]
     remark:
       - Homebrew 裝的交給 Homebrew；安裝腳本裝的下載 release 的執行檔、用 checksum 驗過再換掉自己；Scoop 裝的說要跑什麼；資料夾不能寫入時說明原因後停下來
+      - 訊息裡要使用者打的指令用反引號：`git pull && make install`、`ccdrawu install claude`、`ccdrawu update`（tdp M5；tdp v1.2.18；tdp #25）；錯誤一行一件、開頭 ccdrawu: 、大寫開頭（tdp E1；tdp v1.2.18；tdp #24）；Scoop 那段的指令各自一行縮排，不在句子裡，不加
   - id: 20
-    spec: 1
+    spec: 8
     request: ccdrawu version 印版本，ccdrawu help 印用法
-    tdp: [tdp E1, harness project.4]
+    tdp: [tdp E1, harness project.4, tdp M5, tdp M5-32, tdp E1-4, tdp E1-5, tdp E1-6, tdp E1-7, tdp E1-8]
+    remark:
+      - 命令列照 tdp E1（tdp v1.2.18；tdp #24）：錯誤與警告寫 stderr、一件一行、開頭 ccdrawu: 、大寫開頭（路徑、檔名、程式名開頭的照原樣）；結果與進度寫 stdout；用錯（不認得的指令、install 或 uninstall 少了 claude）寫「ccdrawu: <哪裡錯>」、空一行、用法，exit 2，例「Unknown command "x"」「Say where: `ccdrawu install claude`」（tdp M5）；exit 0 做完、1 沒做完、2 用錯
   - id: 21
-    spec: 7
+    spec: 8
     request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問；讀得進來、只有用不了的值時，備份後換成預設
-    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6, tdp note.7, tdp P5, tdp E3-36, tdp E3-38, tdp E3-39]
+    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6, tdp note.7, tdp P5, tdp E3-36, tdp E3-38, tdp E3-39, tdp M5, tdp M5-32]
     remark:
       - ~/.config/ccdrawu/config.yaml（CCDRAWU__CONFIG、XDG_CONFIG_HOME）；系統快取資料夾裡的 ccdrawu（CCDRAWU__CACHE）；~/.ccdrawu/originals.yaml（CCDRAWU__DATA）
       - config.yaml 讀不了：寫出原因，Enter 改名成 config.yaml.bak、用預設值開始，Esc 離開
       - 用不了的值（不認得的名字、不是 #rrggbb 的顏色、超過 60 或負的秒數、外掛不收的 alias、有控制字元的分隔、型別不對的值）：啟動時複製成 config.yaml.bak、換成預設寫回，跳 Warning toast，App Log 每個值一筆 WARN；備份做不出來時不寫回、跳 Error toast（tdp E3，值不合規則）
       - 同一次啟動有搬家又有不合的值：合成一個 toast，App Log 一件一筆（tdp E3，同一次啟動有好幾件）
       - 外掛畫的側邊欄（不在 TUI 裡的畫面，TUI 以外，tdp E3、P5）：config.yaml 讀不了、或有用不了的值時，不動檔，照預設畫，在面板最上面用一列寫出哪個檔有什麼問題；備份、重寫、跳 toast 留給下次打開的 TUI（tdp E3-36、E3-39；tdp #23，tdp v1.2.17）
-      - 側邊欄那一列後面接「; run ccdrawu doctor」，提示怎麼修（task 28；使用者 2026-11-19），「run」用一般文字的顏色、「ccdrawu doctor」用 Blue，指令跟說明分開（使用者 2026-11-20）
-      - note: 指令跟說明怎麼分開 tdp 沒寫，使用者要家族一致；暫時照 E3「TUI 以外，怎麼呈現 app 可以自行決定」只用顏色分
-        issue: tdp #25
+      - 側邊欄那一列後面接「; run `ccdrawu doctor`」，提示怎麼修（task 28；使用者 2026-11-19），提示用一般文字的顏色，指令用反引號包起來、跟提示同色（使用者 2026-11-20；tdp M5；tdp v1.2.18；tdp #25）
       - ccdrawu 不讀的 key（以前讀過的，或從來沒讀過的、例如打錯的）留在檔案裡，重寫時也留著，不跳 toast，每次啟動在 App Log 記一筆 INFO：以前讀過的寫 No longer used，其他寫 Not read（tdp E3-38；tdp #21，tdp v1.2.17）
   - id: 22
     spec: 1
@@ -192,14 +199,13 @@ tasks:
       - 場上有它們時寵物不睡，最多趴著；Claude 工作時寵物照常閒逛，不特別去抓
       - 取代 2026-11-06 的小螢幕（shell）與雷達（monitor），那次因為太難表示而取消
   - id: 28
-    spec: 6
+    spec: 8
     request: ccdrawu doctor 不用打開 ccdrawu，就把側邊欄與狀態列說 config.yaml 有問題的地方修好；側邊欄與狀態列的紅字提示使用者執行它
-    tdp: [tdp E1, tdp E3, tdp E3-27, tdp E3-31, tdp E3-37, tdp E3-38, tdp P5, tdp E3-24, tdp E3-32]
+    tdp: [tdp E1, tdp E3, tdp E3-27, tdp E3-31, tdp E3-37, tdp E3-38, tdp P5, tdp E3-24, tdp E3-32, tdp M5, tdp M5-32, tdp E1-5, tdp E1-7, tdp E3-40]
     remark:
       - 做的事跟打開 ccdrawu 時一樣，只是沒有畫面（tdp E3「沒有畫面時」、E3-31）：搬舊位置的檔、用不了的值先複製成 .bak 再換成預設寫回；要說的寫到 stderr，一件一行，照發生的順序（tdp E3-37）。沒有 App Log 可看，所以每個值也各寫一行，跟 TUI 的 App Log 同一句：key、原本寫的、現在用的
-      - config.yaml 或 originals.yaml 讀不了：照 Esc 做，不動檔，stderr 寫路徑與原因，再一句 Open ccdrawu to move it aside and start fresh, or set it right by hand.，exit 1（tdp E3-27）；沒有畫面，問不了要不要移到 .bak
+      - config.yaml 或 originals.yaml 讀不了：照 Esc 做，不動檔，stderr 寫路徑與原因，再一句 Open `ccdrawu` to move it aside and start fresh, or set it right by hand.，exit 1（tdp E3-27）；沒有畫面，問不了要不要移到 .bak
       - ccdrawu 不讀的 key 留著，每個一行 Not read，以前讀過的寫 No longer used（tdp E3-38）
       - 沒有要修的：stdout 印 Nothing to set right in <路徑>.，exit 0；搬不動、備份或寫回失敗 exit 1
       - 只管 ccdrawu 自己的檔（設定、原值、搬家），不查外掛裝了沒、版本對不對：使用者要的是紅字的修法（使用者 2026-11-19）；指令是 app 自行決定的（tdp E1）
-      - note: 沒有畫面的指令 tdp 沒寫的幾件（WARN 與 INFO 寫到哪、讀不了能不能多一句怎麼辦、搬不動怎麼做、TUI 以外要不要指向修的指令、家族共用的指令與 exit status），使用者要家族有共同的 subcommand 規範；暫時照 E1 的放行做：都寫 stderr、一件一行，讀不了多一句怎麼辦，沒做完 exit 1、用法錯 exit 2
-        issue: tdp #24
+      - 沒有畫面時照 tdp E1、E3（tdp v1.2.18；tdp #24）：每一件寫 stderr、一行一件、開頭 ccdrawu: 、跟 TUI 同一句話（路徑照 TUI 用 ~ 開頭）；讀不了多一行怎麼辦；exit 1 是沒做完；句子裡的 `ccdrawu` 用反引號（tdp M5；tdp v1.2.18；tdp #25）

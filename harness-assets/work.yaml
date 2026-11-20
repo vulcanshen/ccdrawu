@@ -13,12 +13,13 @@ tasks:
       - commit: 6df08c2
       - commit: 7eb5a51
   - id: 2
-    spec: 3
+    spec: 8
     implementation: |
       外掛在 session 開始時打開 pane；Claude Code 把它放在對話旁邊或輸入框上方
       輸入框上方：寵物佔最左 14 欄，項目排成好幾欄文字，欄數取放得下的最少列數
       Pane 的 placement 是 widget（桌面版最小化的面板）時照輸入框上方畫、用 inline 的項目；keepPlace 只看 dock 與 inline，不關 widget；Claude Code 以後新加的值照它文件說的當成 dock
       ccdrawu 的 sidebar 頁、inline 頁最上面的 Drawer 列：radio（off、on），畫在原地選，寫進 config.yaml 的 drawer；外掛一秒內讀到
+      放不下時的 toast：「Type `/ccdrawu` to show the drawer above the prompt」，指令用反引號（tdp M5）
     test:
       - TestDrawerTurnsOffAndOn
       - commit: 39d8059
@@ -30,10 +31,11 @@ tasks:
     test:
       - commit: 25ebd70
   - id: 4
-    spec: 1
+    spec: 8
     implementation: |
       ccdrawu 的 preferences 頁 Alias 列：Enter 開 text input，照外掛收的規則檢查名字，存進 config.yaml 的 alias
       外掛讀到 alias 就多註冊一個同樣的指令；註冊過的名字在 session 裡留著
+      Alias 輸入框的提示：「One more name for `/ccdrawu`, such as ccd; empty for none」
     test:
       - TestAliasIsCheckedAndSaved
       - TestCleanAliasTakesWhatTheModTakes
@@ -51,10 +53,11 @@ tasks:
       - commit: c9ca750
       - commit: 7eb5a51
   - id: 6
-    spec: 1
+    spec: 8
     implementation: |
       /ccdrawu pat：寵物停下來坐著，頭上冒出 ♥，說一句
       /ccdrawu ball：球從遠的那一側彈進來滾到停，寵物跑過去揮爪玩一陣子後拿到、說一句；20 秒沒拿到球就消失
+      寵物項目的說明（catalog 的 description）：「…; `/ccdrawu pat` pats it」
     test:
       - commit: 3c977dc
   - id: 7
@@ -86,13 +89,13 @@ tasks:
       - TestPetIsPicked
       - TestConfigKeepsTheAliasAndPet
   - id: 10
-    spec: 7
+    spec: 8
     implementation: |
       ccdrawu statusline：從 stdin 讀 Claude Code 給的 session，讀外掛寫在快取資料夾 sessions/ 的那個 session 的值；沒有的話只畫 Model、Context、Cost
       照 config.yaml 的項目、順序、Format、Color、Separator 排成一列，截到 COLUMNS 減 4 欄，結尾加 …
       on when narrow 時側邊欄在對話旁邊、或終端機寬到 144 欄以上，印一個 reset 讓那一列收起來；沒有東西可畫也一樣
       一週沒寫過的 session 檔刪掉
-      config.yaml 讀不了或有用不了的值（TUI 以外）：用 config.Check 只讀不寫，不動檔、不寫 stderr、exit 0；這一次用預設值照樣排那一列，最後接分隔與紅色（#f38ba8，dimmed 時沒顏色）的標記：「config.yaml can't be read: <原因第一行>」或「config.yaml: <不合的 key>, … did not fit」；值不合的標記放不下（前面的項目剩不到 20 欄）時改短成「config.yaml: N values did not fit」；讀不了的標記一定帶原因（tdp E3-36）：前面的項目讓位，還放不下就截掉原因的結尾加 …；前面的項目截短留位置給標記；標記後面接「; run ccdrawu doctor」，放不下時先把 key 的清單改成「N values did not fit」、再拿掉提示；讀不了的提示先讓位、原因留著；顏色：「; 」接在紅色的標記裡，「run 」#cdd6f4，「ccdrawu doctor」#89b4fa（dimmed 時都沒顏色）
+      config.yaml 讀不了或有用不了的值（TUI 以外）：用 config.Check 只讀不寫，不動檔、不寫 stderr、exit 0；這一次用預設值照樣排那一列，最後接分隔與紅色（#f38ba8，dimmed 時沒顏色）的標記：「config.yaml can't be read: <原因第一行>」或「config.yaml: <不合的 key>, … did not fit」；值不合的標記放不下（前面的項目剩不到 20 欄）時改短成「config.yaml: N values did not fit」；讀不了的標記一定帶原因（tdp E3-36）：前面的項目讓位，還放不下就截掉原因的結尾加 …；前面的項目截短留位置給標記；標記後面接「; run `ccdrawu doctor`」，放不下時先把 key 的清單改成「N values did not fit」、再拿掉提示；讀不了的提示先讓位、原因留著；顏色：「; 」接在紅色的標記裡，「run `ccdrawu doctor`」#cdd6f4（dimmed 時沒顏色）
     test:
       - TestRunMarksValuesThatDoNotFit
       - TestRunMarksAConfigThatCantBeRead
@@ -108,11 +111,12 @@ tasks:
       - TestRunOnWhenNarrow
       - TestRunHidesTheRow
   - id: 11
-    spec: 1
+    spec: 8
     implementation: |
       ccdrawu 的 statusline 頁：Statusline（off、on、on when narrow）、Format（label、short、value）、Color（highlighted、dimmed）是 radio，畫在原地選；Items、Order 見 task 12、13；Separator 開 text input；Refresh 開 number input（1–60 秒）
       Statusline 設 on：settings.json 的 statusLine 已經是別的時，開 confirm 問過才換；原本的寫進 originals.yaml；設回 off 時換回去
       改 settings.json 只動 statusLine 那個值，其他原樣
+      Statusline 設 on 的那段說明：「Turning the statusline off, or `ccdrawu uninstall claude`, puts it back.」
     test:
       - TestStatuslineReplacesTheUsersOnlyAfterAsking
       - TestStatuslineOnWithoutAskingWhereThereWasNone
@@ -181,21 +185,25 @@ tasks:
     test:
       - TestBarIsSquaresUntilTheLineIsPicked
   - id: 17
-    spec: 1
+    spec: 8
     implementation: |
       preferences 頁 Plugin：Enter 開 confirm 問過，再跑 ccdrawu install claude 那一套；Claude Code 印的字記進 App Log
       外掛還沒寫出 catalog.json 時，sidebar、inline、statusline 頁寫還沒有東西可以列，提示在 Plugin 上按 Enter
+      Plugin 的 confirm：「Installs the ccdrawu plugin for your user, as `ccdrawu install claude` does.」「New sessions have the drawer; open ones take it with `/reload-plugins`.」；移除的：「…, as `ccdrawu uninstall claude` does.」
+      ccdrawu 開著時每 2 秒（App.Tick）看 catalog.json 的修改時間，變了才讀；不是第一次讀到時，App Log 記 INFO「The ccdrawu plugin changed its items; added <名字>, …; taken out <名字>, …」，之前沒有就「The ccdrawu plugin wrote its items: N of them」
     test:
+      - TestCatalogWrittenAgainIsInTheAppLog
       - TestPluginRowInstallsAfterAsking
       - TestNoCatalogSaysWhatToDo
       - TestClaudesLinesGoToTheAppLog
   - id: 18
-    spec: 4
+    spec: 8
     implementation: |
       ccdrawu install claude：用 claude plugin 指令加市集、裝外掛，來源是 GitHub 上跟執行檔同一版的 tag（CCDRAWU__MARKETPLACE 可改）；已經裝了就更新、換到那個 tag；印 Claude Code 說的話
       外掛的 icon 是 .claude-plugin/icon.png：docs/icon.svg 轉成 1000×1000 的 PNG（claude plugin validate 要 512～2048 的正方形 PNG）
-      ccdrawu uninstall claude：先讀 config.yaml 與 originals.yaml，讀不了就停下來，不動任何檔、什麼都不印，stderr 寫 <路徑> can't be read: <原因>，exit 1；讀得了才拿掉外掛與市集，換回原本的主題與狀態列，印做了什麼
+      ccdrawu uninstall claude：先讀 config.yaml 與 originals.yaml，讀不了就停下來，不動任何檔、什麼都不印，stderr 寫 terminu.CannotReadText（<路徑，~ 開頭> can't be read: <原因>），exit 1；讀得了才拿掉外掛與市集，換回原本的主題與狀態列，印做了什麼
       uninstall 遇到 config.yaml 有用不了的值：config.Settle 複製成 .bak、換成預設寫回，那句寫到 stderr（在終端機跑的指令，照 tdp E3 的沒有畫面時；task 10 的狀態列是 TUI 以外，不寫 stderr），照樣往下做
+      install 印完 Claude Code 說的話後：「Open Claude Code sessions take the drawer with `/reload-plugins`; new ones have it from the start.」「Run `ccdrawu` to pick what it shows.」；uninstall 遇到用不了的值，stderr 每行「ccdrawu: 」開頭，寫 config.Settled.Lines：toast 那一列、每個值的 WARN、不讀的 key 的 INFO，跟 TUI 同一句話
     test:
       - TestUninstallGoesOnWithValuesThatDoNotFit
       - TestInstallTakesTheMarketplaceItIsGiven
@@ -210,10 +218,11 @@ tasks:
       - TestUninstallStopsOnAFileThatCantBeRead
       - commit: 20a69c7
   - id: 19
-    spec: 1
+    spec: 8
     implementation: |
       ccdrawu update：查 GitHub 最新的 release，比版本；Homebrew 的 Cellar 底下跑 brew upgrade vulcanshen/tap/ccdrawu；安裝腳本或下載的：抓 release 的壓縮檔與 checksums.txt，驗 sha256，換掉自己（Windows 先把執行中的改名 .old）；Scoop 的印要跑的指令；資料夾不能寫入時下載前就停
       之後 Claude Code 有外掛的話，用新的 ccdrawu 跑 install claude
+      訊息裡的指令用反引號：從原始碼建的「This ccdrawu is built from source: update it there (`git pull && make install`), then run `ccdrawu install claude`」、寫不進資料夾「Run the install script again, or `ccdrawu update` as the folder's owner」、外掛不在「The ccdrawu plugin is not in Claude Code; `ccdrawu install claude` adds it.」；Scoop 那段的指令各自一行縮排
     test:
       - TestNewerComparesPartByPart
       - TestNewerTakesPreReleases
@@ -223,13 +232,15 @@ tasks:
       - TestReplaceRefusesAnArchiveThatFailsItsChecksum
       - TestReplaceStopsWhereItCannotWrite
   - id: 20
-    spec: 1
+    spec: 8
     implementation: |
-      ccdrawu version（--version、-v）印 ccdrawu 與版本，版本是 internal/version 的 Display()；ccdrawu help（--help、-h）印用法與環境變數；不認得的指令印用法、exit 2
+      ccdrawu version（--version、-v）印 ccdrawu 與版本，版本是 internal/version 的 Display()；ccdrawu help（--help、-h）印用法與環境變數
+      指令做不完（failed）：錯誤每行寫成「ccdrawu: 」接 sentence（開頭大寫；路徑、檔名、ccdrawu、claude、brew、scoop 開頭的照原樣），exit 1；用錯（wrongUse）：不認得的指令「Unknown command "x"」、install 或 uninstall 少了 claude「Say where: `ccdrawu install claude`」，stderr 寫「ccdrawu: 」接它、空一行、用法，exit 2
     test:
+      - TestWrongUseAndSentences
       - commit: 5de15c1
   - id: 21
-    spec: 7
+    spec: 8
     implementation: |
       config.yaml 在 CCDRAWU__CONFIG、XDG_CONFIG_HOME/ccdrawu 或 ~/.config/ccdrawu；快取在 CCDRAWU__CACHE 或系統快取資料夾；originals.yaml 在 CCDRAWU__DATA 或 ~/.ccdrawu
       啟動時把 config.json 與舊位置的檔搬到新位置，搬了的用 Info toast 說「Moved <從> to <到>」
@@ -243,7 +254,7 @@ tasks:
       搬家的 Info 與不合的值（terminu.MisfitNotice；備份做不出來時先一列 Error 寫原因，再接不帶那一句、只帶 WARN 的 MisfitNotice）一起交給 App.Notify：一個 toast、一件一行、種類取最重的，App Log 一件一筆、每個值一筆 WARN
       搬家（config.json → config.yaml、config 裡的 theme.before／statusline.before → originals.yaml）照原文寫，不合的值留給 Settle
       ccdrawu 不讀的 key（頂層，與 pet、drawer、theme、statusline 底下的）：WriteConfig 用 yaml.Node 把原檔裡這些 key 與值照原樣接在後面，存設定與 E3 重寫都留著；啟動時 Settle 列出來，TUI 每個記一筆 INFO「Not read: <key> in <路徑>; delete it if you don't need it」，ccdrawu 以前讀過的 input_tab_width 寫 No longer used；不跳 toast
-      外掛（hooks）每秒讀 config.yaml，TUI 以外，不動檔：解不開時當成寫到一半，下一秒還是一樣才算讀不了，這時用預設值，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」；讀得了但有用不了的值（configMisfits，規則與 config.readFit 一樣），照預設畫，那一列寫「<路徑>: <不合的 key>, … did not fit」；都沒有就拿掉那一列；那一列比面板寬時折成好幾行，路徑與原因整句都看得到（2026-11-19 在沙盒截圖驗過）；那一列後面接紅色的「; 」、一般文字顏色（#cdd6f4）的「run 」與 Blue（#89b4fa）的「ccdrawu doctor」
+      外掛（hooks）每秒讀 config.yaml，TUI 以外，不動檔：解不開時當成寫到一半，下一秒還是一樣才算讀不了，這時用預設值，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」；讀得了但有用不了的值（configMisfits，規則與 config.readFit 一樣），照預設畫，那一列寫「<路徑>: <不合的 key>, … did not fit」；都沒有就拿掉那一列；那一列比面板寬時折成好幾行，路徑與原因整句都看得到（2026-11-19 在沙盒截圖驗過）；那一列後面接紅色的「; 」與一般文字顏色（#cdd6f4）的「run `ccdrawu doctor`」
     test:
       - TestValuesThatDoNotFitAreTheirDefaults
       - TestSettleKeepsTheFileAsideAndWritesItAgain
@@ -311,11 +322,11 @@ tasks:
     test:
       - commit: 7eb5a51
   - id: 28
-    spec: 6
+    spec: 8
     implementation: |
-      ccdrawu doctor（cmd/ccdrawu 的 doctor）：先讀 config.yaml 與 originals.yaml，讀不了就不動任何檔，stderr 寫「ccdrawu: <路徑> can't be read: <原因>」與「ccdrawu: Open ccdrawu to move it aside and start fresh, or set it right by hand.」，exit 1
-      都讀得了：config.Move 搬舊位置的檔，每件一行「ccdrawu: Moved <從> to <到>」，搬不動的每件一行、exit 1；config.Settle 把用不了的值複製成 .bak 後換成預設寫回，stderr 寫 terminu.DidNotFitText 那一句，接著每個值一行「config.yaml: <key> "<原本>" did not fit; using "<現在>"」（清單裡拿掉的一筆寫 taken out）；備份做不出來時先寫原因、不寫回、exit 1；寫回之後才失敗的接在最後、exit 1
-      ccdrawu 不讀的 key 每個一行「ccdrawu: Not read: <key> in <路徑>; delete it if you don't need it」，input_tab_width 寫 No longer used；檔案裡照樣留著
+      ccdrawu doctor（cmd/ccdrawu 的 doctor）：先讀 config.yaml 與 originals.yaml，讀不了就不動任何檔，stderr 寫「ccdrawu: 」接 terminu.CannotReadText（<路徑，~ 開頭> can't be read: <原因>）與「ccdrawu: Open `ccdrawu` to move it aside and start fresh, or set it right by hand.」，exit 1
+      都讀得了：config.Move 搬舊位置的檔，每件一行「ccdrawu: Moved <從> to <到>」（路徑照 TUI 用 ~ 開頭），搬不動的每件一行、exit 1；config.Settle 把用不了的值複製成 .bak 後換成預設寫回，stderr 寫 config.Settled.Lines（跟 uninstall 同一套，用 terminu.MisfitNotice(...).Lines()）：terminu.DidNotFitText 那一句，接著每個值一行「config.yaml: <key> "<原本>" did not fit; using "<現在>"」（清單裡拿掉的一筆寫 taken out）；備份做不出來時先寫原因、不寫回、exit 1；寫回之後才失敗的接在最後、exit 1
+      ccdrawu 不讀的 key 每個一行「ccdrawu: Not read: <key> in <路徑，~ 開頭>; delete it if you don't need it」，input_tab_width 寫 No longer used；檔案裡照樣留著
       沒有搬、也沒有不合的值：stdout 印「Nothing to set right in <路徑>.」，exit 0
       ccdrawu help 的用法裡有 doctor 一行
     test:

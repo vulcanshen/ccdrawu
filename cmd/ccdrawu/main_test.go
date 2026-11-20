@@ -131,11 +131,40 @@ func TestUninstallGoesOnWithValuesThatDoNotFit(t *testing.T) {
 	if err := uninstall(loc, run, &out, &errs); err != nil {
 		t.Fatal(err)
 	}
-	if !ran || errs.String() != "ccdrawu: 1 value in config.yaml did not fit: defaults used, yours kept in config.yaml.bak\n" {
+	// The toast's row and the value's WARN, in the TUI's words (tdp E3-40 on tdp main)
+	want := "ccdrawu: 1 value in config.yaml did not fit: defaults used, yours kept in config.yaml.bak\n" +
+		"ccdrawu: config.yaml: bar \"wavy\" did not fit; using \"squares\"\n"
+	if !ran || errs.String() != want {
 		t.Fatalf("ran %v, stderr %q", ran, errs.String())
 	}
 	if _, err := os.Stat(loc.ConfigFile + ".bak"); err != nil {
 		t.Error("not kept aside:", err)
+	}
+}
+
+// tdp E1 (tdp #24, on tdp main): a wrong use says what is wrong, a blank line
+// and the usage, exit status 2; a line of a command that could not be done is
+// a toast's row, a capital first unless it starts with a path or a program's
+// name
+func TestWrongUseAndSentences(t *testing.T) {
+	var errs bytes.Buffer
+	if status := wrongUse(&errs, "Unknown command \"x\""); status != 2 || errs.String() != "ccdrawu: Unknown command \"x\"\n\n"+usage {
+		t.Fatalf("exit %d, stderr %q", status, errs.String())
+	}
+	for line, want := range map[string]string{
+		"looking up the latest release: EOF":      "Looking up the latest release: EOF",
+		"invalid character 'x' looking for value": "Invalid character 'x' looking for value",
+		"config.yaml can't be read: not a config": "config.yaml can't be read: not a config",
+		"/tmp/x can't be read: denied":            "/tmp/x can't be read: denied",
+		"~/.ccdrawu/originals.yaml can't be read": "~/.ccdrawu/originals.yaml can't be read",
+		"claude plugin list: exit status 1":       "claude plugin list: exit status 1",
+		"brew upgrade vulcanshen/tap/ccdrawu: x":  "brew upgrade vulcanshen/tap/ccdrawu: x",
+		"This ccdrawu is built from source":       "This ccdrawu is built from source",
+		"":                                        "",
+	} {
+		if got := sentence(line); got != want {
+			t.Errorf("%q: %q", line, got)
+		}
 	}
 }
 
@@ -213,7 +242,7 @@ func TestDoctorLeavesAFileThatCantBeRead(t *testing.T) {
 			t.Fatalf("%s: exit %d, stdout %q", c.file, status, out.String())
 		}
 		lines := strings.Split(strings.TrimSuffix(errs.String(), "\n"), "\n")
-		if len(lines) != 2 || !strings.HasPrefix(lines[0], "ccdrawu: "+c.file+" can't be read: ") || lines[1] != "ccdrawu: Open ccdrawu to move it aside and start fresh, or set it right by hand." {
+		if len(lines) != 2 || !strings.HasPrefix(lines[0], "ccdrawu: "+c.file+" can't be read: ") || lines[1] != "ccdrawu: Open `ccdrawu` to move it aside and start fresh, or set it right by hand." {
 			t.Fatalf("%s: stderr %q", c.file, errs.String())
 		}
 		if got, _ := os.ReadFile(c.file); string(got) != c.text {

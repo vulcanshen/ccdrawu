@@ -62,7 +62,7 @@ func (d *drawer) statusOnField() *terminu.Field {
 			Details: []string{
 				"Claude Code runs this as its status line now:",
 				command,
-				"Turning the statusline off, or ccdrawu uninstall claude, puts it back.",
+				"Turning the statusline off, or `ccdrawu uninstall claude`, puts it back.",
 			},
 			Warn: []int{1},
 		}, func() tea.Cmd {

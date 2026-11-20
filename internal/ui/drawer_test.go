@@ -464,6 +464,34 @@ func TestNoCatalogSaysWhatToDo(t *testing.T) {
 	}
 }
 
+// tdp note.7: the catalog, read again on its own every two seconds, is one
+// INFO in the App Log when the plugin wrote it anew, saying what changed;
+// read the same, nothing
+func TestCatalogWrittenAgainIsInTheAppLog(t *testing.T) {
+	d, loc := newTestDrawer(t)
+	path := filepath.Join(loc.Cache, "catalog.json")
+	write := func(c config.Catalog, at time.Time) {
+		t.Helper()
+		data, _ := json.Marshal(c)
+		if err := os.WriteFile(path, data, 0o644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.Chtimes(path, at, at); err != nil {
+			t.Fatal(err)
+		}
+	}
+	changed := config.Catalog{Version: 1, Items: append(slices.Clone(testCatalog.Items[1:]), config.Item{ID: "tasks", Label: "Tasks", Name: "Tasks", Group: "Session", Dock: true})}
+	write(changed, time.Now().Add(time.Hour))
+	d.load()
+	d.load()
+	d.app.Update(tea.WindowSizeMsg{Width: 160, Height: 40})
+	press(d, key("!"))
+	text := frameText(d)
+	if n := strings.Count(text, "INFO The ccdrawu plugin changed its items; added Tasks; taken out Model"); n != 1 {
+		t.Fatalf("%d entries of the change in the App Log:\n%s", n, text)
+	}
+}
+
 // tdp panel.11 and panel.13, groups and details: [1] in groups, the cursor
 // skipping their titles; [2] is the row under it, named after it
 func TestDetailFollowsTheSidebar(t *testing.T) {
@@ -828,7 +856,7 @@ func TestUnsavedChangeGoesBack(t *testing.T) {
 		t.Fatalf("no error over the alias, or the alias taken as saved (%q):\n%s", d.cfg.Alias, text)
 	}
 	press(d, tea.KeyMsg{Type: tea.KeyEsc}) // the error
-	if text := frameText(d); !strings.Contains(text, "One more name for /ccdrawu") || !strings.Contains(text, "ccd") {
+	if text := frameText(d); !strings.Contains(text, "One more name for `/ccdrawu`") || !strings.Contains(text, "ccd") {
 		t.Fatalf("the alias input is gone, or what was typed in it:\n%s", text)
 	}
 }

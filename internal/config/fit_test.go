@@ -138,10 +138,18 @@ func TestSettleKeepsTheFileAsideAndWritesItAgain(t *testing.T) {
 	if _, s, _ = Settle(loc); len(s.Misfits) != 0 || s.Copy != "" {
 		t.Fatalf("a second start: %+v", s)
 	}
-	// Said with no screen, a line on its own (tdp E3-31)
+	// Said with no screen, in the TUI's words, a line each: the toast's row, each value's WARN and each
+	// key not read's INFO (tdp E3-31, E3-40 on tdp main)
 	three := []terminu.Misfit{{Key: "bar", Was: "wavy", Now: "squares"}, {Key: "pet.species", Was: "dragon", Now: "cat"}, {Key: "alias", Was: "a b!", Now: "none"}}
-	lines := (Settled{Misfits: three, Copy: loc.ConfigFile + ".bak"}).Lines(loc.ConfigFile)
-	if len(lines) != 1 || lines[0] != "3 values in config.yaml did not fit: defaults used, yours kept in config.yaml.bak" {
+	lines := (Settled{Misfits: three, Copy: loc.ConfigFile + ".bak", Unread: []string{"refesh"}}).Lines(loc)
+	want := []string{
+		"3 values in config.yaml did not fit: defaults used, yours kept in config.yaml.bak",
+		`config.yaml: bar "wavy" did not fit; using "squares"`,
+		`config.yaml: pet.species "dragon" did not fit; using "cat"`,
+		`config.yaml: alias "a b!" did not fit; using "none"`,
+		"Not read: refesh in " + ShortHome(loc.ConfigFile) + "; delete it if you don't need it",
+	}
+	if !slices.Equal(lines, want) {
 		t.Fatalf("lines %q", lines)
 	}
 }
@@ -191,7 +199,8 @@ func TestSettleWithNoCopyLeavesTheFile(t *testing.T) {
 	if data, _ := os.ReadFile(loc.ConfigFile); string(data) != "bar: wavy\n" || fileThere(loc.ConfigFile+".bak") {
 		t.Fatalf("the file touched:\n%s", data)
 	}
-	if lines := s.Lines(loc.ConfigFile); len(lines) != 1 || !strings.Contains(lines[0], "could not be made") {
+	// The copy not made first, then the value's WARN
+	if lines := s.Lines(loc); len(lines) != 2 || !strings.Contains(lines[0], "could not be made") || lines[1] != `config.yaml: bar "wavy" did not fit; using "squares"` {
 		t.Fatalf("lines %q", lines)
 	}
 }

@@ -5,7 +5,7 @@ go 1.26.0
 require (
 	github.com/charmbracelet/bubbletea v1.3.10
 	github.com/charmbracelet/x/ansi v0.10.1
-	github.com/vulcanshen/terminu-go v1.2.18
+	github.com/vulcanshen/terminu-go v1.2.19
 	gopkg.in/yaml.v3 v3.0.1
 )
 

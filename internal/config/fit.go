@@ -321,17 +321,29 @@ func Settle(loc Locations) (Config, Settled, error) {
 	return c, s, nil
 }
 
-// Lines are what a start with no screen says on stderr of what Settle did, a
-// line each: the values kept aside and written again with the defaults
-// (terminu.DidNotFitText), and why that could not be done (tdp E3, a value
-// that does not fit; several at one start).
-func (s Settled) Lines(path string) []string {
+// Lines are what a start of the TUI says of what Settle did, in its words, a
+// line each for stderr with no screen (tdp E3, with no screen): the copy not
+// made first, then its toast's row and each value's WARN, as the lib words
+// them (terminu.MisfitNotice); written again, the row and the WARNs, then what
+// failed after (several at one start); and the INFO of each key ccdrawu does
+// not read, which stays.
+func (s Settled) Lines(loc Locations) []string {
 	var lines []string
-	if text := terminu.DidNotFitText(path, s.Copy, s.Misfits...); text != "" {
-		lines = append(lines, text)
-	}
-	if s.Err != nil {
+	if s.Copy == "" && s.Err != nil {
 		lines = append(lines, s.Err.Error())
+	}
+	if len(s.Misfits) > 0 {
+		lines = append(lines, terminu.MisfitNotice(loc.ConfigFile, s.Copy, s.Misfits...).Lines()...)
+	}
+	if s.Copy != "" && s.Err != nil {
+		lines = append(lines, s.Err.Error())
+	}
+	for _, key := range s.Unread {
+		what := "Not read"
+		if UsedToRead(key) {
+			what = "No longer used"
+		}
+		lines = append(lines, what+": "+key+" in "+ShortHome(loc.ConfigFile)+"; delete it if you don't need it")
 	}
 	return lines
 }
