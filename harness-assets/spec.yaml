@@ -80,7 +80,7 @@ tasks:
   - id: 11
     spec: 8
     request: 在 ccdrawu 的 statusline 頁設定狀態列：開關（on、off、on when narrow）、項目、順序、寫法、顏色、分隔、重跑間隔
-    tdp: [tdp radio, tdp text, tdp number, tdp confirm, tdp F6, tdp panel.12, tdp P5, tdp M5, tdp M5-32]
+    tdp: [tdp radio, tdp text, tdp number, tdp confirm, tdp F6, tdp panel.12, tdp P5, tdp M5, tdp M5-32, tdp E3]
     remark:
       - 打開時在 ~/.claude/settings.json 設成 ccdrawu statusline；原本就有狀態列的，先問過才換掉，並記下原本的，關掉或移除時換回去
       - Format：label、short、value；Color：highlighted、dimmed；Separator 沒設是 |；Refresh 沒設是 10 秒
@@ -110,7 +110,7 @@ tasks:
   - id: 15
     spec: 12
     request: 讓側邊欄的底色跟終端機一樣：選一個 Claude Code 內建主題當底，再選側邊欄的底色
-    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker, tdp M2, tdp M3, tdp panel.12, tdp E2, tdp K13]
+    tdp: [tdp P5, tdp M5, tdp select, tdp color-picker, tdp M2, tdp M3, tdp panel.12, tdp E2, tdp K13, tdp E3]
     remark:
       - ccdrawu 寫 ~/.claude/themes/ccdrawu.json 並在 Claude Code 選用；Claude theme 設回 off 或移除時換回原本的主題
       - Drawer background 上按 x 改回主題原本的底色（tdp P5 的領域熱鍵）
@@ -142,7 +142,7 @@ tasks:
   - id: 19
     spec: 14
     request: ccdrawu update 照安裝的方式更新 ccdrawu，再把 Claude Code 裡的外掛更新成同一版
-    tdp: [tdp P5, tdp E1, tdp M5, tdp M5-32, tdp E1-4, tdp E1-8, tdp E1-9, tdp E1-10]
+    tdp: [tdp P5, tdp E1, tdp M5, tdp M5-32, tdp E1-4, tdp E1-8, tdp E1-9, tdp E1-10, harness project.4]
     remark:
       - Homebrew 裝的交給 Homebrew；安裝腳本裝的下載 release 的執行檔、用 checksum 驗過再換掉自己；Scoop 裝的說要跑什麼；資料夾不能寫入時說明原因後停下來
       - 訊息裡要使用者打的指令用反引號：`git pull && make install`、`ccdrawu install claude`、`ccdrawu update`（tdp M5；tdp v1.2.18；tdp #25）；錯誤一行一件、開頭 ccdrawu: 、大寫開頭（tdp E1；tdp v1.2.18；tdp #24）；Scoop 那段的指令各自一行縮排，不在句子裡，不加
