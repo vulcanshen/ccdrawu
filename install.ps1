@@ -14,15 +14,33 @@ $arch = if ([Environment]::Is64BitOperatingSystem) {
     exit 1
 }
 
-# Get latest release tag
+# Get latest release tag: where the releases page's latest points, the
+# redirect not followed, not GitHub's API, which answers 60 lookups an hour
+# to everything on a network and then 403 (GitHub's latest is never a beta)
 Write-Host "Fetching latest release..." -ForegroundColor Cyan
-$release = Invoke-RestMethod "https://api.github.com/repos/$repo/releases/latest"
-$version = $release.tag_name -replace "^v", ""
+Add-Type -AssemblyName System.Net.Http
+$handler = New-Object System.Net.Http.HttpClientHandler
+$handler.AllowAutoRedirect = $false
+$client = New-Object System.Net.Http.HttpClient($handler)
+try {
+    $location = $client.GetAsync("https://github.com/$repo/releases/latest").Result.Headers.Location
+} catch {
+    $location = $null
+} finally {
+    $client.Dispose()
+}
+if (-not $location -or "$location" -notmatch "/releases/tag/(v?([^/]+))$") {
+    Write-Host "Error: Cannot find the latest release of $repo on GitHub." -ForegroundColor Red
+    Write-Host "Check your connection, or download it from https://github.com/$repo/releases" -ForegroundColor Yellow
+    exit 1
+}
+$tag = $Matches[1]
+$version = $Matches[2]
 Write-Host "Latest version: $version"
 
 # Download
 $fileName = "ccdrawu_${version}_windows_${arch}.zip"
-$downloadUrl = "https://github.com/$repo/releases/download/$($release.tag_name)/$fileName"
+$downloadUrl = "https://github.com/$repo/releases/download/$tag/$fileName"
 $tempFile = Join-Path $env:TEMP $fileName
 
 Write-Host "Downloading $fileName..." -ForegroundColor Cyan

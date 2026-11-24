@@ -9,8 +9,6 @@ import (
 	"io"
 	"os"
 	"os/exec"
-	"path/filepath"
-	"runtime"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,7 +20,6 @@ import (
 	"github.com/vulcanshen/ccdrawu/internal/config"
 	"github.com/vulcanshen/ccdrawu/internal/statusline"
 	"github.com/vulcanshen/ccdrawu/internal/ui"
-	"github.com/vulcanshen/ccdrawu/internal/update"
 	"github.com/vulcanshen/ccdrawu/internal/version"
 	"github.com/vulcanshen/terminu-go"
 )
@@ -43,8 +40,7 @@ func main() {
 			failed(integrate(os.Args[1] == "install"))
 			return
 		case "update":
-			failed(selfUpdate(os.Stdout))
-			return
+			os.Exit(selfUpdate().Run(os.Stdout, os.Stderr))
 		case "doctor":
 			loc, err := config.UserLocations()
 			failed(err)
@@ -215,65 +211,24 @@ func doctor(loc config.Locations, out, errs io.Writer) int {
 	return status
 }
 
-// upToDate is what update says when ccdrawu, at version, needs none: the
-// latest release, or one newer than it, a beta (tdp E1).
-func upToDate(version, latest string) string {
-	if update.Newer(version, latest) {
-		return fmt.Sprintf("ccdrawu %s is newer than the latest release, %s.", version, latest)
+// selfUpdate is ccdrawu update, terminu-go's as every app's (tdp E1): it
+// brings ccdrawu to its latest release the way it was installed, never asking
+// for more rights; then, where Claude Code has the plugin, the plugin to the
+// same release (pluginAfter). A build from source, or Scoop, says to run
+// ccdrawu install claude after updating by hand.
+func selfUpdate() terminu.SelfUpdate {
+	return terminu.SelfUpdate{
+		App: "ccdrawu", Version: version.Version, Owner: "vulcanshen", Tap: "vulcanshen/tap",
+		Source: "git pull && make install", Then: "ccdrawu install claude",
+		After: func(exe string, _ bool) error { return pluginAfter(exe, os.Stdout, claude.Exec) },
 	}
-	return fmt.Sprintf("ccdrawu %s is the latest release.", version)
 }
 
-// selfUpdate brings ccdrawu to its latest release the way it was installed,
-// then, where Claude Code has the plugin, the plugin to the same release: the
-// new ccdrawu runs its own install claude, which takes the plugin of its
-// version. It never asks for more rights: a folder it cannot write in, it says
-// so.
-func selfUpdate(out io.Writer) error {
-	if version.Version == "dev" {
-		return errors.New("This ccdrawu is built from source: update it there (`git pull && make install`), then run `ccdrawu install claude`")
-	}
-	exe, err := os.Executable()
-	if err == nil {
-		exe, err = filepath.EvalSymlinks(exe)
-	}
-	if err != nil {
-		return err
-	}
-	latest, err := update.GitHub.LatestVersion()
-	if err != nil {
-		return fmt.Errorf("looking up the latest release: %w", err)
-	}
-	next := exe // the ccdrawu that updates the plugin
-	if !update.Newer(latest, version.Version) {
-		fmt.Fprintln(out, upToDate(version.Version, latest))
-	} else {
-		switch update.How(exe) {
-		case update.Homebrew:
-			fmt.Fprintf(out, "Updating ccdrawu %s to %s with Homebrew...\n", version.Version, latest)
-			brew := exec.Command("brew", "upgrade", "vulcanshen/tap/ccdrawu")
-			brew.Stdout, brew.Stderr = out, os.Stderr
-			if err := brew.Run(); err != nil {
-				return fmt.Errorf("brew upgrade vulcanshen/tap/ccdrawu: %w", err)
-			}
-			next = update.BrewBin(exe)
-		case update.Scoop:
-			// Scoop refuses to update an app while it runs, and this is it
-			fmt.Fprintf(out, "ccdrawu %s is out. Scoop installed this one: close ccdrawu and run\n\n  scoop update ccdrawu\n  ccdrawu install claude\n", latest)
-			return nil
-		default:
-			fmt.Fprintf(out, "Updating ccdrawu %s to %s...\n", version.Version, latest)
-			if err := update.GitHub.Replace(exe, latest, runtime.GOOS, runtime.GOARCH); err != nil {
-				if errors.Is(err, os.ErrPermission) {
-					return fmt.Errorf("%w\nRun the install script again, or `ccdrawu update` as the folder's owner", err)
-				}
-				return err
-			}
-			fmt.Fprintf(out, "ccdrawu %s is in %s.\n", latest, exe)
-		}
-	}
-	// The plugin goes with the command, where Claude Code has it; one taken out stays out
-	id, _, err := claude.Installed(claude.Exec)
+// pluginAfter takes the plugin to the release exe is, the ccdrawu that is the
+// latest now: where Claude Code has the plugin, exe runs its own install
+// claude, which takes the plugin of its version; one taken out stays out.
+func pluginAfter(exe string, out io.Writer, run claude.Run) error {
+	id, _, err := claude.Installed(run)
 	if err != nil {
 		return err
 	}
@@ -281,7 +236,7 @@ func selfUpdate(out io.Writer) error {
 		fmt.Fprintln(out, "The ccdrawu plugin is not in Claude Code; `ccdrawu install claude` adds it.")
 		return nil
 	}
-	install := exec.Command(next, "install", "claude")
+	install := exec.Command(exe, "install", "claude")
 	install.Stdout, install.Stderr = out, os.Stderr
 	return install.Run()
 }

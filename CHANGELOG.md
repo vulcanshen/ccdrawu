@@ -4,10 +4,11 @@ Each release names the version of terminu design (tdp) it follows.
 
 ## Unreleased
 
-- `ccdrawu update` finds the latest release where the releases page's latest points, not through GitHub's API: the API answers 60 lookups an hour to everything sharing a network address, then `403 Forbidden`, and `ccdrawu update` stopped there.
+- `ccdrawu update` finds the latest release where the releases page's latest points, not through GitHub's API: the API answers 60 lookups an hour to everything sharing a network address, then `403 Forbidden`, and `ccdrawu update` stopped there. It is terminu-go's update now, the family's one (tdp E1), with ccdrawu's own part after it: the plugin in Claude Code taken to the same release.
+- The Windows install script, `install.ps1`, finds the latest release the same way, and says so when it can't.
 - `ccdrawu update` on a version newer than the latest release, such as a beta, says so instead of calling it the latest (tdp E1).
 - Toasts stack, the newest at the bottom, at most three: what `ccdrawu` says as it starts, such as a file it moved and values that did not fit, is a toast each, no longer rows of one (tdp E3, toast.2).
-- Built on terminu-go v1.3.6 (tdp v1.3.5).
+- Built on terminu-go v1.3.7 (tdp v1.3.5).
 
 ## v1.4.1 — tdp v1.2.20
 

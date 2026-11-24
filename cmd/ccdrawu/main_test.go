@@ -5,6 +5,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -142,16 +143,38 @@ func TestUninstallGoesOnWithValuesThatDoNotFit(t *testing.T) {
 	}
 }
 
-// tdp E1 (v1.3.0): update says so when ccdrawu is the latest release, and
-// when it is newer than it, a beta
-func TestUpdateSaysItIsUpToDate(t *testing.T) {
-	for _, c := range []struct{ version, latest, want string }{
-		{"1.4.1", "1.4.1", "ccdrawu 1.4.1 is the latest release."},
-		{"1.5.0-beta.1", "1.4.1", "ccdrawu 1.5.0-beta.1 is newer than the latest release, 1.4.1."},
-	} {
-		if got := upToDate(c.version, c.latest); got != c.want {
-			t.Errorf("upToDate(%s, %s) = %q, want %q", c.version, c.latest, got, c.want)
-		}
+// update is terminu-go's (tdp E1), ccdrawu's own part after it: where Claude
+// Code has the plugin, the ccdrawu that is the latest now runs install claude;
+// where it has none, it says how to add it and adds none
+func TestUpdateTakesThePluginAlong(t *testing.T) {
+	u := selfUpdate()
+	if u.App != "ccdrawu" || u.Owner != "vulcanshen" || u.Tap != "vulcanshen/tap" || u.Then != "ccdrawu install claude" || u.After == nil {
+		t.Fatalf("selfUpdate = %+v", u)
+	}
+	none := func(string, ...string) ([]byte, error) {
+		return []byte(`[{"id": "other@market", "enabled": true}]`), nil
+	}
+	var out bytes.Buffer
+	if err := pluginAfter("no ccdrawu runs here", &out, none); err != nil || !strings.Contains(out.String(), "`ccdrawu install claude` adds it") {
+		t.Fatalf("with no plugin: %v, %q", err, out.String())
+	}
+	if runtime.GOOS == "windows" {
+		return
+	}
+	dir := t.TempDir()
+	ran := filepath.Join(dir, "ran")
+	exe := filepath.Join(dir, "ccdrawu")
+	if err := os.WriteFile(exe, []byte("#!/bin/sh\necho \"$@\" > '"+ran+"'\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	has := func(string, ...string) ([]byte, error) {
+		return []byte(`[{"id": "ccdrawu@ccdrawu", "enabled": true}]`), nil
+	}
+	if err := pluginAfter(exe, &out, has); err != nil {
+		t.Fatal(err)
+	}
+	if got, _ := os.ReadFile(ran); strings.TrimSpace(string(got)) != "install claude" {
+		t.Fatalf("the latest ccdrawu ran %q, want install claude", got)
 	}
 }
 

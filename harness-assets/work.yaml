@@ -223,21 +223,13 @@ tasks:
       - TestUninstallStopsOnAFileThatCantBeRead
       - commit: 20a69c7
   - id: 19
-    spec: 14
+    spec: 15
     implementation: |
-      ccdrawu update：查 GitHub 最新的 release（update.Release.LatestVersion：GET github.com/vulcanshen/ccdrawu/releases/latest、不跟著轉址，從 Location 的 /releases/tag/v<版本> 取版號；不用 API，使用者 2026-11-20 遇到 API 額度用完的 403），比版本：一樣說「ccdrawu <版本> is the latest release.」、比最新正式版還新說「ccdrawu <版本> is newer than the latest release, <最新>.」（upToDate，tdp E1），都照樣接著更新外掛；Homebrew 的 Cellar 底下跑 brew upgrade vulcanshen/tap/ccdrawu；安裝腳本或下載的：抓 release 的壓縮檔與 checksums.txt，驗 sha256，換掉自己（Windows 先把執行中的改名 .old）；Scoop 的印要跑的指令；資料夾不能寫入時下載前就停
-      之後 Claude Code 有外掛的話，用新的 ccdrawu 跑 install claude
-      訊息裡的指令用反引號：從原始碼建的「This ccdrawu is built from source: update it there (`git pull && make install`), then run `ccdrawu install claude`」、寫不進資料夾「Run the install script again, or `ccdrawu update` as the folder's owner」、外掛不在「The ccdrawu plugin is not in Claude Code; `ccdrawu install claude` adds it.」；Scoop 那段的指令各自一行縮排
+      ccdrawu update：os.Exit(terminu.SelfUpdate{App: ccdrawu, Version: version.Version, Owner: vulcanshen, Tap: vulcanshen/tap, Source: git pull && make install, Then: ccdrawu install claude, After}.Run(stdout, stderr))（terminu-go v1.3.7，tdp E1）：最新版看 github.com/vulcanshen/ccdrawu/releases/latest 的轉址（不走 API）；已經是最新版說「ccdrawu <版本> is the latest release.」、比最新正式版還新說「… is newer than the latest release, <最新>.」，exit 0；Homebrew 跑 brew upgrade vulcanshen/tap/ccdrawu；安裝腳本或下載的：抓 release 的壓縮檔、照 checksums.txt 驗過、換掉自己；Scoop 印 scoop update ccdrawu 與 ccdrawu install claude，exit 0；從原始碼編的說請在那邊更新（`git pull && make install`）再跑 `ccdrawu install claude`，exit 1；寫不進資料夾說明怎麼做，exit 1；錯誤寫 stderr、開頭 ccdrawu:
+      After（pluginAfter）：已經是最新的、或剛更新完，Claude Code 有外掛（claude plugin list --json 有 ccdrawu@…）就用最新的那個 ccdrawu（Homebrew 是它 bin 裡的連結）跑 install claude，把外掛換成同一版；沒有外掛說「The ccdrawu plugin is not in Claude Code; `ccdrawu install claude` adds it.」，不裝
+      ccdrawu 自己的 internal/update（查最新版、比版本、下載換檔）拿掉了，換成 lib 的
     test:
-      - TestLatestVersionIsWhereTheLatestPagePoints
-      - TestUpdateSaysItIsUpToDate
-      - TestNewerComparesPartByPart
-      - TestNewerTakesPreReleases
-      - TestHowTellsTheMethodFromThePath
-      - TestReplacePutsTheCheckedExecutableInPlace
-      - TestReplaceOnWindowsMovesTheRunningOneAside
-      - TestReplaceRefusesAnArchiveThatFailsItsChecksum
-      - TestReplaceStopsWhereItCannotWrite
+      - TestUpdateTakesThePluginAlong
   - id: 20
     spec: 8
     implementation: |
@@ -304,9 +296,10 @@ tasks:
       - commit: a5a8c27
       - commit: 830e085
   - id: 25
-    spec: 1
+    spec: 15
     implementation: |
       install.sh、install.ps1、uninstall.sh、uninstall.ps1；.goreleaser.yaml 與 .github/workflows/release.yml 在推 v* tag 時測試、發 GitHub release、推 Homebrew tap 與 Scoop bucket
+      install.ps1 查最新版：System.Net.Http.HttpClient 關掉自動轉址（AllowAutoRedirect false），GET github.com/vulcanshen/ccdrawu/releases/latest，從 Location 的 /releases/tag/v<版本> 取 tag 與版號，下載 github.com/…/releases/download/<tag>/ccdrawu_<版本>_windows_<arch>.zip；查不到（連不上、沒有 Location、不是 tag 的網址）寫「Error: Cannot find the latest release of vulcanshen/ccdrawu on GitHub.」與去哪裡下載，exit 1；不用 GitHub API（Windows PowerShell 5.1 與 7 都有 HttpClient）
     test:
       - check: repo
   - id: 26
