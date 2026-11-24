@@ -1,13 +1,15 @@
 // Snails and owls (user, 2026-11-19): beside the transcript, for each shell left in the background a
 // snail on the pet's strip, a sea snail (user, 2026-11-20: a shell's) or the look the settings pick
-// (SHELL_LOOKS), and for each monitor an owl, either kind none at all if the settings say so, as many as there are, over one another, the
-// git boxes and the pet as they come, each in colors made up at random when it comes, in a hue away from
+// (SHELL_LOOKS), and for each monitor an owl, either kind none at all if the settings say so, as many
+// as there are, over one another, the git boxes and the pet as they come, each in colors made up at
+// random when it comes, in a hue away from
 // those of its kind about (user, 2026-11-20: their colors too often alike). Toys, as the ball
 // is: idle, the pet now and then goes over and paws at one (hooks/pets.ts), and a snail draws into its
 // shell, an owl spreads its wings. A snail crawls in from beyond an end of the strip, about a column a
 // second, wanders slowly, and crawls off past the nearer end once its shell is done (user: no hurry to
-// show it there or gone); an owl flies down onto the strip, rests ten seconds, blinking now and then,
-// flies ten seconds, its wings beating, along the top of the strip, and comes down where it is, on the
+// show it there or gone); an owl flies down onto the strip, rests ten seconds, blinking and looking
+// the other way now and then (user, 2026-11-24), flies ten seconds, its wings beating, looking where
+// it goes, along the top of the strip, and comes down where it is, on the
 // ground or on the git boxes as high as there is room over them, as a kit goes (user, 2026-11-19), to
 // rest again (user, 2026-11-20), and flies off up. Known from the background work a reply's end lists.
 // An earlier screen for a shell and radar for a monitor, beside the boxes, went (user, 2026-11-06: too
@@ -33,6 +35,7 @@ export const OWL_TOP = Math.floor((WALK_HEIGHT - OWL_HEIGHT) / BOX_HEIGHT) * BOX
 const OWL_CRUISE = WALK_HEIGHT - OWL_HEIGHT // how high it flies: the top of the strip
 const BLINK_CHANCE = 1 / 25 // a tick's: about every five seconds
 const BLINK_MS = 400
+const GLANCE_CHANCE = 1 / 15 // a tick's, resting: looking the other way about every three seconds
 
 // The looks a shell's toy takes, facing left, the user's pick in the settings (pet.shell; user,
 // 2026-11-20: every one tried on the way to the sea snail a choice, or none). The first, the default:
@@ -264,9 +267,11 @@ function owlStep(t: Toy, now: number, rand: () => number, ground: (x: number) =>
   if (t.air) return { ...t, air: false, stepAt: t.stepAt <= now ? now + OWL_REST_MS : t.stepAt }
   if (t.hitUntil > 0) return now < t.hitUntil ? t : { ...t, hitUntil: 0 }
   if (t.blinkUntil > 0) return now < t.blinkUntil ? t : { ...t, blinkUntil: 0 }
-  // Rested: off on a flight; resting, now and then a blink
+  // Rested: off on a flight; resting, now and then a blink, or a look the other way
   if (now >= t.stepAt) return { ...t, flyUntil: now + OWL_FLIGHT_MS, target: elsewhere(t.x, rand), air: true, stride }
-  return rand() < BLINK_CHANCE ? { ...t, blinkUntil: now + BLINK_MS } : t
+  const r = rand()
+  if (r < BLINK_CHANCE) return { ...t, blinkUntil: now + BLINK_MS }
+  return r < BLINK_CHANCE + GLANCE_CHANCE ? { ...t, faceLeft: !t.faceLeft } : t
 }
 
 // A spot along the walk, at random, other than x: the far end when the draw is x
@@ -284,9 +289,9 @@ export function toyHit(toys: Toy[], id: string, until: number): Toy[] {
 // A toy's pixels as it is now, a shell's in the look the config picks
 export function toyDrawing(t: Toy, look: ShellLook = SHELL_LOOKS['sea-snail']): string[] {
   if (t.kind === 'owl') {
-    if (t.hitUntil > 0) return OWL.wings
-    if (t.air) return WINGBEAT[t.stride % WINGBEAT.length]!
-    return t.blinkUntil > 0 ? OWL.blink : OWL.stand
+    const art = t.hitUntil > 0 ? OWL.wings : t.air ? WINGBEAT[t.stride % WINGBEAT.length]! : t.blinkUntil > 0 ? OWL.blink : OWL.stand
+    // Its eyes the way it faces: the pupils (k) on the right of the eyes (y), or on the left
+    return t.faceLeft ? art.map(r => r.replace(/yk/g, 'ky')) : art
   }
   const art = t.hitUntil > 0 ? look.shell : t.stride % 2 === 0 ? look.walk1 : look.walk2
   return t.faceLeft ? art : art.map(r => [...r].reverse().join(''))

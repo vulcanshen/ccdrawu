@@ -905,6 +905,14 @@ test('a snail crawls in for each shell left in the background and an owl flies d
   const blinking = toysTick([perched], 10_000, () => 0.03)[0]
   expect(toyDrawing(blinking!)).not.toEqual(toyDrawing(perched))
   expect(toysTick([blinking!], 10_400, quiet)[0]?.blinkUntil).toBe(0)
+  // Resting, now and then it looks the other way, its pupils on the other side of its eyes, a blink
+  // the same either way; flying, it looks where it goes (user, 2026-11-24)
+  expect(toyDrawing(perched)[2]).toBe('ykayk')
+  const glancing = toysTick([perched], 10_000, () => 0.05)[0]!
+  expect(glancing.faceLeft).toBe(!perched.faceLeft)
+  expect(toyDrawing({ ...perched, faceLeft: true })[2]).toBe('kyaky')
+  expect(toyDrawing({ ...perched, faceLeft: true, blinkUntil: 1 })).toEqual(toyDrawing({ ...perched, blinkUntil: 1 }))
+  expect(toyDrawing({ ...perched, faceLeft: true, hitUntil: 1 })[2]).toBe('okyakyo')
 
   // Rested, it flies ten seconds, its wings beating: a step a tick along the top of the strip, on to
   // somewhere else each time it gets there; then down where it is, onto the boxes, as high as there is
@@ -915,6 +923,9 @@ test('a snail crawls in for each shell left in the background and an owl flies d
   expect(flight[0]).toMatchObject({ x: 5, target: 12, air: true, flyUntil: 21_200 })
   flight = toysTick(flight, 11_400, quiet, boxes)
   expect([flight[0]?.x, flight[0]?.y, flight[0]?.air]).toEqual([6, 2, true])
+  // Flying right, it looks right: the pupils on the right of its eyes
+  expect(flight[0]?.faceLeft).toBe(false)
+  expect(toyDrawing(flight[0]!).join('')).toContain('ykayk')
   // A frame a tick: up, out, down, out (user, 2026-11-19: wings out and still did not beat)
   const beat = [toyDrawing(flight[0]!)]
   for (let t = 11_600; t <= 12_000; t += 200) beat.push(toyDrawing((flight = toysTick(flight, t, quiet, boxes))[0]!))
