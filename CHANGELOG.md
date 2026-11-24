@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.4.2 — tdp v1.3.5
 
 - `ccdrawu update` finds the latest release where the releases page's latest points, not through GitHub's API: the API answers 60 lookups an hour to everything sharing a network address, then `403 Forbidden`, and `ccdrawu update` stopped there. It is terminu-go's update now, the family's one (tdp E1), with ccdrawu's own part after it: the plugin in Claude Code taken to the same release.
 - The Windows install script, `install.ps1`, finds the latest release the same way, and says so when it can't.
