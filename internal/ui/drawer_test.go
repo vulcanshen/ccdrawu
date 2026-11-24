@@ -796,9 +796,9 @@ func TestShellAndMonitorArePicked(t *testing.T) {
 // config.yaml that ccdrawu does not take turns its label Red
 // tdp E3-28, E3-30, E3-37: values in config.yaml ccdrawu can't use are their
 // defaults at a start, the file kept aside and written again with them; what
-// moved and what did not fit are one toast, a row each, Warning its kind, and
-// each an entry of its own in the App Log
-func TestValuesThatDoNotFitAreSaidInOneToast(t *testing.T) {
+// moved and what did not fit are a toast each, stacked (tdp v1.3.0, toast.2),
+// and each an entry of its own in the App Log
+func TestMovedAndValuesThatDoNotFitAreToastsOfTheirOwn(t *testing.T) {
 	_, loc := newTestDrawer(t)
 	if err := os.MkdirAll(filepath.Dir(loc.ConfigFile), 0o755); err != nil {
 		t.Fatal(err)
@@ -816,8 +816,9 @@ func TestValuesThatDoNotFitAreSaidInOneToast(t *testing.T) {
 	d.app.Update(tea.WindowSizeMsg{Width: 200, Height: 40})
 	run(d, d.app.Start())
 	text := frameText(d)
-	if !strings.Contains(text, "Moved theme.before") || !strings.Contains(text, "4 values in config.yaml did not fit: defaults used, yours kept in config.yaml.bak") {
-		t.Fatalf("no one toast of the move and the values:\n%s", text)
+	if !strings.Contains(text, "INFO") || !strings.Contains(text, "Moved theme.before") ||
+		!strings.Contains(text, "WARNING") || !strings.Contains(text, "4 values in config.yaml did not fit: defaults used, yours kept in config.yaml.bak") {
+		t.Fatalf("no toast of the move and one of the values, stacked:\n%s", text)
 	}
 	if c := d.cfg; c.Alias != "" || c.Theme.Background != "" || c.Statusline.Refresh != 0 || c.Statusline.Separator != "" {
 		t.Fatalf("the values that did not fit are %+v", c)
@@ -825,6 +826,9 @@ func TestValuesThatDoNotFitAreSaidInOneToast(t *testing.T) {
 	if kept, err := os.ReadFile(loc.ConfigFile + ".bak"); err != nil || !strings.Contains(string(kept), `"a b!"`) {
 		t.Fatalf("not kept aside: %s, %v", kept, err)
 	}
+	// Esc closes them, the oldest first, so the App Log shows whole
+	press(d, tea.KeyMsg{Type: tea.KeyEsc})
+	press(d, tea.KeyMsg{Type: tea.KeyEsc})
 	press(d, key("!"))
 	log := frameText(d)
 	for _, entry := range []string{"INFO Moved theme.before", "WARN 4 values in config.yaml did not fit", `WARN config.yaml: alias "a b!" did not fit; using "none"`, `WARN config.yaml: statusline.refresh "999" did not fit; using "10"`, "INFO Not read: refesh in"} {

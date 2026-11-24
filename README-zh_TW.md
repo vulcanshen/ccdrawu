@@ -104,6 +104,7 @@ ccdrawu update
 
 - 用 Scoop 裝的：它會告訴你先跑 `scoop update ccdrawu`，再跑 `ccdrawu install claude`。Scoop 不會在 ccdrawu 執行中更新它。
 - `ccdrawu` 所在的資料夾不能寫入時（例如安裝腳本用 root 裝在 `/usr/local/bin`），它會說明原因後停下來：請再跑一次安裝腳本，或用那個資料夾擁有者的身分執行 `ccdrawu update`。
+- 1.4.1 以前的 `ccdrawu update` 可能停在 `Looking up the latest release: … 403 Forbidden`：它問的是 GitHub 的 API，同一個網路每小時只能問 60 次，大家共用。這時請照你安裝的方式更新（`brew upgrade vulcanshen/tap/ccdrawu`、`scoop update ccdrawu`，或再跑一次安裝腳本），再執行 `ccdrawu install claude`；或過一小時再試。之後的版本不再問 API。
 - 0.1.3 之前的版本沒有 `ccdrawu update`：先照你安裝的方式更新指令（`brew upgrade ccdrawu`、`scoop update ccdrawu`，或再跑一次安裝腳本），再執行 `ccdrawu install claude`，它會把外掛更新成跟指令同一版。
 
 ### 移除

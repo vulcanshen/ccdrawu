@@ -11,7 +11,6 @@ import (
 	"compress/gzip"
 	"crypto/sha256"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -24,8 +23,8 @@ import (
 	"time"
 )
 
-// Release is where the latest release is looked up, in GitHub's API, and
-// where its files download from: <Download>/v<version>/<name>.
+// Release is where the latest release is looked up, the releases page's
+// latest, and where its files download from: <Download>/v<version>/<name>.
 type Release struct {
 	Latest   string
 	Download string
@@ -34,7 +33,7 @@ type Release struct {
 
 // GitHub is ccdrawu's releases, the ones the install scripts take.
 var GitHub = Release{
-	Latest:   "https://api.github.com/repos/vulcanshen/ccdrawu/releases/latest",
+	Latest:   "https://github.com/vulcanshen/ccdrawu/releases/latest",
 	Download: "https://github.com/vulcanshen/ccdrawu/releases/download",
 	Client:   &http.Client{Timeout: 2 * time.Minute},
 }
@@ -44,18 +43,29 @@ const maxDownload = 64 << 20
 
 // LatestVersion is the latest release's version, without its v: 0.1.3.
 // GitHub's latest is never a pre-release, so a beta is offered to no one.
+// It is where the releases page's latest points, …/releases/tag/v0.1.3,
+// the page not followed: GitHub's API, which it asked before, answers 60
+// lookups an hour to all that share an address, then 403 (user, 2026-11-20).
+// TODO(tgo, sent to the terminu-go session 2026-11-24): terminu-go's
+// SelfUpdate asks the API too; take it in place of this once it does not.
 func (r Release) LatestVersion() (string, error) {
-	body, err := r.get(r.Latest)
+	c := *r.Client
+	c.CheckRedirect = func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }
+	resp, err := c.Get(r.Latest)
 	if err != nil {
 		return "", err
 	}
-	var release struct {
-		TagName string `json:"tag_name"`
+	defer resp.Body.Close()
+	where := resp.Header.Get("Location")
+	if resp.StatusCode/100 != 3 || where == "" {
+		return "", fmt.Errorf("%s: %s, not the latest release's page", r.Latest, resp.Status)
 	}
-	if err := json.Unmarshal(body, &release); err != nil || release.TagName == "" {
-		return "", fmt.Errorf("%s: no release tag in its answer", r.Latest)
+	const tag = "/releases/tag/"
+	i := strings.LastIndex(where, tag)
+	if i < 0 || i+len(tag) == len(where) {
+		return "", fmt.Errorf("%s: %s, no release tag in it", r.Latest, where)
 	}
-	return strings.TrimPrefix(release.TagName, "v"), nil
+	return strings.TrimPrefix(where[i+len(tag):], "v"), nil
 }
 
 func (r Release) get(url string) ([]byte, error) {

@@ -1,6 +1,6 @@
-id: 13
-from: v1.2.19
-to: v1.2.20
+id: 14
+from: v1.2.20
+to: v1.3.5
 tasks:
   - id: 1
     spec: 1
@@ -140,12 +140,15 @@ tasks:
       - uninstall 遇到 config.yaml 有用不了的值：複製成 .bak、換成預設寫回，那句寫到 stderr，照樣往下做（tdp E3，值不合規則）
       - 照 tdp E1 的命令列格式（tdp v1.2.18；tdp #24）：錯誤一行一件、開頭 ccdrawu: 、大寫開頭；uninstall 遇到用不了的值，stderr 寫 TUI 的同一句話：toast 那一列、每個值的 WARN、不讀的 key 的 INFO（tdp E3）；安裝後那兩句的 `/reload-plugins`、`ccdrawu` 用反引號（tdp M5；tdp v1.2.18；tdp #25）
   - id: 19
-    spec: 8
+    spec: 14
     request: ccdrawu update 照安裝的方式更新 ccdrawu，再把 Claude Code 裡的外掛更新成同一版
-    tdp: [tdp P5, tdp E1, tdp M5, tdp M5-32, tdp E1-4, tdp E1-8]
+    tdp: [tdp P5, tdp E1, tdp M5, tdp M5-32, tdp E1-4, tdp E1-8, tdp E1-9, tdp E1-10]
     remark:
       - Homebrew 裝的交給 Homebrew；安裝腳本裝的下載 release 的執行檔、用 checksum 驗過再換掉自己；Scoop 裝的說要跑什麼；資料夾不能寫入時說明原因後停下來
       - 訊息裡要使用者打的指令用反引號：`git pull && make install`、`ccdrawu install claude`、`ccdrawu update`（tdp M5；tdp v1.2.18；tdp #25）；錯誤一行一件、開頭 ccdrawu: 、大寫開頭（tdp E1；tdp v1.2.18；tdp #24）；Scoop 那段的指令各自一行縮排，不在句子裡，不加
+      - 照 tdp E1 的 update（tdp v1.3.0 起每個 app 都有，照 ccdrawu 的做法寫）：已經是最新版說 is the latest release、比最新正式版還新（beta）說 is newer than the latest release, <最新>，都 exit 0
+      - 最新版從 github.com/vulcanshen/ccdrawu/releases/latest 轉到哪個 tag 看，不用 GitHub API：API 不帶登入時同一個網路每小時共用 60 次，用完回 403（使用者 2026-11-20 遇到）；下載本來就不走 API
+      - {note: terminu-go 的 SelfUpdate 一樣用 API 查，會遇到同一個 403；ccdrawu 先用自己的 update 讀轉址，lib 修好後再考慮改用 SelfUpdate, issue: 本機用 SendMessage 傳給 terminu-go session（2026-11-24，使用者選不發 GitHub）}
   - id: 20
     spec: 8
     request: ccdrawu version 印版本，ccdrawu help 印用法
@@ -153,14 +156,14 @@ tasks:
     remark:
       - 命令列照 tdp E1（tdp v1.2.18；tdp #24）：錯誤與警告寫 stderr、一件一行、開頭 ccdrawu: 、大寫開頭（路徑、檔名、程式名開頭的照原樣）；結果與進度寫 stdout；用錯（不認得的指令、install 或 uninstall 少了 claude）寫「ccdrawu: <哪裡錯>」、空一行、用法，exit 2，例「Unknown command "x"」「Say where: `ccdrawu install claude`」（tdp M5）；exit 0 做完、1 沒做完、2 用錯
   - id: 21
-    spec: 8
+    spec: 14
     request: 設定、快取、原本的主題與狀態列，各放在系統規定的位置；可以用環境變數改；舊版的檔第一次執行時搬過來；讀不了時先問；讀得進來、只有用不了的值時，備份後換成預設
-    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6, tdp note.7, tdp P5, tdp E3-36, tdp E3-38, tdp E3-39, tdp M5, tdp M5-32]
+    tdp: [tdp E2, tdp E3, tdp confirm, tdp toast, tdp note.6, tdp note.7, tdp P5, tdp E3-36, tdp E3-38, tdp E3-39, tdp M5, tdp M5-32, tdp E3-37, tdp toast.2]
     remark:
       - ~/.config/ccdrawu/config.yaml（CCDRAWU__CONFIG、XDG_CONFIG_HOME）；系統快取資料夾裡的 ccdrawu（CCDRAWU__CACHE）；~/.ccdrawu/originals.yaml（CCDRAWU__DATA）
       - config.yaml 讀不了：寫出原因，Enter 改名成 config.yaml.bak、用預設值開始，Esc 離開
       - 用不了的值（不認得的名字、不是 #rrggbb 的顏色、超過 60 或負的秒數、外掛不收的 alias、有控制字元的分隔、型別不對的值）：啟動時複製成 config.yaml.bak、換成預設寫回，跳 Warning toast，App Log 每個值一筆 WARN；備份做不出來時不寫回、跳 Error toast（tdp E3，值不合規則）
-      - 同一次啟動有搬家又有不合的值：合成一個 toast，App Log 一件一筆（tdp E3，同一次啟動有好幾件）
+      - 同一次啟動有搬家又有不合的值：各一個 toast，照發生的順序往上疊，App Log 一件一筆（tdp E3，同一次啟動有好幾件；tdp v1.3.0 起不再合成一個，toast.2）
       - 外掛畫的側邊欄（不在 TUI 裡的畫面，TUI 以外，tdp E3、P5）：config.yaml 讀不了、或有用不了的值時，不動檔，照預設畫，在面板最上面用一列寫出哪個檔有什麼問題；備份、重寫、跳 toast 留給下次打開的 TUI（tdp E3-36、E3-39；tdp #23，tdp v1.2.17）
       - 側邊欄那一列後面接「; run `ccdrawu doctor`」，提示怎麼修（task 28；使用者 2026-11-19），提示用一般文字的顏色，指令用反引號包起來、跟提示同色（使用者 2026-11-20；tdp M5；tdp v1.2.18；tdp #25）
       - ccdrawu 不讀的 key（以前讀過的，或從來沒讀過的、例如打錯的）留在檔案裡，重寫時也留著，不跳 toast，每次啟動在 App Log 記一筆 INFO：以前讀過的寫 No longer used，其他寫 Not read（tdp E3-38；tdp #21，tdp v1.2.17）

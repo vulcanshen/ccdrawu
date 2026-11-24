@@ -142,6 +142,19 @@ func TestUninstallGoesOnWithValuesThatDoNotFit(t *testing.T) {
 	}
 }
 
+// tdp E1 (v1.3.0): update says so when ccdrawu is the latest release, and
+// when it is newer than it, a beta
+func TestUpdateSaysItIsUpToDate(t *testing.T) {
+	for _, c := range []struct{ version, latest, want string }{
+		{"1.4.1", "1.4.1", "ccdrawu 1.4.1 is the latest release."},
+		{"1.5.0-beta.1", "1.4.1", "ccdrawu 1.5.0-beta.1 is newer than the latest release, 1.4.1."},
+	} {
+		if got := upToDate(c.version, c.latest); got != c.want {
+			t.Errorf("upToDate(%s, %s) = %q, want %q", c.version, c.latest, got, c.want)
+		}
+	}
+}
+
 // tdp E1 (tdp #24, on tdp main): a wrong use says what is wrong, a blank line
 // and the usage, exit status 2; a line of a command that could not be done is
 // a toast's row, a capital first unless it starts with a path or a program's

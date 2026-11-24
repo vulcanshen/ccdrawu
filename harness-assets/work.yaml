@@ -223,12 +223,14 @@ tasks:
       - TestUninstallStopsOnAFileThatCantBeRead
       - commit: 20a69c7
   - id: 19
-    spec: 8
+    spec: 14
     implementation: |
-      ccdrawu update：查 GitHub 最新的 release，比版本；Homebrew 的 Cellar 底下跑 brew upgrade vulcanshen/tap/ccdrawu；安裝腳本或下載的：抓 release 的壓縮檔與 checksums.txt，驗 sha256，換掉自己（Windows 先把執行中的改名 .old）；Scoop 的印要跑的指令；資料夾不能寫入時下載前就停
+      ccdrawu update：查 GitHub 最新的 release（update.Release.LatestVersion：GET github.com/vulcanshen/ccdrawu/releases/latest、不跟著轉址，從 Location 的 /releases/tag/v<版本> 取版號；不用 API，使用者 2026-11-20 遇到 API 額度用完的 403），比版本：一樣說「ccdrawu <版本> is the latest release.」、比最新正式版還新說「ccdrawu <版本> is newer than the latest release, <最新>.」（upToDate，tdp E1），都照樣接著更新外掛；Homebrew 的 Cellar 底下跑 brew upgrade vulcanshen/tap/ccdrawu；安裝腳本或下載的：抓 release 的壓縮檔與 checksums.txt，驗 sha256，換掉自己（Windows 先把執行中的改名 .old）；Scoop 的印要跑的指令；資料夾不能寫入時下載前就停
       之後 Claude Code 有外掛的話，用新的 ccdrawu 跑 install claude
       訊息裡的指令用反引號：從原始碼建的「This ccdrawu is built from source: update it there (`git pull && make install`), then run `ccdrawu install claude`」、寫不進資料夾「Run the install script again, or `ccdrawu update` as the folder's owner」、外掛不在「The ccdrawu plugin is not in Claude Code; `ccdrawu install claude` adds it.」；Scoop 那段的指令各自一行縮排
     test:
+      - TestLatestVersionIsWhereTheLatestPagePoints
+      - TestUpdateSaysItIsUpToDate
       - TestNewerComparesPartByPart
       - TestNewerTakesPreReleases
       - TestHowTellsTheMethodFromThePath
@@ -245,7 +247,7 @@ tasks:
       - TestWrongUseAndSentences
       - commit: 5de15c1
   - id: 21
-    spec: 8
+    spec: 14
     implementation: |
       config.yaml 在 CCDRAWU__CONFIG、XDG_CONFIG_HOME/ccdrawu 或 ~/.config/ccdrawu；快取在 CCDRAWU__CACHE 或系統快取資料夾；originals.yaml 在 CCDRAWU__DATA 或 ~/.ccdrawu
       啟動時把 config.json 與舊位置的檔搬到新位置，搬了的用 Info toast 說「Moved <從> to <到>」
@@ -256,7 +258,7 @@ tasks:
       config.yaml 或 originals.yaml 讀不了：不動它，畫面開在沒有東西的狀態，開 terminu-go 的 MoveAside confirm，寫 <路徑> can't be read: <原因>；Enter 改名 .bak、用預設值開始，Esc 離開、stderr 寫路徑與原因
       讀不了是 YAML 解不開，或最上層不是 mapping；讀得進來的檔一個值一個值讀（config.readFit），用不了的換成預設，記成 terminu.Misfit（key、原本寫的、現在用的）：alias 外掛不收→none；pet.species、bar、statusline.format、statusline.color、theme.base 不在選項裡→第一個選項（theme.base→off）；statusline.when 不是 narrow→always；theme.background 不是 #rrggbb→none；statusline.separator 有控制字元→|；statusline.refresh 小於 0 或超過 60→10；型別不對的值（例：refresh: ten）→預設；不是 mapping 的 pet、drawer、theme、statusline→全部預設
       啟動時（搬家之後）config.Settle：有用不了的值就用 terminu.KeepAside 複製成 config.yaml.bak（有了就 .bak.1…），用預設值寫回；theme.base 不合時同時像 Claude theme 設 off 一樣換回 Claude Code 原本的主題，statusline.refresh 不合、狀態列是 ccdrawu 的時，Claude Code 的 refreshInterval 也換回 10；備份做不出來時不寫回，這一次用預設
-      搬家的 Info 與不合的值（terminu.MisfitNotice；備份做不出來時先一列 Error 寫原因，再接不帶那一句、只帶 WARN 的 MisfitNotice）一起交給 App.Notify：一個 toast、一件一行、種類取最重的，App Log 一件一筆、每個值一筆 WARN
+      搬家的 Info 與不合的值（terminu.MisfitNotice；備份做不出來時先一列 Error 寫原因，再接不帶那一句、只帶 WARN 的 MisfitNotice）一起交給 App.Notify：terminu-go v1.3 起每一件各是一個 toast、照順序往上疊（tdp E3、toast.2），App Log 一件一筆、每個值一筆 WARN
       搬家（config.json → config.yaml、config 裡的 theme.before／statusline.before → originals.yaml）照原文寫，不合的值留給 Settle
       ccdrawu 不讀的 key（頂層，與 pet、drawer、theme、statusline 底下的）：WriteConfig 用 yaml.Node 把原檔裡這些 key 與值照原樣接在後面，存設定與 E3 重寫都留著；啟動時 Settle 列出來，TUI 每個記一筆 INFO「Not read: <key> in <路徑>; delete it if you don't need it」，ccdrawu 以前讀過的 input_tab_width 寫 No longer used；不跳 toast
       外掛（hooks）每秒讀 config.yaml，TUI 以外，不動檔：解不開時當成寫到一半，下一秒還是一樣才算讀不了，這時用預設值，在面板最上面（側邊欄在項目上方，輸入框上方在欄位上方）用 Red 寫「<路徑> can't be read: <原因>」；讀得了但有用不了的值（configMisfits，規則與 config.readFit 一樣），照預設畫，那一列寫「<路徑>: <不合的 key>, … did not fit」；都沒有就拿掉那一列；那一列比面板寬時折成好幾行，路徑與原因整句都看得到（2026-11-19 在沙盒截圖驗過）；那一列後面接紅色的「; 」與一般文字顏色（#cdd6f4）的「run `ccdrawu doctor`」
@@ -266,7 +268,7 @@ tasks:
       - TestSettleGivesClaudeCodeItsThemeBack
       - TestSettleWithNoCopyLeavesTheFile
       - TestMoveKeepsValuesThatDoNotFit
-      - TestValuesThatDoNotFitAreSaidInOneToast
+      - TestMovedAndValuesThatDoNotFitAreToastsOfTheirOwn
       - TestValuesThatDoNotFitWithNoCopy
       - TestKeysNotReadStay
       - TestLocateFollowsE3

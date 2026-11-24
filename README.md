@@ -104,6 +104,7 @@ It looks up the latest release and updates the `ccdrawu` command the way you ins
 
 - Installed with Scoop, it tells you to run `scoop update ccdrawu`, then `ccdrawu install claude`: Scoop does not update ccdrawu while it runs.
 - Where it cannot write in the folder `ccdrawu` is in, such as `/usr/local/bin` after the install script ran as root, it says so and stops: run the install script again, or `ccdrawu update` as the folder's owner.
+- Up to 1.4.1, `ccdrawu update` can stop with `Looking up the latest release: … 403 Forbidden`: it asked GitHub's API, which answers 60 lookups an hour to everything on your network. Update the way you installed it instead (`brew upgrade vulcanshen/tap/ccdrawu`, `scoop update ccdrawu`, or the install script again), then run `ccdrawu install claude`; or try again within the hour. Later versions do not ask the API.
 - Before 0.1.3 there is no `ccdrawu update`: update the command the way you installed it (`brew upgrade ccdrawu`, `scoop update ccdrawu`, or the install script again), then run `ccdrawu install claude`, which updates the plugin to the version of the command.
 
 ### Uninstall

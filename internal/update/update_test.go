@@ -113,8 +113,11 @@ func release(t *testing.T, version, goos string, exe []byte, corrupt bool) Relea
 	}
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
+		// The releases page's latest points at its tag's page, as GitHub's does
 		case "/latest":
-			_, _ = w.Write([]byte(`{"tag_name": "v` + version + `"}`))
+			http.Redirect(w, r, "/releases/tag/v"+version, http.StatusFound)
+		case "/releases/tag/v" + version:
+			_, _ = w.Write([]byte("<html>a release page</html>"))
 		case "/download/v" + version + "/checksums.txt":
 			_, _ = w.Write([]byte(sums))
 		case "/download/v" + version + "/" + name:
@@ -125,6 +128,20 @@ func release(t *testing.T, version, goos string, exe []byte, corrupt bool) Relea
 	}))
 	t.Cleanup(srv.Close)
 	return Release{Latest: srv.URL + "/latest", Download: srv.URL + "/download", Client: srv.Client()}
+}
+
+// The latest release is where the releases page's latest points, not
+// GitHub's API, whose lookups an address shares run out (user, 2026-11-20:
+// 403 Forbidden); a page that points nowhere says what it answered
+func TestLatestVersionIsWhereTheLatestPagePoints(t *testing.T) {
+	r := release(t, "1.4.1", "darwin", []byte("new ccdrawu"), false)
+	if v, err := r.LatestVersion(); err != nil || v != "1.4.1" {
+		t.Fatalf("LatestVersion = %q, %v", v, err)
+	}
+	r.Latest = strings.TrimSuffix(r.Latest, "/latest") + "/nowhere"
+	if v, err := r.LatestVersion(); err == nil || !strings.Contains(err.Error(), "404") {
+		t.Fatalf("LatestVersion from a page that points nowhere = %q, %v", v, err)
+	}
 }
 
 func TestReplacePutsTheCheckedExecutableInPlace(t *testing.T) {

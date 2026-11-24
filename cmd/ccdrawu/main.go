@@ -215,6 +215,15 @@ func doctor(loc config.Locations, out, errs io.Writer) int {
 	return status
 }
 
+// upToDate is what update says when ccdrawu, at version, needs none: the
+// latest release, or one newer than it, a beta (tdp E1).
+func upToDate(version, latest string) string {
+	if update.Newer(version, latest) {
+		return fmt.Sprintf("ccdrawu %s is newer than the latest release, %s.", version, latest)
+	}
+	return fmt.Sprintf("ccdrawu %s is the latest release.", version)
+}
+
 // selfUpdate brings ccdrawu to its latest release the way it was installed,
 // then, where Claude Code has the plugin, the plugin to the same release: the
 // new ccdrawu runs its own install claude, which takes the plugin of its
@@ -237,7 +246,7 @@ func selfUpdate(out io.Writer) error {
 	}
 	next := exe // the ccdrawu that updates the plugin
 	if !update.Newer(latest, version.Version) {
-		fmt.Fprintf(out, "ccdrawu %s is the latest release.\n", version.Version)
+		fmt.Fprintln(out, upToDate(version.Version, latest))
 	} else {
 		switch update.How(exe) {
 		case update.Homebrew:
