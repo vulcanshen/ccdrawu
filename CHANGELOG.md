@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.4.1 — tdp v1.2.20
 
 - An owl looks left and right now and then while it rests, and where it goes while it flies.
 - Built on terminu-go v1.2.21 (tdp v1.2.20).
