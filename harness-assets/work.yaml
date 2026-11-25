@@ -1,12 +1,12 @@
 tasks:
   - id: 1
-    spec: 1
+    spec: 16
     implementation: |
       外掛（hooks/）在 Claude Code 的 pane 裡畫：每列左邊是項目名（Blue），右邊是值；Context、Session、Weekly 畫 bar 與百分比，Session、Weekly 下面一列寫 resets 與倒數
       打開的列一開始就畫，值還沒來時寫 -
       值從 Claude Code 的 mod 介面讀：$.session.usage()（context、5 小時與每週的用量與重置、花費）、$.session.model()、$.session.turns()、$.session.id()、$.session.cwd()、$.session.version()、$.config.list()（output style）、$.agent.list()（subagent）；Mode、Compact、Skills、Tasks 從 classic.PostToolBatch、classic.UserPromptSubmit、classic.SessionStart、classic.Stop、session.compact、skill.prompt 這些事件記下來；git 用 $.process.run 跑 git 指令
       更新：session 開始時全部讀一次；用量在 Claude Code 說它變了時（session.measure）；倒數與 Uptime 每 30 秒；git、Path、subagent 每 5 秒；config.yaml 每秒讀一次
-      Tasks 的背景工作照回覆結束（classic.Stop）的 background_tasks 依 type 計數；Monitor 工具開的 monitor 在清單裡標成 shell，用 Monitor 呼叫（tool.call）回來的 taskId 認出來，算成 monitor
+      Tasks 的背景工作照回覆結束（classic.Stop）的 background_tasks 依 type 計數；Monitor 工具開的 monitor 在清單裡標成 shell，用 Monitor 呼叫（tool.call）回來的 taskId 認出來，算成 monitor；清單裡類型是 monitor、卻不是 Monitor 呼叫開的（Claude Code 自己的 live-update watcher，例：發佈 Artifact 後的留言監看）不算（sessionTasks；使用者 2026-11-25）
     test:
       - commit: a5a8c27
       - commit: acc8e18
@@ -296,10 +296,11 @@ tasks:
       - commit: a5a8c27
       - commit: 830e085
   - id: 25
-    spec: 15
+    spec: 16
     implementation: |
       install.sh、install.ps1、uninstall.sh、uninstall.ps1；.goreleaser.yaml 與 .github/workflows/release.yml 在推 v* tag 時測試、發 GitHub release、推 Homebrew tap 與 Scoop bucket
       install.ps1 查最新版：System.Net.Http.HttpClient 關掉自動轉址（AllowAutoRedirect false），GET github.com/vulcanshen/ccdrawu/releases/latest，從 Location 的 /releases/tag/v<版本> 取 tag 與版號，下載 github.com/…/releases/download/<tag>/ccdrawu_<版本>_windows_<arch>.zip；查不到（連不上、沒有 Location、不是 tag 的網址）寫「Error: Cannot find the latest release of vulcanshen/ccdrawu on GitHub.」與去哪裡下載，exit 1；不用 GitHub API（Windows PowerShell 5.1 與 7 都有 HttpClient）
+      install.sh 照 harness v1.3.5 的範本：curl -w %{redirect_url} 讀 github.com/vulcanshen/ccdrawu/releases/latest 轉到哪個 tag，取 v 後面的版號；查不到說明、exit 1
     test:
       - check: repo
   - id: 26
@@ -309,9 +310,9 @@ tasks:
     test:
       - commit: f6cf97f
   - id: 27
-    spec: 13
+    spec: 16
     implementation: |
-      外掛在主 agent 每次回覆結束（classic.Stop）讀 background_tasks：type 是 shell 的一個一隻海螺、monitor 的一個一隻貓頭鷹；Monitor 工具開的 monitor 在清單裡標成 shell，用 Monitor 呼叫回來的 taskId 認出來；清單裡沒有了的離場
+      外掛在主 agent 每次回覆結束（classic.Stop）讀 background_tasks：type 是 shell 的一個一隻海螺、monitor 的一個一隻貓頭鷹；Monitor 工具開的 monitor 在清單裡標成 shell，用 Monitor 呼叫回來的 taskId 認出來；清單先照 sessionTasks 過一遍：類型是 monitor、卻不是 Monitor 呼叫開的（Claude Code 自己的 watcher）不算，不畫貓頭鷹（使用者 2026-11-25）；清單裡沒有了的離場
       海螺（kind 仍是 snail；預設的樣子，SHELL_LOOKS 的 sea-snail，其他樣子見 task 29）6×3 像素，面向左：圓頂殼（s）、螺紋與頂上的螺塔（d）、身體（b）；殼的後半（右 2 欄）貼地，身體在最下一列從左邊伸到殼底下兩格，觸角從頭往左上；爬 1／爬 2 只差最下一列最左那格（腳的前緣一伸一縮），上面兩列不變；縮進殼時身體不見，殼口最下一列畫成兩格 d（口蓋）（使用者 2026-11-20）
       從走道左端或右端外面 10 步（TOY_OFF＝max(12−3, 3＋最寬的樣子 7)，左邊要多算牠的寬度才看不到）每秒爬一步進來，停 4～8 秒再爬到走道上別的地方；離場時爬到近的那一端外面才拿掉，走道外一步一欄，只畫在走道裡的那幾欄
       貓頭鷹 5×6 像素，從走道上方每 tick 下降 2 像素，落在隨機位置；飛的時候振翅，每 tick 換一張：翅膀往上舉（9 像素寬）、平伸（7）、往下壓（9）、平伸（使用者 2026-11-19：「貓頭鷹飛起來的時候翅膀打開但是沒有振翅」）；平均約 5 秒眨一次眼（0.4 秒）；眼睛照 faceLeft 看左或看右（每一張圖的 yk 換成 ky，瞳孔換到左邊；眨眼那張沒有瞳孔，兩邊一樣）：休息時每 tick 有 1/15 機率換邊（約 3 秒一次，跟眨眼同一個亂數，不另外抽），飛的時候 faceLeft 是飛的方向，降落後留著（使用者 2026-11-24）；離場時振翅，每 tick 往上 2 像素，飛出走道才拿掉

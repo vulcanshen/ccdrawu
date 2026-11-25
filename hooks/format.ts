@@ -112,6 +112,15 @@ export function syncText(ahead: number, behind: number): string {
   return parts.length > 0 ? parts.join(' ') : 'up to date'
 }
 
+// The background work a reply's end lists, as the session runs it: a monitor the Monitor tool started,
+// told by the id its call answered (started), is a monitor, though the list names it a shell (Claude Code
+// 2.1.328); one the list names a monitor that no Monitor call started is none at all: the live-update
+// watchers Claude Code keeps, such as the one on a published Artifact's comments, which it leaves out of
+// its own count of work running (user, 2026-11-25: an owl, and 1 monitor, with no monitor left)
+export function sessionTasks<T extends { id: string; type: string }>(listed: readonly T[], started: readonly string[]): T[] {
+  return listed.flatMap(t => (started.includes(t.id) ? [{ ...t, type: 'monitor' }] : t.type === 'monitor' ? [] : [t]))
+}
+
 // The background work a reply's end reports, counted by type; subagents are left to $.agent.list(),
 // which follows them live
 export function countBackground(tasks: readonly { type: string }[]): Record<string, number> {

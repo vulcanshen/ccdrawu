@@ -5,6 +5,7 @@ import {
   compact,
   commandNames,
   countBackground,
+  sessionTasks,
   countdown,
   duration,
   effortColor,
@@ -248,6 +249,24 @@ test('tasks count subagents live and the rest of the background by type, parted 
     { type: 'MCP task' },
   ]
   expect(countBackground(reported)).toEqual({ shell: 2, workflow: 1, 'MCP task': 1 })
+  // As the session runs it: the Monitor tool's monitor, listed as a shell (or as a monitor), is a monitor
+  // by its id; a monitor no Monitor call started, the watcher Claude Code keeps on a published Artifact's
+  // comments, is no work at all (user, 2026-11-25: an owl, and 1 monitor, with no monitor left)
+  const listed = [
+    { id: 's1', type: 'shell' },
+    { id: 'm1', type: 'shell' },
+    { id: 'watch', type: 'monitor' },
+    { id: 'm2', type: 'monitor' },
+    { id: 'a1', type: 'subagent' },
+  ]
+  const tasks = sessionTasks(listed, ['m1', 'm2'])
+  expect(tasks.map(t => [t.id, t.type])).toEqual([
+    ['s1', 'shell'],
+    ['m1', 'monitor'],
+    ['m2', 'monitor'],
+    ['a1', 'subagent'],
+  ])
+  expect(tasksText(0, countBackground(sessionTasks([{ id: 'watch', type: 'monitor' }], [])))).toBe('none')
   expect(tasksText(2, { shell: 1 })).toBe('2 agents｜1 shell')
   expect(tasksText(1, { workflow: 1, 'MCP task': 2, shell: 2, monitor: 1 })).toBe(
     '1 agent｜2 shells｜1 monitor｜1 workflow｜2 MCP tasks',

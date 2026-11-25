@@ -54,6 +54,7 @@ import {
   parseShortstat,
   parseStatusV2,
   percentText,
+  sessionTasks,
   repoFromRemote,
   shortPath,
   usageColor,
@@ -327,10 +328,10 @@ async function stepPet($: Engine) {
 }
 
 // The background work a reply's end lists, counted by type, and a toy on the strip for each shell and
-// monitor; the monitors the Monitor tool started, listed as shells, told by their ids
+// monitor: as the session runs it (sessionTasks), the monitors the Monitor tool started told by their
+// ids, Claude Code's own watchers left out
 async function backgroundListed($: Engine, listed: readonly { id: string; type: string }[]) {
-  const started = await read($, monitors)
-  const tasks = listed.map(t => (started.includes(t.id) ? { ...t, type: 'monitor' } : t))
+  const tasks = sessionTasks(listed, await read($, monitors))
   await update($, monitors, ids => ids.filter(id => listed.some(t => t.id === id)))
   await update($, background, () => countBackground(tasks))
   await update($, toys, ts => toysFor(ts, tasks, Math.random))

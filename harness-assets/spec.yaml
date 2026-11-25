@@ -1,9 +1,9 @@
-id: 15
+id: 16
 from: v1.2.20
 to: v1.3.5
 tasks:
   - id: 1
-    spec: 1
+    spec: 16
     request: 側邊欄一列一項，顯示用量上限、context、模型、花費、git、session 統計等；有些預設開、有些預設關，打開的列一定顯示，還沒有值時顯示 -
     tdp: [tdp P5]
     remark:
@@ -184,18 +184,18 @@ tasks:
     request: 側邊欄每 6 小時向 npm registry 查一次 Claude Code 的最新版本，打開 Status 時每 5 分鐘查一次 status.claude.com，其他時候不連網
     tdp: [tdp P5]
   - id: 25
-    spec: 15
+    spec: 16
     request: 用安裝腳本、Homebrew、Scoop 安裝與移除 ccdrawu；發 release 到 GitHub、tap 與 bucket
     tdp: [tdp E6, harness project]
     remark:
       - 移除腳本先問過才刪設定與快取
-      - install.ps1（ccdrawu 自己的，不是範本）查最新版看 github.com/vulcanshen/ccdrawu/releases/latest 轉到哪個 tag，不用 GitHub API（同 task 19 的 403；2026-11-24 terminu 通知）；查不到就說明、exit 1。install.sh 是 harness 的範本，harness v1.3.5 的範本改了之後照 check 重新複製
+      - install.ps1（ccdrawu 自己的，不是範本）查最新版看 github.com/vulcanshen/ccdrawu/releases/latest 轉到哪個 tag，不用 GitHub API（同 task 19 的 403；2026-11-24 terminu 通知）；查不到就說明、exit 1。install.sh 是 harness 的範本：harness v1.3.5 的範本改看轉址之後，照 check 重新複製了（2026-11-25）
   - id: 26
     spec: 1
     request: README（英文與繁中）與 CHANGELOG
     tdp: [tdp E7, harness project.6]
   - id: 27
-    spec: 13
+    spec: 16
     request: 背景的 shell 和 monitor 補回走道上：shell 預設是會伸出觸角爬的海螺（原本是蝸牛；樣子可以在設定換，task 29）、monitor 是貓頭鷹，像球一樣會跟寵物互動；主 agent 靜止時寵物偶爾去抓一下；幾個就幾隻，可以重疊，每一隻的配色隨機生成，同一種的顏色不要重複；貓頭鷹每休息 10 秒就起飛，振翅飛 10 秒再降落，也會停在箱子上；貓頭鷹的眼睛會左右看
     tdp: [tdp P5]
     remark:
@@ -205,6 +205,7 @@ tasks:
       - 貓頭鷹停在箱子上最高到上面還放得下牠的那一層（跟小隻一樣是第二層），第三層牠停在前面
       - 貓頭鷹飛的時候振翅：翅膀上、平、下、平一輪（方案 2）
       - 貓頭鷹的眼睛左右看（使用者 2026-11-24，看了預覽與 GIF 同意）：瞳孔換到眼睛的另一邊；休息時每隔幾秒隨機換邊看，照舊眨眼；飛的時候看著飛的方向
+      - 只有這個 session 用 Monitor 工具開的才是 monitor（使用者 2026-11-25）：清單裡類型是 monitor、卻不是 Monitor 工具開的，是 Claude Code 自己的 live-update watcher（例：發佈 Artifact 後的留言監看），Claude Code 自己也不算成在跑的工作，不畫貓頭鷹、Tasks 也不算；MCP 工具開的 monitor 從清單分不出來，一起不算
       - 貓頭鷹降落後休息 10 秒，起飛在走道上方來回飛 10 秒，時間到就在當下的位置降落，再休息 10 秒（使用者 2026-11-20；取代原本約 10 秒一次、隨機起飛換個地方停）；每隻從自己降落的時候算，不會一起飛
       - 場上有它們時寵物不睡，最多趴著；Claude 工作時寵物照常閒逛，不特別去抓
       - 顏色不重複（使用者 2026-11-20）：殼與羽毛的色相挑在同種現有色相之間最大的空檔中間，仍帶隨機；只跟同種比，因為蝸牛和貓頭鷹的形狀本來就分得出來，貓頭鷹彩度低，要把色相空間留給同種；小隻是從固定幾種花色挑沒用過的，這裡色相是連續的，所以改成挑空檔

@@ -39,9 +39,15 @@ esac
 # --- app's own: checks before the download (none by default) ---
 # --- end of the app's own ---
 
-# Get latest version
+# Get latest version: where github.com/$REPO/releases/latest leads
+# (.../releases/tag/v<version>), never a pre-release. Not GitHub's API: to a
+# network not signed in it answers 60 times an hour, then says 403.
 echo "Fetching latest release..."
-VERSION=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" | grep '"tag_name"' | sed 's/.*"v\(.*\)".*/\1/')
+VERSION=$(curl -fsS -o /dev/null -w '%{redirect_url}' "https://github.com/$REPO/releases/latest" | sed -n 's|.*/releases/tag/v||p')
+if [ -z "$VERSION" ]; then
+  echo "Error: no release of $APP found at https://github.com/$REPO/releases"
+  exit 1
+fi
 echo "Latest version: $VERSION"
 
 # Install dir

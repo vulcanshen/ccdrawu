@@ -46,6 +46,9 @@ ccdrawu tui 設定裡面，讓使用者自己選擇 monitor 和 shell 的物件�
 
 使用者 2026-11-24：我想要讓貓頭鷹的眼睛也要看左看右變換。
 
+使用者 2026-11-25：我發現有 bug，session 裡面已經都 commit 或者沒有 monitor 了，但是 plugin 還是顯示著。（查到的：monitor 那邊是
+Claude Code 在發佈 Artifact 後自己開的留言監看器，被當成 monitor；紙箱是那個 repo 真的有沒 commit 的檔。使用者選直接修。）
+
 不能發生的事：
 
 - 換成 ccdrawu 的主題與狀態列之後，使用者原本的找不回來：換之前先記下來，關掉或移除時放回去。
