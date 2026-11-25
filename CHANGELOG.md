@@ -2,7 +2,7 @@
 
 Each release names the version of terminu design (tdp) it follows.
 
-## Unreleased
+## v1.4.3 — tdp v1.3.5
 
 - The watcher Claude Code keeps on the comments of an Artifact the session published is no longer taken for a monitor: it drew an owl, and Tasks read `1 monitor`, while no monitor ran. Only a monitor the Monitor tool started counts, as in Claude Code's own count of work running.
 - The install script, `install.sh`, finds the latest release where the releases page's latest points, not through GitHub's API, as `ccdrawu update` and `install.ps1` do, and says so when it can't.
